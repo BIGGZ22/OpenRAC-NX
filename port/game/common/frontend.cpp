@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -20,6 +21,7 @@
 #include <string_view>
 #include <thread>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <SDL3/SDL.h>
@@ -406,6 +408,10 @@ void world_drawn(std::span<const std::uint8_t> ram) {
 
 bool show_picture(const std::uint8_t* rgba, int width, int height, float black) {
     using namespace gl;
+    // Movie frames also share the graphics context with pending world recording.
+    if (!finish_render()) {
+        return false;
+    }
     if (!g || width <= 0 || height <= 0) {
         return true;
     }
@@ -482,11 +488,17 @@ std::int64_t since_control() {
 
 void close() {
     if (g) {
+        // Stop the worker before releasing the scene, temporal history or graphics context.
+        // Cleanup still releases resources after a previously reported render error.
+        [[maybe_unused]] const bool finished = finish_render();
+        g->render_worker.reset();
         debug_overlay::release();
         settings::save();  // the window's size, if it was changed
         renderer::ui::fps_counter::release();
         renderer::ui::touch_overlay::release();
         debug_menu::release();
+        // Temporal histories reference the target and scene, so retire them before either owner.
+        g->temporal.reset();
         g->frame.release();
         g->picture.release();
         g->last_world.release();

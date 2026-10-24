@@ -121,6 +121,7 @@ enum class Var : std::uint16_t {
     PvsOff,
     Reach,
     RenderOptOff,
+    RenderThread,
     RoundNearest,
     ScriptBudgetMs,
     ShaderDir,

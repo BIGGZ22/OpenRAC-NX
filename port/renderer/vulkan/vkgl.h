@@ -21,7 +21,9 @@
 //     right way up when it is copied to the screen at present().
 //   - Everything is recorded in one command buffer a frame, two frames in flight.
 //
-// One context at a time, on the thread that opened it, as the renderer uses GL.
+// One context at a time with one host owner. The frontend transfers exclusive ownership to its
+// render worker while recording an owned world snapshot, then joins that job before UI or present.
+// The window stays on its creating thread; OpenGL contexts do not use this handoff.
 
 #pragma once
 

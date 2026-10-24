@@ -62,6 +62,15 @@ void particle(std::span<const std::uint8_t> ram, const std::uint8_t* record, std
 // when the game does not report them).
 bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t draws);
 
+// Captures the next tick's owned CPU scene while an earlier Vulkan snapshot renders.
+// The game thread calls this with stable RAM before finish_render(); false on capture failure.
+[[nodiscard]] bool prepare_frame(std::span<const std::uint8_t> ram);
+
+// Completes a pending render and presents it on the window thread. False on render failure.
+[[nodiscard]] bool finish_render();
+// True while a submitted snapshot has not yet been presented; queried only by the game thread.
+bool render_pending();
+
 // Frames between the game's ticks: the window draws at the display's rate, the camera and mobys
 // moved from the last tick's to the latest's by when each frame is shown (OPENRAC_UNCAPPED or
 // OPENRAC_NO_BLEND: one frame a tick). set_tick: when the tick about to be drawn was due, and the

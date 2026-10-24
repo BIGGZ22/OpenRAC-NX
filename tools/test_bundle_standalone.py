@@ -132,7 +132,8 @@ class Bundle(unittest.TestCase):
             for rel in ("STANDALONE", "tools/openrac.py", "tools/extractor.py", "editor/extract.py",
                         "editor/moby_classes.tsv", "games/rac1/game.json", "progress/summary.json",
                         "launcher/actions.json", "port/enhanced/tools/probes/bake_all.py",
-                        "port/enhanced/tools/probes/moby_seed_whitelist.json"):
+                        "port/enhanced/tools/probes/moby_seed_whitelist.json",
+                        "port/enhanced/lighting/profiles/rac1-ntsc/level_01/probe-bake.json"):
                 self.assertTrue((out / rel).is_file(), rel)
             self.assertFalse(list(out.rglob("test_*.py")))
             json.loads((out / "launcher/actions.json").read_text())
@@ -145,6 +146,19 @@ class Bundle(unittest.TestCase):
             root = subprocess.run([sys.executable, "-c", "from openrac_common import paths; print(paths.repo_root())"],
                                   cwd=out / "tools", capture_output=True, text=True, check=True).stdout.strip()
             self.assertEqual(Path(root), out.resolve())
+            # The carried exporter resolves the carried profile without the checkout or its cwd.
+            exported = Path(tmp) / "exported-level"
+            exported.mkdir()
+            script = ("import sys\n"
+                      "from pathlib import Path\n"
+                      "from types import SimpleNamespace\n"
+                      "sys.path.insert(0, sys.argv[1])\n"
+                      "from enhanced.profiles import write_bake_profile\n"
+                      "write_bake_profile(SimpleNamespace(game='rac1', version='ntsc', id=1), Path(sys.argv[2]))\n")
+            subprocess.run([sys.executable, "-I", "-c", script,
+                            str(out / "editor"), str(exported)], cwd=tmp, check=True)
+            profile = "port/enhanced/lighting/profiles/rac1-ntsc/level_01/probe-bake.json"
+            self.assertEqual((exported / "probe-bake.json").read_bytes(), (bundle.ROOT / profile).read_bytes())
 
     def test_games_as_built(self):
         # On macOS a game is its bundle, carried whole; the build folder's link to it is not.
@@ -201,6 +215,7 @@ class Bundle(unittest.TestCase):
             # graphics, whose program is a library of the APK too.
             self.assertFalse((out / "port/build").exists())
             self.assertTrue((out / "port/enhanced/tools/probes/bake_all.py").is_file())
+            self.assertTrue((out / "port/enhanced/lighting/profiles/rac1-ntsc/level_01/probe-bake.json").is_file())
             self.assertIn("Android", (out / "STANDALONE").read_text())
 
 

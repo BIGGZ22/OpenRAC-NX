@@ -2,6 +2,22 @@
 // Copyright (c) 2026 the OpenRAC contributors
 // Included inside vkgl_draw.cpp: the native material path leaves GL shader sources unchanged.
 
+namespace {
+
+// Material samplers share one indexed texture array; slots match kMaterialTextureWords.
+constexpr std::array<std::string_view, 3> kMaterialSamplers =
+    {"tex_T0", "emission_texture", "upscaled_texture_colours"};
+// Texture indices occupy resources.xy and texture_indices.x in the GLSL material record.
+constexpr std::array<unsigned, 3> kMaterialTextureWords = {12, 13, 20};
+
+// Returns whether the sampler is selected through the per-draw material record.
+bool material_sampler(std::string_view name) {
+    return std::find(kMaterialSamplers.begin(), kMaterialSamplers.end(), name)
+           != kMaterialSamplers.end();
+}
+
+}  // namespace
+
 bool material_enabled() {
     static const bool& off = stats::probe(
         "OPENRAC_GPU_MATERIALS_OFF",
@@ -44,6 +60,7 @@ bool material_layout() {
     );
 }
 
+// Compiles mesh shaders with per-draw material fields and bindless texture selection.
 bool material_program(Program& p, const std::string& vertex, const std::string& fragment) {
     p.gpu_materials = false;
     if (!material_enabled() || vertex.find("in mat4 model;") == std::string::npos) {
@@ -109,8 +126,11 @@ bool material_program(Program& p, const std::string& vertex, const std::string& 
         fs = std::regex_replace(fs, declaration, "");
         macros += std::string("#define ") + field.name + " (" + field.value + ")\n";
     }
-    for (const char* name : {"tex_T0", "emission_texture"}) {
-        const std::regex declaration(std::string(R"(uniform\s+sampler2D\s+)") + name + R"(\s*;)");
+    // Upscaled colour sampling must not split otherwise compatible mesh draws.
+    for (const auto name : kMaterialSamplers) {
+        const std::regex declaration(
+            std::string(R"(uniform\s+sampler2D\s+)") + std::string(name) + R"(\s*;)"
+        );
         fs = std::regex_replace(fs, declaration, "");
     }
     const std::string vertex_header = R"(#extension GL_ARB_shader_draw_parameters : require
@@ -132,6 +152,7 @@ struct OpenracMaterial {
     uvec4 flags;
     uvec4 resources;
     uvec4 draw_flags;
+    uvec4 texture_indices;
 };
 
 layout(std430, set = 1, binding = 1) readonly buffer OpenracMaterials {
@@ -144,6 +165,7 @@ layout(set=1,binding=0) uniform sampler2D openrac_textures[
 #define O_MATERIAL (openrac_materials[openrac_draws[openrac_draw]])
 #define tex_T0 openrac_textures[nonuniformEXT(O_MATERIAL.resources.x)]
 #define emission_texture openrac_textures[nonuniformEXT(O_MATERIAL.resources.y)]
+#define upscaled_texture_colours openrac_textures[nonuniformEXT(O_MATERIAL.texture_indices.x)]
 )" + macros;
     vs.replace(0, vs.find('\n'), "#version 450 core");
     fs.replace(0, fs.find('\n'), "#version 450 core");
@@ -182,7 +204,8 @@ layout(set=1,binding=0) uniform sampler2D openrac_textures[
     std::erase_if(compiled.blocks, [](const auto& b) { return b.name == "OpenracDrawBase"; });
     p.material_start = (static_cast<unsigned>(std::max(compiled.default_size, 0)) + 15u) & ~15u;
     for (auto u : original.uniforms) {
-        if (u.name == "tex_T0" || u.name == "emission_texture") {
+        // Preserve GL sampler locations while moving their bindings into the material array.
+        if (u.sampler && material_sampler(u.name)) {
             u.binding = -2;
             compiled.uniforms.push_back(std::move(u));
             continue;
@@ -216,21 +239,41 @@ std::array<std::uint64_t, 2> material_texture_key(const Sampled& sample) {
     };
 }
 
-MaterialPage& material_page(const std::array<Sampled, 2>& textures) {
-    auto& f = frame();
-    const auto fits = [&](const MaterialPage& page) {
-        unsigned additional = 0;
-        for (unsigned i = 0; i < 2; ++i) {
-            if (textures[i].image && !page.textures.contains(material_texture_key(textures[i]))
-                && (i == 0 || !textures[0].image
-                    || material_texture_key(textures[0]) != material_texture_key(textures[i]))) {
-                ++additional;
-            }
+namespace {
+
+// Checks page capacity without counting a repeated sampler/image pair more than once.
+bool material_page_fits(const MaterialPage& page, std::span<const Sampled> textures) {
+    unsigned additional = 0;
+
+    // Several material roles can use the same image and sampler.
+    for (std::size_t n = 0; n < textures.size(); ++n) {
+        const auto& sample = textures[n];
+
+        // Missing roles consume no texture descriptor, and existing entries already fit.
+        if (!sample.image || page.textures.contains(material_texture_key(sample))) {
+            continue;
         }
-        return page.draws < kMaterialDraws
-               && page.textures.size() + additional <= g->material_texture_capacity;
-    };
-    if (!f.material_pages_used || !fits(f.material_pages[f.material_pages_used - 1])) {
+
+        const auto key = material_texture_key(sample);
+        // Called immediately on the graphics owner to detect earlier roles with identical sampling.
+        const bool repeated =
+            std::any_of(textures.begin(), textures.begin() + n, [&](const auto& earlier) {
+                return earlier.image && material_texture_key(earlier) == key;
+            });
+        additional += repeated ? 0u : 1u;
+    }
+
+    return page.draws < kMaterialDraws
+           && page.textures.size() + additional <= g->material_texture_capacity;
+}
+
+}  // namespace
+
+// Returns a fence-owned page with room for the draw and its distinct material textures.
+MaterialPage& material_page(std::span<const Sampled> textures) {
+    auto& f = frame();
+    if (!f.material_pages_used
+        || !material_page_fits(f.material_pages[f.material_pages_used - 1], textures)) {
         if (f.material_pages_used == f.material_pages.size()) {
             auto& page = f.material_pages.emplace_back();
             page.data = gpu_buffer(
@@ -302,12 +345,13 @@ struct MaterialBinding {
     unsigned draw = 0;
 };
 
+// Resolves material textures and retains an immutable record for this draw.
 MaterialBinding material_binding(Program& p, const Target& target) {
     if (!p.gpu_materials) {
         return {};
     }
     // Resolve and transition before binding the target. Resource identity includes sampler and mip view.
-    std::array<Sampled, 2> textures{};
+    std::array<Sampled, kMaterialSamplers.size()> textures{};
     for (std::size_t i = 0; i < p.compiled.uniforms.size(); ++i) {
         const auto& u = p.compiled.uniforms[i];
         if (!u.sampler || u.binding != -2) {
@@ -323,14 +367,16 @@ MaterialBinding material_binding(Program& p, const Target& target) {
             barrier(frame().main, *sample.image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         }
         sample.image->touched = g->recording;
-        textures[u.name == "tex_T0" ? 0 : 1] = sample;
+        const auto slot = std::find(kMaterialSamplers.begin(), kMaterialSamplers.end(), u.name);
+        textures[static_cast<std::size_t>(slot - kMaterialSamplers.begin())] = sample;
     }
     auto& page = material_page(textures);
     std::array<std::uint32_t, kMaterialWords> record;
     std::memcpy(record.data(), p.uniforms.data() + p.material_start, kMaterialBytes);
-    for (unsigned i = 0; i < 2; ++i) {
-        // Depth/shadow programs may not use an emission sampler.
-        record[12 + i] = textures[i].image ? material_texture(page, textures[i]) : 0;
+    // Depth/shadow programs can omit emission and upscaled colour sampling.
+    for (std::size_t n = 0; n < textures.size(); ++n) {
+        record[kMaterialTextureWords[n]] =
+            textures[n].image ? material_texture(page, textures[n]) : 0;
     }
     auto [it, added] =
         page.materials.try_emplace(record, static_cast<unsigned>(page.materials.size()));

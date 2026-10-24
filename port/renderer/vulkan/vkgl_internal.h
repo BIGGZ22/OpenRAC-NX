@@ -127,7 +127,8 @@ inline constexpr unsigned kGpuInputBytes = 8u << 20;
 // The native material path's pages: the draws one page holds, and the words and bytes of one
 // material record.
 inline constexpr unsigned kMaterialDraws = 32768;
-inline constexpr unsigned kMaterialWords = 20;
+// Six GLSL vec4 fields, including the upscaled texture index.
+inline constexpr unsigned kMaterialWords = 24;
 inline constexpr unsigned kMaterialBytes = kMaterialWords * sizeof(std::uint32_t);
 
 // A hash of a fixed-size array (FNV-1a over its elements), for the material pages' maps.
@@ -292,6 +293,7 @@ struct Image {
     VkImage image = VK_NULL_HANDLE;
     VmaAllocation allocation = nullptr;
     VkFormat format = VK_FORMAT_UNDEFINED;
+    VkImageUsageFlags usage = 0;  // Validated before lending an image to a native compute writer.
     VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
     int width = 0;
     int height = 0;
@@ -543,6 +545,9 @@ struct Program {
     // What the program is across runs, for the pipeline manifest: a hash of its SPIR-V and of
     // what its layout depends on (pipeline_identity); 0 for a compute program or before a link.
     std::uint64_t identity = 0;
+    // The last complete graphics key and its context-owned pipeline, used by one graphics owner.
+    std::string last_pipeline_key;
+    VkPipeline last_pipeline = VK_NULL_HANDLE;  // Cleared before the program's pipelines retire.
     CompiledProgram compiled;
     bool gpu_materials = false;
     unsigned material_start = 0;
@@ -1251,7 +1256,12 @@ int texel_bytes(VkFormat f);
 // sampled when single-sampled, and drawn into when the format allows. Null when Vulkan fails
 // (logged). The image goes with its last owner.
 ImagePtr make_image(
-    const Format& format, int width, int height, int levels, VkSampleCountFlagBits samples
+    const Format& format,
+    int width,
+    int height,
+    int levels,
+    VkSampleCountFlagBits samples,
+    VkImageUsageFlags extra_usage = 0
 );
 
 // The view of level 0 that draws into the image, made the first time it is asked for.

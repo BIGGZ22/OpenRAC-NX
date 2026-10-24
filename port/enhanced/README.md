@@ -1,6 +1,6 @@
 # Enhanced rendering
 
-Probe GI, modern shadows, GTAO and edge-aware texture upscaling run through
+Probe GI, modern shadows, GTAO, FSR temporal upscaling and edge-aware texture upscaling run through
 Vulkan when enhanced rendering is enabled. With it off, or on OpenGL, the game
 uses original lighting. Embree is needed only for offline baking.
 
@@ -10,6 +10,7 @@ Start with the [lighting guide](lighting/README.md) for builds, bakes and contro
 | --- | --- |
 | `lighting/` | Probe data, sampling, emission and transport |
 | `renderer/` | GTAO, cached texture upscaling and shaders |
+| `fsr3/` | Temporal world reconstruction, motion and reactive masks |
 | `viewer/` | Probe lighting, probe selection and early lighting of a level, library `openrac_enhanced_viewer`, namespace `openrac::lighting`; `scene_lighting.h` registers them with the scene's lighting hook ([scene/README.md](../scene/README.md)) |
 | `game/` | Authored brightness tracking |
 | `tools/probes/` | Offline baker and bake tools |
@@ -31,6 +32,27 @@ Shared integration and core Vulkan optimisations stay in `port/renderer/` and
 `port/scene/`. Editor bake inputs live in `editor/enhanced/`.
 
 Texture upscaling and its 64 MiB cache live in `renderer/texture_upscale.*`.
+Edge-aware mode combines 2x colour reconstruction with conservative directional
+debanding during cache creation.
 The normal texture pool accepts an optional `UpscaledTextureColours` provider; it
 keeps original alpha/mip sampling and notifies the provider when source textures
 are retired. Only the enhanced texture library depends on the Vulkan copy helper.
+
+Enhanced world rendering writes smooth view-space normals during the shared depth prepass.
+Early GI and GTAO read those normals directly; depth supplies receiver positions and horizon
+samples, not reconstructed normals. Mesh colour passes read the early GI/shadow cache and
+retain smooth normals for direct lighting. Skinning, nonuniform scaling and camera-facing
+orientation agree across the passes. Invalid normals use a neutral fallback.
+Smooth normals are oriented to the visible triangle and constrained at grazing angles.
+This prevents a camera-facing sign flip from pointing them beneath the surface and causing
+GTAO self-occlusion. Raster position derivatives determine orientation only; lighting still
+uses the smooth normal, with no extra normal texture or depth-derived normals.
+
+The prepass uses RGBA8 normals (four bytes per render pixel), with matching depth and MSAA
+coverage. It preserves the existing sky/background and reuses depth for world colour.
+Original rendering and OpenGL retain the minimal depth-only path. Probe formats and bake transport
+are unchanged.
+
+Level exports preserve authored normals for terrain, ties, shrubs and mobys. Older exports
+flattened terrain and static meshes, so re-extract those levels to restore smooth shading.
+Changed mesh files require a matching probe bake under the existing source-fingerprint checks.

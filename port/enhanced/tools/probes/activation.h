@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include <cstdint>
 #include <filesystem>
+#include <string>
 
 #include "enhanced/tools/probes/level_scene.h"
 
@@ -22,6 +24,20 @@ struct LevelBakeProfile {
 LevelBakeProfile load_level_bake_profile(
     const std::filesystem::path& directory, const std::filesystem::path& overrides = {}
 );
+
+// One level-load session shares scene validation across sparse and dense assets.
+// Construct a new session when the scene or lighting inputs change.
+class ProbeAssetLoader {
+public:
+    ProbeAssetLoader(const scene::LevelData& level, const ProbeActivation& expected);
+    ProbeVolume load(const std::filesystem::path& path, bool expand_linear_maps = false) const;
+
+private:
+    std::string m_version;
+    int m_level;
+    BakeSettings m_bake;
+    std::uint64_t m_scene_hash;
+};
 
 // Retain GPU-ready file planes; offline diagnostics can request linear maps.
 // Reject wrong game/level, stale scene and bake settings before texture upload.

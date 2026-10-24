@@ -58,7 +58,9 @@ void menu_bar() {
         if (ImGui::MenuItem("Full screen", "F11")) {
             press(SDLK_F11);
         }
-        if (ImGui::MenuItem("Frame counter", "F2", settings::get().show_fps)) {
+        if (ImGui::MenuItem(
+                "Frame counter", "F2", settings::get().show_fps != settings::FrameCounter::Off
+            )) {
             press(SDLK_F2);
         }
         ImGui::Separator();

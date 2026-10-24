@@ -72,6 +72,8 @@ endif()
 # window opens for OPENRAC_GL_API=vulkan.
 if(OPENRAC_VULKAN)
   add_library(openrac_renderer_vulkan STATIC
+    renderer/vulkan/native_compute.cpp
+    renderer/vulkan/native_shader_compiler.cpp
     renderer/vulkan/pipeline_cache_file.cpp
     renderer/vulkan/shader_compiler.cpp
     renderer/vulkan/vkgl.cpp
@@ -100,6 +102,8 @@ if(OPENRAC_VULKAN)
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl_present.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/vkgl_resources.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/shader_compiler.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/native_shader_compiler.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/shader_compiler_internal.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/gpu_draw.inc"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/gpu_materials.inc")
   set(openrac_renderer_vulkan_pipeline_text "")
@@ -150,6 +154,8 @@ add_library(openrac_renderer STATIC
   renderer/texture_pool.cpp
 )
 openrac_embed_shaders(openrac_renderer renderer openrac::renderer
+  "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/shading_normal.glsl"
+  "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/surface_normal.glsl"
   "${CMAKE_CURRENT_SOURCE_DIR}/renderer/shaders/upscaled_texture_colours.glsl"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/gtao.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/renderer/shaders/gtao_common.glsl"
@@ -245,6 +251,7 @@ openrac_warnings(openrac_probe_scene)
 # link without a graphics context) and this.
 add_library(openrac_scene_renderer STATIC
   scene/level_renderer.cpp
+  scene/motion.cpp
 )
 openrac_embed_shaders(openrac_scene_renderer scene openrac::scene
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.vert"
@@ -256,7 +263,7 @@ openrac_embed_shaders(openrac_scene_renderer scene openrac::scene
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/sky.frag"
 )
-target_link_libraries(openrac_scene_renderer PUBLIC openrac_scene openrac_renderer)
+target_link_libraries(openrac_scene_renderer PUBLIC openrac_scene openrac_renderer openrac_renderer_world)
 if(OPENRAC_VULKAN)
   target_link_libraries(openrac_scene_renderer PRIVATE openrac_renderer_vulkan)
   target_compile_definitions(openrac_scene_renderer PRIVATE OPENRAC_VULKAN=1)
@@ -315,6 +322,10 @@ openrac_warnings(openrac_game_rac1_profile)
 # or the program has no test at all without Vulkan, which the helper cannot express.
 add_executable(probe_gpu_test enhanced/tests/probe_gpu_test.cpp)
 add_executable(early_lighting_test enhanced/tests/early_lighting_test.cpp)
+openrac_add_test(surface_normals SOURCES enhanced/tests/surface_normals_test.cpp
+  LIBS openrac_viewer_lib openrac_platform)
+set_tests_properties(surface_normals PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+  "OPENRAC_GL_API=vulkan;OPENRAC_ENHANCED=1")
 target_link_libraries(early_lighting_test PRIVATE openrac_viewer_lib openrac_platform)
 target_include_directories(early_lighting_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 openrac_warnings(early_lighting_test)
@@ -338,6 +349,8 @@ add_executable(hero_shadow_test tests/hero_shadow_test.cpp)
 target_link_libraries(hero_shadow_test PRIVATE openrac_viewer_lib openrac_platform)
 openrac_warnings(hero_shadow_test)
 add_test(NAME hero_shadow_cpu COMMAND hero_shadow_test)
+openrac_add_test(hero_attachments SOURCES tests/hero_attachments_test.cpp
+  game/rac1/host/hero_attachments.c INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}")
 if(OPENRAC_VULKAN AND OPENRAC_ENHANCED_RENDERING)
   add_test(NAME hero_shadow_vulkan COMMAND hero_shadow_test --gpu)
   set_tests_properties(hero_shadow_vulkan PROPERTIES SKIP_RETURN_CODE 77
@@ -409,7 +422,8 @@ openrac_add_test(renderer_gif LIBS openrac_renderer)
 openrac_add_test(renderer_direct LIBS openrac_renderer openrac_platform)
 set_tests_properties(renderer_direct PROPERTIES SKIP_RETURN_CODE 77)
 
-openrac_add_test(texture_filter INCLUDES "${CMAKE_CURRENT_BINARY_DIR}/generated"
+openrac_add_test(texture_filter SOURCES tests/texture_filter_test.cpp tests/texture_filter_reference.cpp
+                 INCLUDES "${CMAKE_CURRENT_BINARY_DIR}/generated"
                  LIBS openrac_viewer_lib openrac_platform)
 set_tests_properties(texture_filter PROPERTIES SKIP_RETURN_CODE 77)
 if(OPENRAC_VULKAN)
@@ -507,6 +521,7 @@ add_executable(gtao_horizon_test enhanced/tests/gtao_horizon_test.cpp)
 target_link_libraries(gtao_horizon_test PRIVATE openrac_renderer openrac_platform)
 target_include_directories(gtao_horizon_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 openrac_embed_shaders(gtao_horizon_test gtao_reference openrac::test::gtao_reference
+  "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/tests/shaders/gtao_normals_reference.glsl"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/tests/shaders/gtao_horizons_reference.frag"
   "${CMAKE_CURRENT_SOURCE_DIR}/enhanced/tests/shaders/gtao_horizons_candidates.comp")
 openrac_warnings(gtao_horizon_test)
@@ -537,3 +552,5 @@ if(OPENRAC_VULKAN)
 endif()
 
 openrac_add_test(bake_liquids SOURCES enhanced/tests/bake_liquids_test.cpp LIBS openrac_probe_scene)
+
+include(Fsr3)

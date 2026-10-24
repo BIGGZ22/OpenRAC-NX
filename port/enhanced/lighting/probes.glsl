@@ -12,6 +12,8 @@ uniform float probe_resolution;
 uniform int probe_tiles_x;
 uniform float probe_gi_multiplier;
 uniform vec3 probe_sunlight_scale;
+// XYZ is a world-space travel direction; W enables the primary-light override.
+uniform vec4 probe_sunlight_direction;
 uniform int probe_terrain_albedo;
 uniform float probe_normal_bias;
 uniform float probe_view_bias;
@@ -26,7 +28,7 @@ uniform vec2 probe_tile_extent;
 uniform usamplerBuffer probe_region_masks;
 
 layout(std140) uniform ProbeRegions {
-    vec4 probe_regions[384];
+    vec4 probe_regions[1536];
 };
 
 uniform int probe_mode;      // 0 original, 1 combined, 2 indirect, 3 direct, 4 coverage
@@ -37,6 +39,8 @@ uniform sampler2D hero_shadow_map;
 uniform mat4 hero_shadow_matrix;
 uniform int hero_shadow_enabled;
 uniform int hero_shadow_airborne;
+// Transition progress fades the platforming cue and delays rig self-shadowing until grounded.
+uniform float hero_shadow_air_blend;
 uniform int hero_shadow_receiver;
 uniform sampler2D sun_shadow_map0;
 uniform sampler2D sun_shadow_map1;
@@ -185,7 +189,7 @@ uint probe_candidate_word(ivec2 pixel, int word) {
     int tiles_x = (int(probe_tile_extent.x) + 15) / 16;
     return texelFetch(
                probe_region_masks,
-               (tile.y * tiles_x + tile.x) * ((probe_region_count + 31) / 32) + word
+               129 + (tile.y * tiles_x + tile.x) * 4 + word
     )
         .r;
 }
@@ -193,29 +197,31 @@ uint probe_candidate_word(ivec2 pixel, int word) {
 ivec2 probe_choose_regions(vec3 p) {
     ivec2 best = ivec2(-1);
     vec2 scores = vec2(0);
-    for (int word = 0; word < (probe_region_count + 31) / 32; ++word) {
+    int count = int(texelFetch(probe_region_masks, 0).r);
+    for (int word = 0; word < (count + 31) / 32; ++word) {
 #ifdef OPENRAC_PROBE_PIXEL
         uint bits = probe_candidate_word(OPENRAC_PROBE_PIXEL, word);
 #else
         uint bits = probe_candidate_word(ivec2(gl_FragCoord.xy), word);
 #endif
         while (bits != 0u) {
-            int id = word * 32 + findLSB(bits);
+            int slot = word * 32 + findLSB(bits);
             bits &= bits - 1u;
-            if (id >= probe_region_count) {
+            if (slot >= count) {
                 continue;
             }
+            int id = int(texelFetch(probe_region_masks, 1 + slot).r);
             vec3 step = probe_regions[id * 3 + 1].xyz;
             vec3 c = (p - probe_regions[id * 3].xyz) / step;
             vec3 edge = min(c, probe_regions[id * 3 + 2].xyz - 1.0 - c);
             float influence = smoothstep(0.0, 1.0, min(edge.x, min(edge.y, edge.z)));
             float score = influence / (step.x * step.y * step.z);
-            if (score > scores.x) {
+            if (score > scores.x || (score > 0.0 && score == scores.x && id < best.x)) {
                 best.y = best.x;
                 scores.y = scores.x;
                 best.x = id;
                 scores.x = score;
-            } else if (score > scores.y) {
+            } else if (score > scores.y || (score > 0.0 && score == scores.y && id < best.y)) {
                 best.y = id;
                 scores.y = score;
             }
@@ -422,7 +428,8 @@ float shadow_pcf_kernel(sampler2D map, vec3 p, float bias, vec2 slope, bool tent
 
 bool hero_shadow_applies(vec3 n) {
     return hero_shadow_enabled != 0
-           && (hero_shadow_airborne == 0 || (hero_shadow_receiver == 0 && n.z >= 0.1));
+           && ((hero_shadow_airborne == 0 && hero_shadow_air_blend <= 0.0)
+               || (hero_shadow_receiver == 0 && n.z >= 0.1));
 }
 
 // Resolve visibility independently of the receiving object. Early lighting
@@ -512,6 +519,10 @@ vec3 probe_direct(vec3 p, vec3 n, vec4 selector, float visibility) {
         vec4 colour = mix(light_sets[a + offset], light_sets[b + offset], blend);
         vec3 direction =
             probe_unit(mix(light_sets[a + offset + 1].xyz, light_sets[b + offset + 1].xyz, blend));
+        // All authored primary sets share the override; secondary fill keeps its direction.
+        if (light == 0 && probe_sunlight_direction.w != 0.0) {
+            direction = probe_sunlight_direction.xyz;
+        }
         float d = dot(-direction, n);
         float response = probe_backlight != 0 ? max(d, -abs(colour.w) * d) : max(d, 0.0);
         // Both the primary sun and secondary directional fill retain 10%.

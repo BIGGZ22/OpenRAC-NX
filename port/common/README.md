@@ -41,7 +41,9 @@ compatibility library for the backtrace below API 33).
 - The crash report's buffers are set up once by `crash::configure()`; `crash::report()` then runs in
   a signal handler without allocating or locking. Each thread that runs game code calls
   `crash::prepare_thread()` once.
-- The statistics are called from the thread that runs the game and draws, and from no other.
+- Statistics have one frame/section owner at a time. The frontend can transfer that ownership to
+  its render worker, then drains it before closing or reading the frame. Game timing fields stay
+  on the game thread; lazy probe registration is locked.
 - `env` reads every variable of its table once, the first time any is asked for, and keeps the
   values for the life of the program: any thread may read them. `env::system_variable` reads a
   variable the port does not own at each call.

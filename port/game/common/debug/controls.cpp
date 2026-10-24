@@ -7,6 +7,7 @@
 #include <imgui.h>
 
 #include "debug/overlay.h"
+#include "enhanced/fsr3/fsr3.h"
 #include "frontend.h"
 #include "options_menu.h"
 #include "settings.h"
@@ -74,6 +75,21 @@ void enhanced_controls() {
     ImGui::BeginDisabled(!available);
     bool changed = ImGui::Checkbox("Enhanced graphics (F4)", &graphics.enhanced_graphics);
     ImGui::BeginDisabled(!graphics.enhanced_graphics);
+    ImGui::BeginDisabled(!enhanced::Fsr3::available());
+    int temporal_quality = static_cast<int>(graphics.temporal_quality);
+
+    // FSR modes appear only in Enhanced and cannot affect the compatibility renderer.
+    if (ImGui::Combo(
+            "FSR temporal upscaling",
+            &temporal_quality,
+            renderer::kTemporalNames,
+            static_cast<int>(renderer::TemporalQuality::Count)
+        )) {
+        graphics.temporal_quality = static_cast<renderer::TemporalQuality>(temporal_quality);
+        changed = true;
+    }
+    changed |= ImGui::SliderFloat("FSR sharpening", &graphics.temporal_sharpness, 0, 1);
+    ImGui::EndDisabled();
     const char* texture_filters[] =
         {settings::name(renderer::TextureFilter::Normal),
          settings::name(renderer::TextureFilter::EdgeAware)};

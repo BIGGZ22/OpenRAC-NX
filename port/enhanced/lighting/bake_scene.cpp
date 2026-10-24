@@ -19,6 +19,11 @@ struct TextureAlpha {
 
 // Reject settings that could create invalid rays or unbounded allocation requests.
 void validate_settings(const BakeSettings& settings, std::size_t triangle_count) {
+    // Overrides must form a finite ray even when supplied directly by native callers.
+    if (settings.sunlight_direction) {
+        unit(*settings.sunlight_direction);
+    }
+
     // Reject invalid per-channel sun correction before preparing transport.
     if (!finite(settings.sunlight_scale)
         || std::any_of(settings.sunlight_scale.begin(), settings.sunlight_scale.end(), [](float v) {
@@ -287,12 +292,16 @@ void Scene::build_geometry(unsigned group) {
     rtcReleaseGeometry(geometry);
 }
 
-Scene::Scene(const BakeScene& source) : input(source) {
+Scene::Scene(const BakeScene& source, const std::optional<Float3>& sunlight_direction)
+    : input(source) {
     collect_triangles();
 
     // Normalise authored sun directions once for all probe grids.
     for (const auto& sun : input.suns) {
-        to_suns.push_back(mul(unit(sun.direction), -1));
+        // Secondary fill retains its authored direction.
+        const auto direction =
+            sun.primary ? sunlight_direction.value_or(sun.direction) : sun.direction;
+        to_suns.push_back(mul(unit(direction), -1));
     }
 
     device = rtcNewDevice(nullptr);

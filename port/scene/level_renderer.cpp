@@ -14,6 +14,7 @@
 #include "renderer/gl.h"
 #include "renderer/render_opt.h"
 #include "renderer/world/gl_world.h"
+#include "renderer_shaders.h"
 #include "scene/hero_shadow.h"
 #include "scene/shadow_atlas.h"
 #include "scene_shaders.h"
@@ -256,6 +257,24 @@ bool LevelScene::upload(
     if (!m_depth.build("mesh depth", shaders::mesh_depth_vert, shaders::mesh_depth_frag, error)
         || !m_depth_solid.build("mesh depth solid", depth_vertex, depth_fragment, error)) {
         return false;
+    }
+    // Compatibility rendering retains the minimal depth-only shaders.
+    if (gl::enhanced_rendering_available()) {
+        const std::string define = "#define OPENRAC_DEPTH_NORMALS 1\n";
+        std::string vertex(shaders::mesh_depth_vert);
+        std::string fragment(shaders::mesh_depth_frag);
+        fragment.insert(fragment.find('\n') + 1, renderer::shaders::shading_normal_glsl);
+        depth_fragment
+            .insert(depth_fragment.find('\n') + 1, renderer::shaders::shading_normal_glsl);
+        vertex.insert(vertex.find('\n') + 1, define);
+        fragment.insert(fragment.find('\n') + 1, define);
+        depth_vertex.insert(depth_vertex.find('\n') + 1, define);
+        depth_fragment.insert(depth_fragment.find('\n') + 1, define);
+        if (!m_surface_depth.build("mesh surface depth", vertex, fragment, error)
+            || !m_surface_depth_solid
+                    .build("mesh solid surface depth", depth_vertex, depth_fragment, error)) {
+            return false;
+        }
     }
     m_models = level.models;
     m_materials = level.materials;
@@ -786,6 +805,14 @@ void LevelScene::set_instances(Layer layer, const std::vector<Instance>& instanc
                 break;
             }
         }
+        // The body remains the projection anchor even when equipment is submitted first.
+        for (const auto& instance : instances) {
+            if (instance.hero_shadow_anchor && instance.hero_shadow_caster) {
+                m_hero_centre =
+                    renderer::Vec3{instance.matrix[12], instance.matrix[13], instance.matrix[14]};
+                break;
+            }
+        }
     }
     // Static instances set again: the static shadow cache's cascades no longer hold them.
     if (layer != Layer::Mobys) {
@@ -1296,13 +1323,16 @@ void LevelScene::prepare_hero_shadow(
     m_hero_ready = false;
     if (!probe_data_available() || !m_hero_enabled || !input.hero_pixel_shadow || !m_hero_centre
         || m_lighting->mode() == 2 || m_lighting->mode() == 4) {
+        m_hero_transition = {};
         return;
     }
     renderer::Vec3 direction{0, 0, -1};
     if (m_light_sets.size() == 256) {
         std::copy_n(m_light_sets.data() + 4, 3, direction.data());
     }
-    const auto projection = hero_shadow_projection(*m_hero_centre, direction, input.hero_airborne);
+    direction = m_lighting->sunlight_direction(direction);
+    const float blend = hero_shadow_blend(input.hero_airborne, input.seconds, m_hero_transition);
+    const auto projection = hero_shadow_projection(*m_hero_centre, direction, blend);
     m_hero_matrix = projection.matrix;
     m_hero_airborne = input.hero_airborne;
     if (!m_hero_logged_airborne || *m_hero_logged_airborne != m_hero_airborne) {
@@ -1392,6 +1422,7 @@ void LevelScene::prepare_sun_shadow(
         }
     }
     try {
+        direction = m_lighting->sunlight_direction(direction);
         m_sun_cascades = sun_cascades(input.camera, direction, low, high);
     } catch (const std::exception&) {
         return;
@@ -1765,6 +1796,11 @@ void LevelScene::release() {
     // The registered static instances go with the level (once the frames reading them retire).
     vkgl::gpu_release_instances();
 #endif
+    m_motion_records.release();
+    m_motion_records_ready = false;
+    m_motion_words.data().clear();
+    m_motion_batches.clear();
+    m_motion_groups.clear();
     for (auto& map : m_sun_maps) {
         release_target(map);
     }
@@ -1790,11 +1826,14 @@ void LevelScene::release() {
     m_shadow_solid_primitives.clear();
     m_hero_enabled = m_hero_ready = false;
     m_hero_logged_airborne.reset();
+    m_hero_transition = {};
     m_hero_centre.reset();
     // Only registered lighting has GL objects to free.
     if (m_lighting) {
         m_lighting->release();
     }
+    m_surface_depth.release();
+    m_surface_depth_solid.release();
     m_early_capable = false;
     if (m_palette != 0) {
         glDeleteTextures(1, &m_palette);
@@ -1945,6 +1984,7 @@ void LevelScene::bind_hero_shadow(const renderer::Shader& shader) const {
     glUniform1i(shader.uniform("hero_shadow_enabled"), m_hero_ready ? 1 : 0);
     bind_shadow_atlas(shader);
     glUniform1i(shader.uniform("hero_shadow_airborne"), m_hero_airborne ? 1 : 0);
+    glUniform1f(shader.uniform("hero_shadow_air_blend"), m_hero_transition.value);
     glUniform1i(shader.uniform("hero_shadow_map"), 6);
     glUniformMatrix4fv(shader.uniform("hero_shadow_matrix"), 1, GL_FALSE, m_hero_matrix.data());
     if (m_hero_ready) {
@@ -2239,6 +2279,7 @@ void LevelScene::draw_layer(
         glUniformMatrix4fv(shader.uniform("view_projection"), 1, GL_FALSE, view_projection.data());
         glUniform1f(shader.uniform("picture_scale"), state.target.picture_scale_x);
         if (state.depth_prepass) {
+            glUniformMatrix4fv(shader.uniform("view"), 1, GL_FALSE, input.camera.view.data());
             glUniform1i(shader.uniform("skinning"), palettes ? 1 : 0);
             glUniform1i(shader.uniform("palette_texture"), static_cast<GLint>(kPaletteUnit));
             glUniform1i(shader.uniform("light_texture"), static_cast<GLint>(kLightUnit));
@@ -2356,13 +2397,33 @@ void LevelScene::draw_layer(
         const auto& specialised = early ? m_early_colour_specialised : m_colour_specialised;
         const bool static_translucent = !state.depth_prepass && !mobys && pass == 2
                                         && m_static_translucent.id() && !specialisation_off;
-        const renderer::Shader& wanted = static_translucent ? m_static_translucent
-                                         : batch_shader && !specialisation_off
-                                         ? specialised[variant]
-                                         : batch_shader ? (early ? m_early_colour_opaque : m_colour_opaque)
-                                         : state.depth_prepass ? (solid ? m_depth_solid : m_depth)
-                                         : early       ? (solid ? m_early_solid : m_early_mesh)
-                                                       : (solid ? m_solid : m_mesh);
+        const renderer::Shader* selected = &m_mesh;
+        // Both depth variants retain identical positions and alpha coverage.
+        if (state.depth_prepass) {
+            // Early lighting and AO request smooth normals alongside depth.
+            if (state.target.normal_texture != 0) {
+                selected = solid ? &m_surface_depth_solid : &m_surface_depth;
+            } else {
+                selected = solid ? &m_depth_solid : &m_depth;
+            }
+        } else if (static_translucent) {
+            // Static blended packets omit moby-only vertex work.
+            selected = &m_static_translucent;
+        } else if (batch_shader && !specialisation_off) {
+            // Opaque variants specialise alpha handling for each geometry kind.
+            selected = &specialised[variant];
+        } else if (batch_shader) {
+            // The reference batch keeps dynamic alpha handling.
+            selected = early ? &m_early_colour_opaque : &m_colour_opaque;
+        } else if (early) {
+            // Opaque colour consumes the cached compute lighting.
+            selected = solid ? &m_early_solid : &m_early_mesh;
+        } else {
+            // Blended surfaces and unsupported early passes retain fragment lighting.
+            selected = solid ? &m_solid : &m_mesh;
+        }
+
+        const renderer::Shader& wanted = *selected;
         const bool depth_matched = mobys ? pass == 0 : pass <= 1;
         if (program != &wanted || program_depth_matched != depth_matched) {
             use(wanted, depth_matched);

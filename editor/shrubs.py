@@ -8,7 +8,7 @@ import struct
 
 from formats import FormatError, span, unpack
 import games
-from mesh import Mesh
+from mesh import Mesh, unit_normal
 from terrain import STCYCL, STMOD, program
 from ties import placement
 
@@ -29,7 +29,7 @@ def shrub_mesh(data: bytes, remap: bytes, name: str) -> Mesh:
         raise FormatError("invalid shrub scale or packet count")
     table = span(data, 64, count * 8)
     normal_table = list(struct.iter_unpack("<4h", span(data, unpack("<I", header, 0x2c)[0], 24 * 8)))
-    mesh, normals = Mesh(name, light_slots=[]), []
+    mesh, normals = Mesh(name, light_slots=[], normals=[]), []
     for packet_id, (offset, size) in enumerate(struct.iter_unpack("<ii", table)):
         p = program(span(data, offset, size), [STCYCL, STMOD, 0x6c, STMOD, 0x6d, STMOD, 0x6d])
         if (p[0].immediate, p[1].immediate, p[3].immediate, p[5].immediate) != (0x404, 0, 0, 0):
@@ -104,6 +104,7 @@ def shrub_mesh(data: bytes, remap: bytes, name: str) -> Mesh:
                 mesh.positions.append((x * scale / 1024, y * scale / 1024, z * scale / 1024))
                 mesh.uvs.append((s / 4096, t / 4096))
                 normals.append(normal_table[n & 0x7fff][:3])
+                mesh.normals.append(unit_normal(normals[-1]))
                 mesh.light_slots.append(n & 0x7fff)  # which of the instance's 24 lit colours
                 vi += 1
                 address += 3

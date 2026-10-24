@@ -12,6 +12,12 @@ uniform mat4 view_projection;
 uniform float picture_scale;
 uniform int skinning;
 uniform sampler2D palette_texture;
+#ifdef OPENRAC_DEPTH_NORMALS
+layout(location = 1) in vec3 normal;
+uniform mat4 view;
+out vec3 v_surface_normal;
+out vec3 v_surface_position;
+#endif
 #ifndef OPENRAC_DEPTH_SOLID
 layout(location = 2) in vec2 uv;
 layout(location = 3) in vec4 colour;
@@ -39,6 +45,9 @@ mat4 joint_matrix(int index) {
 
 void main() {
     vec4 p = vec4(position, 1.0);
+#ifdef OPENRAC_DEPTH_NORMALS
+    vec3 n = normal;
+#endif
     float total = weights.x + weights.y + weights.z + weights.w;
     if (skinning != 0 && palette >= 0.0 && total > 0.0) {
         int base = int(palette + 0.5);
@@ -47,8 +56,16 @@ void main() {
                     + weights.z * joint_matrix(base + int(joints.z))
                     + weights.w * joint_matrix(base + int(joints.w));
         p = vec4((skin * p).xyz, 1.0);
+#ifdef OPENRAC_DEPTH_NORMALS
+        n = mat3(skin) * n;
+#endif
     }
     vec4 world = model * p;
+#ifdef OPENRAC_DEPTH_NORMALS
+    // Match mesh.vert's smooth normal, including skinning and nonuniform model scale.
+    v_surface_normal = mat3(view) * transpose(inverse(mat3(model))) * n;
+    v_surface_position = (view * world).xyz;
+#endif
     gl_Position = view_projection * world;
     bool in_picture = moby_light.w > 1.5 && picture_scale < 1.0;
     gl_ClipDistance[0] = in_picture ? picture_scale * gl_Position.w - gl_Position.x : 1.0;

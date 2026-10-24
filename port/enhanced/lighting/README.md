@@ -117,6 +117,23 @@ CLI/runtime overrides still win; `--print-profile` shows resolved bake settings.
 Baking never edits the profile. Keep completed-bake profiles as input records,
 and rebake sparse and dense together after scene or setting changes.
 
+`sunlight_direction` optionally overrides primary sunlight with a world-space light travel
+vector, for example `[0, 1, -1]` for downward light travelling toward +Y. Z is height.
+The vector is normalised; zero and nonfinite vectors are rejected. Omit it or use `null` to
+retain authored directions. Runtime direct lighting, cascade shadows, Ratchet's grounded
+shadow and baked sun bounces share the override. Secondary fill and airborne downward shadows
+retain their directions. Changing it requires rebaking the level.
+
+The saved [Novalis NTSC profile](profiles/rac1-ntsc/level_01/probe-bake.json)
+sets sky intensity to 0.5, sky weight to 0.3 and the primary sunlight direction.
+Native level export automatically copies the matching profile from
+`profiles/<game>-<version>/level_NN/probe-bake.json` into the exported level.
+Launcher bundles carry these profiles too. The baker and runtime read
+the exported copy; neither needs the source checkout when using that level.
+Levels without a matching profile use built-in defaults. Re-export to adopt
+tracked profile changes, then rebake.
+Profiles contain lighting settings only; extracted meshes and baked assets stay local.
+
 | Setting | Default |
 | --- | --- |
 | Sparse / dense spacing | 256 / 4 units |
@@ -124,6 +141,7 @@ and rebake sparse and dense together after scene or setting changes.
 | Rays / bounces | 1,024 / 3 |
 | Sky intensity / sky colour weight | 1 / 0.7 |
 | Sunlight RGB scale | `[1, 1, 1]` |
+| Sunlight direction | Authored light sets |
 | Terrain vertex albedo | `true` |
 | Distance exponent / inside fraction | 32 / 0.75 |
 | Relocation | 4 attempts within 45% of minimum spacing |
@@ -142,7 +160,7 @@ Optional `probe-regions.json` controls dense placement:
   "padding": 8,
   "vertical_padding": 4,
   "max_probes": 4096,
-  "max_regions": 128,
+  "max_regions": 512,
   "no_moby_seeds": false,
   "no_geometry_coverage": false,
   "geometry_max_rise": 32,
@@ -153,10 +171,35 @@ Optional `probe-regions.json` controls dense placement:
 Only `version` is required. `enabled: false` makes a sparse-only level; space
 levels can use wider sparse spacing. Dense seeds include authored lighting
 volumes, gameplay markers, crates, bolts, pistons and enemies. Planning covers
-piston travel, jump clearance and nearby walls/ceilings, then splits large
-regions with overlap. `seed-plan.json` records skipped seeds and limits;
-enemy patrol routes are excluded. `seed_regions.py` can inspect or replace
-regions for an existing sparse bake, saving the previous list.
+piston travel and jump clearance. High airborne markers use separate ground and
+actor bands instead of filling the empty air between them; known piston travel
+remains continuous. Height-preserving merges run before and after classification:
+a taller top cannot spread over a lower neighbouring footprint.
+
+Collision queries classify indoor cells using
+walkable floor support, overhead coverage across most of the cell and walls in
+at least five of eight horizontal directions within 32 units. Enclosed cells
+extend to their first ceiling, with at least one probe cell of surface support;
+connected cells can fill gaps beyond the initial markers. Growth checks the
+connection for walls and stays within the seed's floor-height band. Outdoor or
+unresolved seeds keep their original height. Roof-only overhangs do not qualify.
+
+Regions crossing indoor/outdoor boundaries are partitioned before bounded
+merging and overlapping budget splits. Existing spacing and height/probe limits, plus the
+512-region and 128 MiB runtime limits, remain in force; the planner does not
+silently increase them. A 4,096-sample cap per seed bounds enclosure work.
+`geometry_max_rise` still limits added height; ceilings beyond that cap are
+reported as incomplete coverage. Missing collision ceilings remain unresolved.
+The resulting bake uses the same lighting inputs and transport as before;
+classification does not create lights from authored light-bank IDs.
+
+`seed-plan.json` includes indoor and unresolved/outdoor sample counts,
+connected cells added, height caps and sampling-cap diagnostics. Dense regions
+are split with overlap. `seed-plan.json` records skipped seeds and limits;
+enemy patrol routes are excluded. The all-level bake cache includes planner
+scripts and per-level region/bake settings, so planner changes invalidate cached
+layouts even when the native baker executable has not changed.
+`seed_regions.py` can inspect or replace regions for an existing sparse bake, saving the previous list.
 
 ## Formats and compatibility
 
@@ -205,15 +248,29 @@ receiver biases and distance moments to limit leaks; thin walls can still leak.
 
 ## Dense regions
 
-A sparse grid covers the level. Vulkan keeps up to 128 dense regions within
-128 MiB, choosing at most two per fragment through depth and 16x16 screen tiles.
-Visibility is checked per volume before boundary blending. If selection or
-atlas capacity is insufficient, the CPU selects two camera-visible regions and
-fades changes. Secondary cameras use resident regions, not another camera's tiles.
+A sparse grid covers the level. Vulkan retains up to 512 dense regions within
+128 MiB of atlases. A GPU pass frustum-culls and ranks regions by squared camera
+distance to their bounds, breaking ties by region ID. The nearest 128 visible
+regions share a lookup; each 16x16 screen tile stores a 128-bit candidate mask.
+Fragments sample at most two dense volumes, checking visibility before blending
+at boundaries. Regions outside the lookup use sparse lighting.
 
-`<sparse.orpg>.regions.json` loads automatically. `OPENRAC_PROBE_REGIONS` chooses
+Secondary cameras build their own lookup. Transparent receivers use that lookup
+without opaque-depth tile rejection. When GPU selection or atlas capacity is
+insufficient, the CPU chooses two camera-visible regions and fades changes.
+
+`<sparse.orpg>.regions.json` loads automatically. `OPENRAC_PROBE_REGIONS` selects
 another list (`0` disables it); paths are relative to the list.
 `OPENRAC_PROBE_DENSE` adds one explicit region.
+
+The geometry-aware planner preserves padding and only merges boxes whose
+rectangular union introduces no extra spatial volume. This retains smaller local
+coverage instead of filling empty corners between overlapping seed boxes. More
+regions can duplicate support probes and incur atlas row padding; the planner's
+resident-byte report includes that cost. Capacity changes require a new bake.
+
+Level loading hashes the source scene once for the sparse/dense asset set. Each
+asset still validates its version, level, bake settings and scene fingerprint.
 
 ## Controls
 

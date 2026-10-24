@@ -502,6 +502,13 @@ bool make_device(std::string& error) {
     features.drawIndirectFirstInstance = g->features.drawIndirectFirstInstance;
     features.multiDrawIndirect = g->features.multiDrawIndirect;
     features.multiViewport = g->features.multiViewport;
+#if OPENRAC_ENHANCED_RENDERING
+    // Native enhanced compute providers need these optional storage-image operations.
+    features.shaderStorageImageExtendedFormats = g->features.shaderStorageImageExtendedFormats;
+    features.shaderStorageImageWriteWithoutFormat =
+        g->features.shaderStorageImageWriteWithoutFormat;
+    features.shaderStorageImageReadWithoutFormat = g->features.shaderStorageImageReadWithoutFormat;
+#endif
     g->features = features;
     VkPhysicalDeviceVulkan13Features f13{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
     f13.dynamicRendering = VK_TRUE;

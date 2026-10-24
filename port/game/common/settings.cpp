@@ -257,6 +257,10 @@ void load(const std::filesystem::path& file) {
             known = parse_float(value, 0.05f, 8.0f, s.gtao_settings.radius);
         } else if (key == "gtao_strength") {
             known = parse_float(value, 0.0f, 3.0f, s.gtao_settings.strength);
+        } else if (key == "temporal_quality") {
+            known = parse(value, renderer::kTemporalKeys, s.temporal_quality);
+        } else if (key == "temporal_sharpness") {
+            known = parse_float(value, 0.0f, 1.0f, s.temporal_sharpness);
         } else if (key == "texture_filter") {
             known = parse(value, kTextureFilter, s.texture_filter);
         } else if (key == "anisotropy") {
@@ -272,7 +276,15 @@ void load(const std::filesystem::path& file) {
             known = parse_frame_rate(value, s);
             has_frame_rate = has_frame_rate || known;
         } else if (key == "show_fps") {
-            known = parse_bool(value, s.show_fps);
+            bool enabled = false;
+            // Existing files also accept boolean words for the original counter.
+            if (value == "2") {
+                s.show_fps = FrameCounter::Timings;
+            } else if (parse_bool(value, enabled)) {
+                s.show_fps = enabled ? FrameCounter::Basic : FrameCounter::Off;
+            } else {
+                known = false;
+            }
         } else if (key == "menu_bar") {
             known = parse_bool(value, s.menu_bar);
         } else if (key == "mute_unfocused") {
@@ -388,10 +400,13 @@ void save() {
         << "gtao_radius = " << s.gtao_settings.radius << "\n"
         << "gtao_strength = " << s.gtao_settings.strength << "\n"
         << "texture_filter = " << kTextureFilter[static_cast<int>(s.texture_filter)] << "\n"
+        << "temporal_quality = " << renderer::kTemporalKeys[static_cast<int>(s.temporal_quality)]
+        << "\n"
+        << "temporal_sharpness = " << s.temporal_sharpness << "\n"
         << "anisotropy = " << (s.anisotropy ? std::to_string(s.anisotropy) : "auto") << "\n"
         << "vsync = " << kVSync[static_cast<int>(s.vsync)] << "\n"
         << "frame_rate = " << frame_rate_value(s) << "\n"
-        << "show_fps = " << (s.show_fps ? 1 : 0) << "\n"
+        << "show_fps = " << static_cast<int>(s.show_fps) << "\n"
         << "menu_bar = " << (s.menu_bar ? 1 : 0) << "\n"
         << "mute_unfocused = " << (s.mute_unfocused ? 1 : 0) << "\n"
         << "skip_cutscenes = " << (s.skip_cutscenes ? 1 : 0) << "\n"
@@ -468,6 +483,17 @@ int step_listed(std::span<const int> list, int now, int by) {
     }
     const auto at = std::lower_bound(list.begin(), list.end(), now);
     return at != list.begin() ? *(at - 1) : list.front();
+}
+
+void step_frame_counter(int by) {
+    constexpr int kModes = static_cast<int>(FrameCounter::Count);
+    const int next = (static_cast<int>(g_settings.show_fps) + by % kModes + kModes) % kModes;
+    g_settings.show_fps = static_cast<FrameCounter>(next);
+}
+
+const char* name(FrameCounter mode) {
+    constexpr const char* kNames[] = {"Off", "On", "CPU / GPU"};
+    return kNames[std::clamp(static_cast<int>(mode), 0, static_cast<int>(FrameCounter::Count) - 1)];
 }
 
 const char* name(DisplayMode mode) {

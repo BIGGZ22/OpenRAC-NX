@@ -113,7 +113,8 @@ void check_scene(bool wall, int samples, renderer::GtaoQuality quality) {
             CHECK(direct.read_rgba() == ao);
             direct.release();
         }
-        CHECK(renderer.last_stats().draw_calls == 2);
+        // Legacy colour now shares a depth/normal prepass before its colour and AO composite draws.
+        CHECK(renderer.last_stats().draw_calls == 3);
         int darkened = 0;
         for (std::size_t i = 0; i < plain.size(); i += 4) {
             CHECK(
@@ -193,6 +194,50 @@ void check_scene(bool wall, int samples, renderer::GtaoQuality quality) {
     frame.release();
     scene.release();
     renderer.release();
+}
+
+// Checks that a floor's smooth normal leaning away from the eye cannot flip below its surface.
+void test_grazing_smooth_normals(float sign, int samples) {
+    auto level = corner(false);
+
+    // The floor stays flat, but its authored normal leans beyond the camera's grazing angle.
+    for (auto& vertex : level.vertices) {
+        vertex.normal[0] = -0.4f * sign;
+        vertex.normal[1] = 0.6f * sign;
+        vertex.normal[2] = 0.69f * sign;
+    }
+
+    renderer::Renderer renderer;
+    renderer.set_ambient_occlusion(std::make_unique<renderer::Gtao>());
+    scene::LevelScene scene;
+    lighting::use_scene_lighting(scene);
+    std::string error;
+    CHECK(scene.upload(level, renderer.textures(), error));
+    CHECK(test::shadow_probe_fixture(scene, error));
+    CHECK(
+        renderer.add(std::make_unique<scene::LayerRenderer>(scene, scene::Layer::Terrain), error)
+    );
+    CHECK(renderer.init(error));
+    renderer::FrameBuffer frame;
+    CHECK(frame.create(128, 96, error, samples));
+    renderer::FrameInput input;
+    input.camera.view = renderer::look_along({4, -6, 4}, {-4, 6, -3.5f}, {0, 0, 1});
+    input.camera.projection = renderer::perspective_reversed(1.0f, 128.0f / 96.0f, 0.1f, 100);
+    renderer.render(input, {frame.id(), 128, 96});
+    const auto plain = frame.read_rgba();
+    input.gtao = true;
+    renderer.render(input, {frame.id(), 128, 96});
+    const auto ao = frame.read_rgba();
+
+    // A solitary floor cannot occlude most of its visible smooth hemisphere.
+    for (std::size_t pixel = 0; pixel < plain.size(); pixel += 4) {
+        CHECK(ao[pixel] * 2 >= plain[pixel]);
+    }
+
+    CHECK(gl::glGetError() == gl::GL_NO_ERROR);
+    renderer.release();
+    scene.release();
+    frame.release();
 }
 
 void indirect_lighting(int samples, bool glow = false, bool cutout = false, bool shadows = false) {
@@ -591,6 +636,12 @@ int main() {
         std::printf("SKIP: %s\n", error.c_str());
         return openrac::test::kSkip;
     }
+    // Normal orientation must agree for reversed authored signs and resolved MSAA coverage.
+    for (const int samples : {1, 4}) {
+        test_grazing_smooth_normals(1, samples);
+        test_grazing_smooth_normals(-1, samples);
+    }
+
     for (auto quality : {renderer::GtaoQuality::Performance, renderer::GtaoQuality::Quality}) {
         check_scene(false, 1, quality);
         check_scene(true, 1, quality);

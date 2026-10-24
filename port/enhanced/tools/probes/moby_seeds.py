@@ -148,12 +148,22 @@ def candidates(placements, allowed, ground, gameplay=b'', game_version='', level
                   'kind': entry.get('kind', 'gameplay'),
                   'position': position, 'ground_z': floor, 'piston_travel_z': travel,
                   'bounds': bounds}
+        bands = [bounds]
+        # High airborne markers need support at their position and near the
+        # ground, not a dense column spanning the empty air between them.
+        # Moving pistons keep their full known travel range.
+        if floor is not None and travel is None and position[2]-floor > max(8, vertical_spacing*2):
+            bands = [marker_bounds([position[0], position[1], floor], floor, None, entry, vertical_spacing),
+                     marker_bounds(position, None, None, entry, vertical_spacing)]
+        source['coverage_bounds'] = bands
+        source['split_airborne_column'] = len(bands) > 1
         seeds.append(source)
-        boxes.append({'bounds': bounds, 'source_mobys': [moby['index']], 'source_transitions': []})
+        for band in bands:
+            boxes.append({'bounds': band, 'source_mobys': [moby['index']], 'source_transitions': []})
     return boxes, seeds, skipped
 
 
-def combine(authored, mobys, coarse, spacing, budget):
+def combine(authored, mobys, coarse, spacing, budget, *, preserve_height=False):
     """Greedy compact overlap merging; no one-volume-per-crate explosion.
 
     Every original box remains covered. Merge growth is bounded to limit empty
@@ -176,7 +186,7 @@ def combine(authored, mobys, coarse, spacing, budget):
             skipped.append({**box, 'reason': 'outside sparse grid or no usable extent'})
             continue
         regions.append({**box, 'bounds': bounds})
-    regions = merge_regions(regions, spacing, budget)
+    regions = merge_regions(regions, spacing, budget, preserve_height=preserve_height)
     out = []
     for r in regions:
         for bounds in split_bounds(r['bounds'], spacing, budget):
@@ -186,7 +196,7 @@ def combine(authored, mobys, coarse, spacing, budget):
     return out, skipped
 
 
-def merge_regions(regions, spacing, budget):
+def merge_regions(regions, spacing, budget, *, preserve_height=False):
     """Keep unchanged pair scores instead of rescanning every pair per merge."""
     from seed_regions import probe_count
 
@@ -199,10 +209,22 @@ def merge_regions(regions, spacing, budget):
 
     def candidate(i, j):
         a, b = active[i]['bounds'], active[j]['bounds']
+        if preserve_height and a[5] != b[5]:
+            # A union must not spread the taller top over the lower footprint.
+            # Equal ceilings are safe; otherwise the taller footprint must
+            # already contain the lower one (including the identical-XY case).
+            high, low = (a, b) if a[5] > b[5] else (b, a)
+            if any(high[k] > low[k] or high[k+3] < low[k+3] for k in (0, 1)):
+                return None
         if any(a[k] > b[k+3] or b[k] > a[k+3] for k in range(3)):
             return None
         bounds = [min(a[k], b[k]) for k in range(3)]
         bounds += [max(a[k+3], b[k+3]) for k in range(3)]
+        if preserve_height:
+            volume = lambda box: math.prod(box[k+3]-box[k] for k in range(3))
+            overlap = math.prod(max(0, min(a[k+3], b[k+3])-max(a[k], b[k])) for k in range(3))
+            if volume(bounds) > volume(a)+volume(b)-overlap:
+                return None
         count = probe_count(bounds, spacing)
         score = count / (counts[i] + counts[j])
         if count > budget or score > 1.15:

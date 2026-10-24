@@ -21,11 +21,16 @@ P2-06), which keeps no GL call of these overlays.
 
 - `renderer` (the GL functions, `renderer/shader.h`), below it on the same layer.
 - `platform` (`platform/touch_pad.h`, the pad the overlay draws), a lower layer.
-- `common` (the log).
+- `common` (the log and asynchronous frame statistics).
 - Dear ImGui (`openrac_imgui`), privately: `imgui_gl.h` names only `ImDrawData`, by a forward
   declaration.
 
 ## State and threads
+
+The host passes the selected `fps_counter::Mode` after each presentation. Basic mode shows FPS
+and elapsed frame time. Detailed mode shows elapsed CPU time outside the swap call and completed
+GPU pass timings; the two values overlap and are not added together. The counter does not read
+game settings or wait for GPU results.
 
 - Each overlay keeps its GL objects (programs, buffers, textures) in state of its own file, made at
   the first draw (`imgui_gl::init` for ImGui) and freed by its `release` or `shutdown`.

@@ -10,8 +10,9 @@ namespace openrac::renderer {
 struct FrameInput;
 struct RenderTarget;
 
-// Optional, spatial-only ground-truth ambient occlusion. Depth is copied before
-// particles and UI; the horizon estimate is filtered at full size. Modern
+// Optional, spatial-only ground-truth ambient occlusion. The target supplies smooth normals
+// from the world prepass; depth is used for positions and horizons, never to derive normals.
+// The horizon estimate is filtered at full size. Modern
 // lighting consumes visibility_texture() after render(..., false); the default
 // colour composite is retained only for legacy prelit paths. evaluate_only
 // exposes the raw horizon/guide texture for fused early-lighting denoising.

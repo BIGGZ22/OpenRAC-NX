@@ -138,6 +138,17 @@ class AllLevelBake(unittest.TestCase):
         report = json.loads((self.output/'bake-all-result.json').read_text())
         self.assertEqual([level['verified'] for level in report['levels']], [True, True, False, True])
 
+    def test_cache_stamp_tracks_planner_and_level_settings(self):
+        level = self.levels/'level_02'
+        initial = batch.level_stamp(level, 'native', [])
+        with patch.object(batch, 'planner_hash', return_value='changed planner'):
+            self.assertNotEqual(initial, batch.level_stamp(level, 'native', []))
+        (level/'probe-regions.json').write_text('{"version": 1, "geometry_max_rise": 24}')
+        regions = batch.level_stamp(level, 'native', [])
+        self.assertNotEqual(initial, regions)
+        (level/'probe-bake.json').write_text('{"version": 1, "dense_spacing": [4, 4, 2]}')
+        self.assertNotEqual(regions, batch.level_stamp(level, 'native', []))
+
     def test_jobs_share_the_threads_unless_told(self):
         self.assertEqual(batch.with_threads(['--rays', '8'], 1), ['--rays', '8'])
         self.assertEqual(batch.with_threads(['--threads', '2'], 4), ['--threads', '2'])

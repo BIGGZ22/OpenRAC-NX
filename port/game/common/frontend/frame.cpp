@@ -19,6 +19,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <format>
 #include <limits>
 #include <optional>
@@ -480,7 +481,7 @@ bool read_window_events() {
 
 // Uses the world the game draws now: the level loaded (`level`, -1 the boot program), or one of
 // the boot program's worlds.
-void use_world(std::span<const std::uint8_t> ram, int level) {
+int world_to_draw(std::span<const std::uint8_t> ram, int level) {
     // The boot program's worlds: the flight between planets (game mode 6), else the title world.
     // A flight between planets also plays inside a planet's program. The game draws it by the ship's
     // state (dispatch_game_state_update): the planet in the take-off (0), the landing (8) and while
@@ -496,11 +497,16 @@ void use_world(std::span<const std::uint8_t> ram, int level) {
             world = -2;
         }
     }
-    use_level(world);
+    return world;
+}
+
+// Uses the requested world after graphics ownership returns.
+void use_world(std::span<const std::uint8_t> ram, int level) {
+    use_level(world_to_draw(ram, level));
 }
 
 // Puts the camera the game's world renderers drew with this tick into `state`, if they ran.
-void take_world_camera(host::GameState& state) {
+void copy_world_camera(host::GameState& state) {
     if (g->world_camera) {
         state.camera_position = g->world_camera->camera_position;
         state.forward = g->world_camera->forward;
@@ -513,8 +519,13 @@ void take_world_camera(host::GameState& state) {
         state.fog_far = g->world_camera->fog_far;
         state.fog_near_f = g->world_camera->fog_near_f;
         state.fog_far_f = g->world_camera->fog_far_f;
-        g->world_camera.reset();
     }
+}
+
+// Consumes the camera only when committing the captured tick.
+void take_world_camera(host::GameState& state) {
+    copy_world_camera(state);
+    g->world_camera.reset();
 }
 
 // Logs the camera this tick is drawn from (OPENRAC_CAM_LOG). `world_ran`: the game's world
@@ -844,16 +855,6 @@ void log_mobys_near_hero(std::span<const std::uint8_t> ram, const host::GameStat
 // The live mobys of one tick, as pose_mobys reads them for keep_tick: each one drawn and its
 // address and joints, the joint palette they index, the hero's shadow, and the mobys the game
 // drew into a texture.
-struct TickMobys {
-    std::vector<scene::Instance> live;
-    std::vector<std::uint32_t> addresses;
-    std::vector<int> joints;
-    std::vector<scene::LevelScene::JointColumns> palette;
-    std::vector<renderer::ShadowCapsule> shadows;
-    std::uint32_t shadow_moby = 0;
-    scene::MobyShadowState shadow_state;
-    std::vector<Kept::TargetMoby> target_mobys;
-};
 
 // Reads the live mobys this tick: which are drawn, how (blend, light, colour, the camera they
 // were drawn with) and in what pose, and the hero's shadow. Mobys the game drew but did not list
@@ -919,6 +920,21 @@ TickMobys pose_mobys(
             }
         }
     }
+    // A game supplies ownership once per frame; weapons and backpacks share the hero's map.
+    // A bounded rig list accommodates equipment without per-frame allocation.
+    constexpr unsigned kHeroCasterCapacity = 32;
+    std::array<gaddr, kHeroCasterCapacity> hero_casters{};
+    unsigned hero_caster_count = 0;
+    // Shadow availability is immutable between level changes, including while a render job runs.
+    if (g->scene.hero_shadow_enabled() && g->loaded >= 0 && openrac_game_front_end
+        && g->loaded < openrac_game_front_end->levels
+        && openrac_game_front_end->hero_shadow_casters) {
+        hero_caster_count = std::min(
+            openrac_game_front_end->hero_shadow_casters(hero_casters.data(), kHeroCasterCapacity),
+            kHeroCasterCapacity
+        );
+    }
+
     for (std::size_t index = 0; index < state.mobys.size(); ++index) {
         const host::LiveMoby& m = state.mobys[index];
         const bool extra = index >= listed;
@@ -1110,7 +1126,14 @@ TickMobys pose_mobys(
             target_mobys.back().camera.focal_y = frame_focal[1];
             continue;
         }
-        instance.hero_shadow_caster = m.class_id == 0 && !extra && g->loaded >= 0 && g->loaded < 19
+        const bool owned_by_hero =
+            std::find(hero_casters.begin(), hero_casters.begin() + hero_caster_count, m.address)
+            != hero_casters.begin() + hero_caster_count;
+        // Keep the body fallback for games without an attachment callback or during state transitions.
+        instance.hero_shadow_anchor =
+            hero_caster_count ? m.address == hero_casters[0] : m.class_id == 0 && !extra;
+        instance.hero_shadow_caster = (owned_by_hero || instance.hero_shadow_anchor)
+                                      && g->loaded >= 0 && g->loaded < 19
                                       && instance.moby_light[3] < 1.5f && instance.tint[3] > 0;
         live_joints.push_back(instance.palette >= 0 ? joints : 0);
         if (g->profile->shadow_directions() != 0 && g->loaded >= 0 && g->loaded < 19 && animate
@@ -1141,7 +1164,6 @@ TickMobys pose_mobys(
         live.push_back(instance);
         live_addresses.push_back(m.address);
     }
-    g->moby_cameras.clear();
     return {
         std::move(live),
         std::move(live_addresses),
@@ -1187,7 +1209,7 @@ void keep_tick(
 ) {
     // What this tick drew, kept for the frames drawn until the next one (between): the scene
     // then moves from the last tick's camera and mobys to this one's.
-    Kept& k = g->kept;
+    Kept& k = *g->kept;
     if (k.level != g->loaded) {
         k.has_state = false;
         k.live.clear();
@@ -1239,7 +1261,7 @@ void keep_tick(
 const std::vector<renderer::UiQuad>* keep_2d_path(
     std::span<const std::uint8_t> ram, std::uint32_t chain, int level, bool debug
 ) {
-    Kept& k = g->kept;
+    Kept& k = *g->kept;
     // OPENRAC_DUMP_DRAWS=N or N-M: the frames whose 2D draws are logged.
     static const std::optional<FrameRange> dump_at = env_frames(env::Var::DumpDraws);
     if (dump_at) {
@@ -1325,7 +1347,7 @@ const std::vector<renderer::UiQuad>* keep_2d_path(
 
 // Decides whether the last frame stands for this tick's (a page menu's gap, a list not finished).
 void choose_repeat_frame(bool debug) {
-    Kept& k = g->kept;
+    Kept& k = *g->kept;
     const bool menu_gap = (k.draws & 0x1Fu) == 0 && k.before_world >= 0x40000;
     g->menu_gap_ticks = menu_gap ? g->menu_gap_ticks + 1 : 0;
     // A tick that draws its world with no 2D list at all (the first tick of the vendor's fly-in,
@@ -1365,7 +1387,7 @@ void keep_effects(
     const host::GameState& state,
     const std::vector<renderer::UiQuad>* named_quads
 ) {
-    Kept& k = g->kept;
+    Kept& k = *g->kept;
     sky_sprite_quads(state);
     particle_quads(ram, state);
     k.effects = std::move(g->effects);
@@ -1390,7 +1412,7 @@ void keep_effects(
 
 // Reports what this tick drew: in the log (OPENRAC_FRAME_LOG) and to the debug overlay.
 void report_tick(std::span<const std::uint8_t> ram, int level) {
-    Kept& k = g->kept;
+    Kept& k = *g->kept;
     // OPENRAC_FRAME_LOG=FROM-TO: what each tick in that range drew, in the log.
     static const std::optional<FrameRange> frame_log = env_frames(env::Var::FrameLog);
     if (frame_log && frame_log->holds(k.frame)) {
@@ -1451,7 +1473,7 @@ bool leave_late_frame() {
         ticks = 0;
         left_out = 0;
     }
-    if (pacing.late > pacing.period && g->skipped < kMostSkipped && g->kept.has_camera
+    if (pacing.late > pacing.period && g->skipped < kMostSkipped && g->kept->has_camera
         && g->index > 1) {
         ++g->skipped;
         ++left_out;
@@ -1459,6 +1481,36 @@ bool leave_late_frame() {
     }
     g->skipped = 0;
     return false;
+}
+
+// Applies owned uploads after the previous render job releases graphics ownership.
+bool begin_capture(State& owner) {
+    // A completed handoff releases every render job's scene owner before capture can mutate it.
+    if (owner.kept.use_count() != 1) {
+        log::error("cannot capture scene while a render job still owns it");
+        return false;
+    }
+    // Deferred uploads belong to this frame, after the previous snapshot has finished.
+    if (owner.renderer) {
+        for (const auto& image : owner.pending_images) {
+            owner.renderer->textures().upload(image);
+        }
+    }
+    owner.pending_images.clear();
+    return read_window_events();
+}
+
+// Uses prepared CPU values only while their level remains loaded.
+host::GameState captured_state(
+    std::span<const std::uint8_t> ram, int level, std::optional<PreparedTick>& prepared
+) {
+    // A level transition invalidates the interpretation of the previously prepared instances.
+    if (prepared && prepared->level != g->loaded) {
+        prepared.reset();
+    }
+
+    // Synchronous frames and transitions still capture after acquiring graphics ownership.
+    return prepared ? std::move(prepared->state) : g->profile->read_state(ram, level);
 }
 
 // Draws the tick's own frame, or leaves it to between when the frame cap holds it back.
@@ -1474,21 +1526,83 @@ void draw_tick_frame() {
     draw_kept(true);
 }
 
+// Keeps effects and schedules the committed tick unless pacing leaves it out.
+bool finish_tick(
+    std::span<const std::uint8_t> ram,
+    const host::GameState& state,
+    const std::vector<renderer::UiQuad>* named_quads,
+    int level,
+    bool debug
+) {
+    choose_repeat_frame(debug);
+    keep_effects(ram, state, named_quads);
+    report_tick(ram, level);
+
+    // A late simulation tick may deliberately leave its displayed frame out.
+    if (leave_late_frame()) {
+        return true;
+    }
+
+    draw_tick_frame();
+    return !g->render_failed;
+}
+
 }  // namespace
 
+bool prepare_frame(std::span<const std::uint8_t> ram) try {
+    // Synchronous frames have no previous job to overlap, and never allocate a preparation slot.
+    if (!g || !render_pending()) {
+        return true;
+    }
+
+    const int level = openrac_game_loaded_overlay();
+
+    // Loading and flight transitions need exclusive graphics ownership before changing level resources.
+    if (level < 0 || world_to_draw(ram, level) != g->loaded) {
+        return true;
+    }
+
+    const auto started = std::chrono::steady_clock::now();
+    PreparedTick prepared;
+    prepared.level = g->loaded;
+    prepared.state = g->profile->read_state(ram, level);
+    const bool world_ran = g->world_camera.has_value();
+    const bool only_own_camera = !world_ran && !g->moby_cameras.empty();
+    copy_world_camera(prepared.state);
+    const bool debug = stats::probe("OPENRAC_DEBUG", "the game's state each 100 ticks, in the log");
+    prepared.mobys = pose_mobys(ram, prepared.state, world_ran, only_own_camera, debug);
+    prepared.seconds =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+    g->prepared_tick = std::move(prepared);
+    return true;
+} catch (const std::exception& failure) {
+    g->render_failed = true;
+    log::error("cannot prepare next frame: {}", failure.what());
+    return false;
+} catch (...) {
+    g->render_failed = true;
+    log::error("cannot prepare next frame: unknown exception");
+    return false;
+}
+
 bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t draws) {
+    // Resource changes require exclusive graphics ownership.
+    if (!finish_render()) {
+        return false;
+    }
     if (!g) {
         return true;
     }
     // The window was closed.
-    if (!read_window_events()) {
+    if (!begin_capture(*g)) {
         return false;
     }
 
     // The level program loaded now (-1: the boot program, title and menus), as the port knows it.
     const int level = openrac_game_loaded_overlay();
     use_world(ram, level);
-    host::GameState state = g->profile->read_state(ram, level);
+    auto prepared = std::exchange(g->prepared_tick, std::nullopt);
+    host::GameState state = captured_state(ram, level, prepared);
     // The world is drawn from the camera the game's world renderers used, not from whatever the
     // camera globals hold at the end of the frame (the page menu sets its own camera, at
     // (256, 256, 64) facing +x, to draw its frame objects, as ReRAC notes).
@@ -1514,19 +1628,14 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         log_tick_state(ram, state, level, draws);
     }
     log_mobys_near_hero(ram, state);
-    TickMobys mobys = pose_mobys(ram, state, world_ran, only_own_camera, debug);
+    TickMobys mobys = prepared ? std::move(prepared->mobys)
+                               : pose_mobys(ram, state, world_ran, only_own_camera, debug);
+    g->moby_cameras.clear();
+    stats::gauge("render preparation ms", prepared ? prepared->seconds * 1000.0 : 0.0);
     light_scene(ram, state);
     keep_tick(ram, state, draws, std::move(mobys));
     const std::vector<renderer::UiQuad>* named_quads = keep_2d_path(ram, chain, level, debug);
-    choose_repeat_frame(debug);
-    keep_effects(ram, state, named_quads);
-    report_tick(ram, level);
-    // The tick came late: its frame is left out.
-    if (leave_late_frame()) {
-        return true;
-    }
-    draw_tick_frame();
-    return true;
+    return finish_tick(ram, state, named_quads, level, debug);
 }
 
 }  // namespace openrac::frontend

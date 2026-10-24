@@ -112,6 +112,8 @@ inline constexpr std::uint32_t kUiSprite = 2;
 
 inline constexpr std::uint32_t kUiGlyph = 1;
 
+struct RenderTarget;
+
 struct FrameInput {
     TextureFilter texture_filter = TextureFilter::Normal;
     bool sun_pixel_shadow = false;
@@ -157,6 +159,10 @@ struct FrameInput {
     // Called with the target as drawn before the HUD's renderer (the world, without the 2D over
     // it): what a copy of the frame the game reads back should hold.
     std::function<void()> before_hud;
+    // Captures opaque world colour before particles change it, for temporal reactive masks.
+    std::function<void(const RenderTarget&)> on_before_particles;
+    // Resolves the world before the HUD, replacing its target with a display-resolution target.
+    std::function<void(RenderTarget&)> on_resolve_world;
     // Resolved world depth, before world colour: GPU probe selection.
     std::function<void(unsigned, int, int)> after_world_depth;
     std::uint64_t frame = 0;
@@ -187,6 +193,8 @@ struct RenderTarget {
     // Optional single-sample depth texture attached to this framebuffer.
     // Borrowed for read-only compute/offscreen passes; zero keeps copy/resolve paths.
     unsigned depth_texture = 0;
+    // Borrowed resolved view-space smooth normals from the depth/normal prepass, or zero.
+    unsigned normal_texture = 0;
 };
 
 // The framebuffer to read `target` from (glReadPixels, glCopyTexSubImage2D, a scaled blit): the
@@ -320,7 +328,13 @@ public:
 
 private:
     std::unique_ptr<AmbientOcclusion> m_ambient_occlusion;  // Null until one is registered.
+    // Starts normal-writing depth with matching samples; allocation failure logs and returns false.
+    [[nodiscard]] bool begin_surface_prepass(RenderState& state);
+    // Resolves normals and copies depth back, preserving the existing background colour.
+    void finish_surface_prepass(const RenderTarget& target);
     FrameBuffer m_selection_depth;
+    // Owns smooth normals and matching depth; allocated only for enhanced lighting or AO.
+    FrameBuffer m_surface_prepass;
     TexturePool m_textures;
     std::vector<std::unique_ptr<BucketRenderer>> m_renderers;
     FrameStats m_stats;

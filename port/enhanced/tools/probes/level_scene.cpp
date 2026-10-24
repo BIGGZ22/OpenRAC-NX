@@ -578,6 +578,12 @@ std::uint64_t probe_bake_settings_hash(const ProbeGrid& grid, const BakeSettings
     hash.f32(settings.sky_intensity);
     hash.f32(settings.sky_weight);
     hash.floats(settings.sunlight_scale);
+    // Preserve existing bake identities when no direction override is requested.
+    if (settings.sunlight_direction) {
+        hash.u32(0x53554E44u);  // SUND marks the optional light travel direction.
+        hash.floats(*settings.sunlight_direction);
+    }
+
     hash.u32(settings.terrain_vertex_albedo ? 1u : 0u);
     hash.floats(grid.origin);
     hash.floats(grid.spacing);

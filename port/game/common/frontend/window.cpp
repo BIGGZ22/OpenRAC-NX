@@ -122,7 +122,7 @@ bool window_key(const SDL_Event& event) {
         return false;
     }
     if (event.key.key == SDLK_F2) {  // the frame counter, as the Video options' row
-        settings::get().show_fps = !settings::get().show_fps;
+        settings::step_frame_counter(1);
         settings::save();
         return true;
     }

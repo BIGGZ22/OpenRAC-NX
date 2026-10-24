@@ -247,6 +247,9 @@ int main() {
     sky_settings = settings;
     sky_settings.sunlight_scale = {.4f, .7f, 1.2f};
     CHECK(probe_bake_settings_hash(grid, sky_settings) != hash);
+    sky_settings = settings;
+    sky_settings.sunlight_direction = Float3{0, 1, -1};
+    CHECK(probe_bake_settings_hash(grid, sky_settings) != hash);
     auto placement_settings = settings;
     placement_settings.min_inside_fraction = 0.875f;
     CHECK(probe_bake_settings_hash(grid, placement_settings) != hash);
@@ -296,12 +299,20 @@ int main() {
     CHECK(load_level_bake_profile(root).activation.bake.terrain_vertex_albedo);
     profile_source(R"({"version":1,"relocation_max_fraction":0.45})");
     CHECK(load_level_bake_profile(root).activation.bake.relocation_max_fraction == 0.45f);
+    profile_source(R"({"version":1,"sunlight_direction":[0,3,-4]})");
+    const auto direction_profile = load_level_bake_profile(root);
+    CHECK(direction_profile.activation.bake.sunlight_direction.has_value());
+    CHECK(std::abs((*direction_profile.activation.bake.sunlight_direction)[1] - .6f) < 1e-6f);
+    CHECK(std::abs((*direction_profile.activation.bake.sunlight_direction)[2] + .8f) < 1e-6f);
+    profile_source(R"({"version":1,"sunlight_direction":null})");
+    CHECK(!load_level_bake_profile(root).activation.bake.sunlight_direction);
     profile_source(R"({"version":1,"terrain_vertex_albedo":false})");
     CHECK(!load_level_bake_profile(root).activation.bake.terrain_vertex_albedo);
     profile_source(R"({"version":1,"sky_intensity":0.75,"sky_weight":0.3,"rays":32,"bounces":2,
         "environment":[0.1,0.2,0.3],"sparse_spacing":[64,64,64],
-        "dense_spacing":[4,4,2],"resolution":6,"light_set":2,"sunlight_scale":[0.4,0.7,1.2]})"
-    );
+        "dense_spacing":[4,4,2],"resolution":6,"light_set":2,"sunlight_scale":[0.4,0.7,1.2],
+        "sunlight_direction":[0,3,-4]})");
+
     auto profile = load_level_bake_profile(root);
     CHECK(profile.activation.bake.sky_intensity == 0.75f);
     CHECK(profile.activation.bake.sky_weight == 0.3f);
@@ -313,6 +324,10 @@ int main() {
     CHECK(std::fegetround() == FE_TOWARDZERO);
     std::fesetround(profile_rounding);
     CHECK(game_profile.activation.bake.sunlight_scale == profile.activation.bake.sunlight_scale);
+    CHECK(
+        game_profile.activation.bake.sunlight_direction
+        == profile.activation.bake.sunlight_direction
+    );
     CHECK(profile.activation.bake.rays_per_probe == 32);
     CHECK(profile.activation.bake.bounces == 2);
     CHECK(profile.activation.light_set == 2);
@@ -323,10 +338,11 @@ int main() {
     std::filesystem::create_directory(mod);
     {
         std::ofstream output(mod / "probe-bake.json");
-        output << R"({"version":1,"sky_intensity":2})";
+        output << R"({"version":1,"sky_intensity":2,"sunlight_direction":null})";
     }
     profile = load_level_bake_profile(root, mod);
     CHECK(profile.activation.bake.sky_intensity == 2);
+    CHECK(!profile.activation.bake.sunlight_direction);
     CHECK(profile.activation.bake.rays_per_probe == 32);
     std::filesystem::remove(mod / "probe-bake.json");
     std::filesystem::remove(mod);
@@ -339,6 +355,10 @@ int main() {
           R"({"version":1,"sunlight_scale":[-0.1,1,1]})",
           R"({"version":1,"sunlight_scale":[1,5,1]})",
           R"({"version":1,"sunlight_scale":0.5})",
+          R"({"version":1,"sunlight_direction":[0,0,0]})",
+          R"({"version":1,"sunlight_direction":[0,1]})",
+          R"({"version":1,"sunlight_direction":[0,"bad",1]})",
+          R"({"version":1,"sunlight_direction":[0,1e30,1]})",
           R"({"version":1,"terrain_vertex_albedo":1})",
           R"({"version":1,"rays":16.5})",
           R"({"version":1,"rays":8})",
@@ -395,6 +415,29 @@ int main() {
         CHECK(denied);
     };
     CHECK(load_level_probes(asset, level, expected).grid.scene_hash == volume.grid.scene_hash);
+    {
+        const ProbeAssetLoader session(level, expected);
+        CHECK(session.load(asset).grid.scene_hash == volume.grid.scene_hash);
+        auto stale = volume;
+        stale.grid.scene_hash ^= 1;
+        const auto stale_bytes = encode_probes(stale);
+        {
+            std::ofstream output(asset, std::ios::binary);
+            output.write(reinterpret_cast<const char*>(stale_bytes.data()), stale_bytes.size());
+        }
+        bool denied = false;
+        try {
+            session.load(asset);
+        } catch (const std::runtime_error&) {
+            denied = true;
+        }
+        CHECK(denied);
+        {
+            std::ofstream output(asset, std::ios::binary);
+            output.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+        }
+        CHECK(session.load(asset).grid.scene_hash == volume.grid.scene_hash);
+    }
     level.emission_profile_revision = 1;
     refuses(expected);
     level.emission_profile_revision = 0;

@@ -29,15 +29,6 @@ vec3 position_at(ivec2 pixel, float depth) {
            * distance;
 }
 
-vec3 delta_at(ivec2 pixel, ivec2 offset, vec3 centre) {
-    ivec2 p = pixel + offset;
-    if (any(lessThan(p, ivec2(0))) || any(greaterThanEqual(p, textureSize(early_depth, 0)))) {
-        return vec3(0, 0, 1e20);
-    }
-    float d = texelFetch(early_depth, p, 0).r;
-    return d > 0.0 ? position_at(p, d) - centre : vec3(0, 0, 1e20);
-}
-
 // Denoise the horizon estimate at the lighting receiver, rather than
 // expanding AO into a separate full-resolution visibility texture.
 float ambient_visibility(ivec2 pixel, vec3 centre, vec3 normal) {
@@ -113,24 +104,7 @@ void main() {
         return;
     }
     vec3 centre = position_at(early_pixel, depth);
-    vec3 l = delta_at(early_pixel, ivec2(-1, 0), centre),
-         r = delta_at(early_pixel, ivec2(1, 0), centre);
-    vec3 d = delta_at(early_pixel, ivec2(0, -1), centre),
-         u = delta_at(early_pixel, ivec2(0, 1), centre);
-    vec3 nv = probe_unit(cross(abs(l.z) < abs(r.z) ? -l : r, abs(d.z) < abs(u.z) ? -d : u));
-    float footprint = -centre.z * 2.0 / (abs(early_projection[1][1]) * float(extent.y));
-    bool isolated_x = (l.z * r.z > 0.0 || max(abs(l.z), abs(r.z)) > 1e19)
-                      && min(abs(l.z), abs(r.z)) > footprint * 2.0;
-    bool isolated_y = (d.z * u.z > 0.0 || max(abs(d.z), abs(u.z)) > 1e19)
-                      && min(abs(d.z), abs(u.z)) > footprint * 2.0;
-    // A one-pixel ridge has no same-surface neighbour along one axis. Estimate
-    // its normal toward the eye here; it still uses this same compute path.
-    if (dot(nv, nv) < 0.5 || isolated_x || isolated_y) {
-        nv = vec3(0, 0, 1);
-    }
-    if (dot(nv, -centre) < 0.0) {
-        nv = -nv;
-    }
+    vec3 nv = smooth_normal_at(early_pixel, -centre);
     // Finish view-space AO before probe sampling to shorten receiver lifetimes.
     float ao = ambient_visibility(early_pixel, centre, nv);
     mat3 inverse_view = transpose(mat3(early_view));

@@ -65,9 +65,17 @@ struct Difference {
     }
 };
 
+// Pins historical receiver normals so this test continues to isolate horizon arithmetic.
 std::string expanded(const char* text) {
     std::string s(text);
     s.insert(s.find('\n') + 1, renderer::shaders::gtao_common_glsl);
+    const auto body = s.find("uniform float radius;");
+    s.insert(body, test::gtao_reference::shaders::gtao_normals_reference_glsl);
+    constexpr std::string_view kSmooth = "smooth_normal_at(pixel, -centre)";
+    // Production's normal texture is tested separately through the scene's real prepass.
+    if (const auto at = s.find(kSmooth); at != std::string::npos) {
+        s.replace(at, kSmooth.size(), "normal_at(pixel, centre)");
+    }
     return s;
 }
 

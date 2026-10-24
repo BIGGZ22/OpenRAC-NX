@@ -19,6 +19,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 #include <volk.h>
@@ -147,6 +148,13 @@ VkPrimitiveTopology topology_of(GLenum mode) {
         default:
             return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     }
+}
+
+// Keeps the complete graphics key after either cache or pre-warm lookup.
+VkPipeline remember_pipeline(Program& program, std::string_view key, VkPipeline pipeline) {
+    program.last_pipeline_key.assign(key);
+    program.last_pipeline = pipeline;
+    return pipeline;
 }
 
 // ---- Descriptors ----
@@ -1146,6 +1154,13 @@ VkPipeline pipeline_for(
     k.inputs = count;
     k.viewports = static_cast<std::uint32_t>(std::max<std::size_t>(1, g->indexed_viewports.size()));
     std::memcpy(k.input, inputs, sizeof(Input) * count);
+    // Repeated draws bypass hashing only when every baked graphics field matches
+    // (vk-last-pipeline); off, every draw looks its key up in the table.
+    const std::string_view bytes(reinterpret_cast<const char*>(&k), sizeof k);
+    if (p.last_pipeline != VK_NULL_HANDLE && bytes == p.last_pipeline_key
+        && renderer::render_opt::enabled(renderer::render_opt::Opt::VkLastPipeline)) {
+        return p.last_pipeline;
+    }
     const std::uint64_t hash = hash_key(k);
 
     // A key made before: by its hash and a compare of the whole key (vk-draw-cache), or by its
@@ -1153,18 +1168,18 @@ VkPipeline pipeline_for(
     if (renderer::render_opt::enabled(renderer::render_opt::Opt::VkDrawCache)) {
         // Found by its hash.
         if (const VkPipeline* made = g->pipelines.find(k, hash)) {
-            return *made;
+            return remember_pipeline(p, bytes, *made);
         }
     } else if (const VkPipeline* made = g->pipelines.find_reference(
                    std::string(reinterpret_cast<const char*>(&k), sizeof k)
                )) {
         // Found by its bytes.
-        return *made;
+        return remember_pipeline(p, bytes, *made);
     }
 
     // Made ahead by the pre-warm worker, or being made: taken from it rather than made again.
     if (const std::optional<VkPipeline> warmed = prewarm_take(k, hash)) {
-        return *warmed;
+        return remember_pipeline(p, bytes, *warmed);
     }
 
     const VkPipeline pipeline = create_graphics_pipeline(k, p.vertex, p.fragment, p.layout);
@@ -1172,7 +1187,7 @@ VkPipeline pipeline_for(
     count_pipeline();
     record_manifest_key(p, k);
     g->pipelines.insert(k, hash, pipeline);
-    return pipeline;
+    return remember_pipeline(p, bytes, pipeline);
 }
 
 // ---- Descriptors ----

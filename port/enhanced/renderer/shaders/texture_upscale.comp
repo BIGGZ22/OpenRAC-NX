@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Vulkan-only texture preprocessing kernel.
 // An elliptical Lanczos-2 kernel follows the local luminance edge. The local
-// colour bounds prevent ringing; alpha is never consumed by the world sampler.
+// colour bounds prevent ringing. Conservative directional debanding reduces small
+// colour steps in the cached RGB; the world sampler retains original alpha.
 uniform sampler2D tex_T0;
 uniform int wrap_mode; // bit 0/1: repeat S/T, otherwise clamp
 ivec2 source_at(ivec2 p) {
@@ -53,11 +54,36 @@ vec3 edge_colour(ivec2 destination) {
   return clamp(total > 0.0001 ? sum/total : linear_rgb, lo, hi);
 }
 
+// Compare RGB, not only luminance, so colour boundaries also reject debanding.
+float colour_distance(vec3 a, vec3 b) { return max(max(abs(a.r-b.r),abs(a.g-b.g)),abs(a.b-b.b)); }
+vec3 deband_colour(ivec2 destination, vec3 colour) {
+  ivec2 centre = ivec2(floor((vec2(destination)+0.5)*0.5));
+  vec3 source = source_rgb(centre);
+  const ivec2 directions[4] = ivec2[4](ivec2(1,0),ivec2(0,1),ivec2(1,1),ivec2(1,-1));
+  vec3 sum = vec3(0.0);
+  float total = 0.0;
+  for (int i=0;i<4;++i) {
+    for (int radius=2;radius<=4;radius+=2) {
+      vec3 a = source_rgb(centre-directions[i]*radius);
+      vec3 b = source_rgb(centre+directions[i]*radius);
+      float difference = max(colour_distance(source,a),colour_distance(source,b));
+      float range = colour_distance(a,b);
+      // Constant regions stay constant; large colour changes reject the pair.
+      float weight = (1.0-smoothstep(4.0/255.0,10.0/255.0,difference))*
+                     smoothstep(0.5/255.0,2.0/255.0,range);
+      sum += ((a+b)*0.5-source)*weight;
+      total += weight;
+    }
+  }
+  if (total>0.0) colour += (sum/total)*0.5;
+  return clamp(colour,0.0,1.0);
+}
+
 layout(local_size_x = 8, local_size_y = 8) in;
 layout(std430, binding = 0) writeonly buffer Output { uint pixels[]; };
 void main() {
   ivec2 p = ivec2(gl_GlobalInvocationID.xy);
   ivec2 size = textureSize(tex_T0, 0) * 2;
   if (any(greaterThanEqual(p, size))) return;
-  pixels[p.y * size.x + p.x] = packUnorm4x8(vec4(edge_colour(p), 1.0));
+  pixels[p.y * size.x + p.x] = packUnorm4x8(vec4(deband_colour(p, edge_colour(p)), 1.0));
 }

@@ -99,9 +99,13 @@ class LevelBake(unittest.TestCase):
         sparse = self.bake()
         plan = json.loads((self.output/'seed-plan.json').read_text())
         self.assertTrue(plan['regions'])
+        capacity = sum(((r['probe_count']+63)//64)*64 for r in plan['regions'])
+        self.assertEqual(plan['dense_resident_bytes'], capacity*(12*8*8+8))
+        self.assertFalse(plan['dense_residency_budget_exceeded'])
         self.assertEqual(plan['authored_count'], 1)
         self.assertEqual(plan['moby_seeds'][0]['class'], 500)
-        self.assertTrue(any(item['changed'] for item in plan['geometry_coverage']))
+        # A lone overhead triangle is not evidence of an enclosed room.
+        self.assertFalse(any(item['changed'] for item in plan['geometry_coverage']))
         self.assertEqual(plan['emission']['emission_masks'], 'none 15 green 5')
         result = json.loads((self.output/'bake-result.json').read_text())
         self.assertTrue(result['verified'])
@@ -174,8 +178,13 @@ class LevelBake(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unsupported'):
             seeds.read_gameplay(self.level, manifest)
 
+    def test_full_runtime_region_capacity(self):
+        self.assertEqual(batch.RegionSettings.load(self.level).max_regions, 512)
+        (self.level/'probe-regions.json').write_text(json.dumps({'version': 1, 'max_regions': 512}))
+        self.assertEqual(batch.RegionSettings.load(self.level).max_regions, 512)
+
     def test_invalid_level_planning_settings(self):
-        for fields in ({'max_regions': 129}, {'max_probes': 32}, {'enabled': 1},
+        for fields in ({'max_regions': 513}, {'max_probes': 32}, {'enabled': 1},
                        {'geometry_max_rise': 0}, {'padding': float('nan')}, {'typo': 1}):
             (self.level/'probe-regions.json').write_text(json.dumps({'version': 1, **fields}))
             with self.assertRaises(ValueError):

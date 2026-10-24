@@ -114,43 +114,31 @@ vec3 probe_surface(vec4 texel, vec3 original) {
     if (dot(n, n) < 0.5) {
         return original;
     }
-    // These surfaces render double-sided. Orient the shading normal toward
-    // the eye, independently of winding (some terrain normals point inward).
+    // Match the prepass's two-sided smooth normal, including its grazing-angle constraint.
     vec3 eye_position = (view * vec4(v_world_position, 1.0)).xyz;
-    if (dot(mat3(view) * n, -eye_position) < 0.0) {
-        n = -n;
-    }
-    vec3 plane_normal = probe_unit(dot(geometric, geometric) > 1e-12 ? geometric : n);
-    vec3 gi_normal = plane_normal;
-    if (dot(mat3(view) * gi_normal, -eye_position) < 0.0) {
-        gi_normal = -gi_normal;
-    }
+    vec3 eye_normal = orient_shading_normal(mat3(view) * n, mat3(view) * geometric, -eye_position);
+    n = transpose(mat3(view)) * eye_normal;
 #ifdef OPENRAC_EARLY_LIGHTING
     bool cached_coverage;
     vec4 cached_lighting;
     float hero_visibility;
     early_surface(
-        eye_position, mat3(view) * gi_normal, cached_lighting, cached_coverage, hero_visibility
+        eye_position, mat3(view) * n, cached_lighting, cached_coverage, hero_visibility
     );
     if (!hero_shadow_applies(n)) {
         hero_visibility = 1.0;
     }
     float sun_visibility = cached_lighting.a;
 #else
-    float sun_visibility = sun_shadow_visibility(v_world_position, n, plane_normal);
+    float sun_visibility = sun_shadow_visibility(v_world_position, n, n);
     float hero_visibility = hero_shadow_visibility(v_world_position, n);
 #endif
-    float visibility = sun_visibility;
-    if (hero_shadow_airborne == 0) {
-        visibility = min(visibility, hero_visibility);
-    }
-    // Gameplay cue: keep Ratchet's footprint readable inside a world shadow.
-    // Only receivers other than Ratchet get the extra diffuse darkening.
+    // Either projection casts a normal shadow in sunlight, including beyond cascade coverage.
+    float visibility = min(sun_visibility, hero_visibility);
+    // Only the airborne footprint adds a platforming cue inside existing cascade shade.
     float hero_cue = 1.0;
     if (hero_shadow_receiver == 0) {
-        hero_cue = hero_shadow_airborne != 0
-                       ? mix(0.75, 1.0, hero_visibility)
-                       : 1.0 - 0.15 * (1.0 - sun_visibility) * (1.0 - hero_visibility);
+        hero_cue = 1.0 - 0.45 * hero_shadow_air_blend * (1.0 - sun_visibility) * (1.0 - hero_visibility);
     }
     // Without a probe asset, retain the original authored lighting and apply
     // the same shadow floor. This also covers holes in probe coverage.
@@ -165,15 +153,14 @@ vec3 probe_surface(vec4 texel, vec3 original) {
         return fallback;
     }
     vec3 indirect;
-    // Probe visibility must use the actual surface plane, rather than an
-    // authored shading normal that can tilt across thin floors or walls.
+    // Use the same smooth receiver normal as the depth/normal prepass and early lighting.
     vec3 toward_camera = transpose(mat3(view)) * (-eye_position);
-    vec3 surface_bias = probe_surface_bias(gi_normal, toward_camera);
+    vec3 surface_bias = probe_surface_bias(n, toward_camera);
 #ifdef OPENRAC_EARLY_LIGHTING
     indirect = cached_lighting.rgb;
     bool covered = cached_coverage;
 #else
-    bool covered = sample_probe_irradiance(v_world_position, gi_normal, surface_bias, indirect);
+    bool covered = sample_probe_irradiance(v_world_position, n, surface_bias, indirect);
 #endif
     if (probe_mode == 4) {
         return covered ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 1.0);

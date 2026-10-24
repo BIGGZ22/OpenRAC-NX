@@ -41,9 +41,9 @@ coverage views omit modern shadows. Without usable probes, visibility affects
 authored prelighting, whose direct and ambient components cannot be separated.
 
 [Ratchet's map](RAC1_HERO_SHADOW.md) is enabled alongside cascades. When ready,
-it removes him from world casters and combines grounded visibility using `min`.
-The airborne cue darkens diffuse light by at most 25%; the grounded overlap cue
-adds up to 15%, including GI, while excluding Ratchet himself. Unreadable hero
+it removes him and attached equipment from world casters. Both projections combine
+visibility using `min`, including outside cascade coverage. Only the airborne overlap cue
+adds up to 45% diffuse darkening inside cascade shade, including GI, while excluding the hero rig. Unreadable hero
 state falls back to world casting. Stencil shadows are suppressed whenever
 either modern route is active, including diagnostic views.
 

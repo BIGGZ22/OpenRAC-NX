@@ -260,6 +260,15 @@ void test_the_moved_variables_keep_their_readings() {
     CHECK(reads_as(Var::VulkanLibrary, Kind::Path, Truth::NotAFlag));
 }
 
+// Keeps Vulkan rendering threaded by default while retaining an explicit synchronous reference.
+void test_render_worker_is_on_unless_disabled() {
+    const env::Variable& row = env::variable(Var::RenderThread);
+    CHECK(row.kind == Kind::Flag);
+    CHECK(row.truth == Truth::UnlessZero);
+    CHECK(row.when_unset == "on (Vulkan)");
+    check_truth(row.truth, {{std::nullopt, true}, {"", true}, {"1", true}, {"0", false}});
+}
+
 // Returns whether `name` is OPENRAC_ and then upper-case words joined by underscores.
 bool is_variable_name(std::string_view name) {
     constexpr std::string_view kPrefix = "OPENRAC_";
@@ -392,6 +401,7 @@ bool run_tests() {
         test_a_hex_integer_reads_as_strtoul_did();
         test_a_number_reads_as_strtod();
         test_the_moved_variables_keep_their_readings();
+        test_render_worker_is_on_unless_disabled();
         test_the_table_is_in_order_and_complete();
         test_debugging_md_documents_the_table();
         return true;

@@ -399,6 +399,12 @@ int main(int argc, char** argv) {
 #else
     ran = run_game_as_the_ee();
 #endif
+#ifdef OPENRAC_FRONTEND
+    // A returning game must join rendering before process-static graphics state is destroyed.
+    if (g_window) {
+        frontend::close();
+    }
+#endif
     if (!ran) {
         log::error(
             "{}'s main is not known yet: port/game/{}/hostgen.json has no \"entry\"",

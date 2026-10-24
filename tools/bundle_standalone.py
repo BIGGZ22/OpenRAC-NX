@@ -13,6 +13,7 @@ OUT (launcher/src-tauri/resources/openrac for an installer) gets:
   tools/, editor/            the set-up and the level tools, as they are here
                              (tools/openrac_common with them: they import it)
   port/enhanced/tools/probes the probe baker's Python half (bake_all.py)
+  port/enhanced/lighting/profiles  per-level settings included by native level export
   games/*/game.json          the catalogue the launcher lists
   progress/summary.json      how far each decompilation is
   launcher/actions.json      the player's actions only, writing to the
@@ -75,6 +76,8 @@ GAMES = ("openrac-rac1-pal", "openrac-rac1-ntsc")
 TOOLS = ("openrac-probe-bake",)
 # Its Python half (bake_all.py and what it imports), without the tests.
 PROBE_TOOLS = "port/enhanced/tools/probes"
+# Authored settings travel with the exporter, rather than depending on a source checkout.
+PROBE_PROFILES = "port/enhanced/lighting/profiles"
 
 
 def levels_folder(key: str) -> str:
@@ -237,6 +240,8 @@ def main() -> int:
     # (libopenrac-probe-bake.so, tools/build_android.py).
     files.copy_tree(ROOT / PROBE_TOOLS, out / PROBE_TOOLS,
                     lambda rel: not rel.name.startswith("test_") and rel.suffix in (".py", ".json"))
+    files.copy_tree(ROOT / PROBE_PROFILES, out / PROBE_PROFILES,
+                    lambda rel: rel.name == "probe-bake.json")
     for manifest in sorted((ROOT / "games").glob("*/game.json")):
         dest = out / manifest.relative_to(ROOT)
         dest.parent.mkdir(parents=True, exist_ok=True)

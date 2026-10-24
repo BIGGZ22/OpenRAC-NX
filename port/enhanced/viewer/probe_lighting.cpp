@@ -19,6 +19,7 @@
 #include "enhanced/viewer/early_lighting.h"
 #include "enhanced_viewer_shaders.h"
 #include "renderer/gl.h"
+#include "renderer_shaders.h"
 
 namespace openrac::lighting {
 using namespace openrac::gl;
@@ -62,6 +63,7 @@ std::string probe_shader_source(std::string source) {
         return source;
     }
     source.insert(source.find('\n') + 1, shaders::probes_glsl);
+    source.insert(source.find('\n') + 1, renderer::shaders::shading_normal_glsl);
     static const bool& gather_off = stats::probe(
         "OPENRAC_SHADOW_GATHER_OFF", "Reference: 16 individual shadow texel fetches (reload level)"
     );
@@ -392,11 +394,12 @@ void ProbeLighting::load(const scene::LevelData& level) {
                 throw std::runtime_error("invalid OPENRAC_PROBE_SKY_INTENSITY");
             }
         }
-        const auto volume = lighting::load_level_probes(path, level, expected);
+        const lighting::ProbeAssetLoader loader(level, expected);
+        const auto volume = loader.load(path);
         std::vector<lighting::ProbeVolume> regions;
         const auto add_region = [&](const std::filesystem::path& file) {
             try {
-                auto region = lighting::load_level_probes(file, level, expected);
+                auto region = loader.load(file);
                 lighting::validate_probe_pair(volume, region);
                 regions.push_back(std::move(region));
             } catch (const std::exception& why) {
@@ -445,6 +448,18 @@ void ProbeLighting::load(const scene::LevelData& level) {
             m_regions.size()
         );
         m_sunlight_scale = expected.bake.sunlight_scale;
+        m_sunlight_direction = expected.bake.sunlight_direction;
+        // Report overrides after verification so a stale bake cannot claim the new direction.
+        if (m_sunlight_direction) {
+            const auto& direction = *m_sunlight_direction;
+            log::info(
+                "enhanced sunlight travel direction: {} {} {}",
+                direction[0],
+                direction[1],
+                direction[2]
+            );
+        }
+
         m_terrain_vertex_albedo = expected.bake.terrain_vertex_albedo;
         log::info(
             "enhanced sunlight RGB scale: {} {} {}",
@@ -526,6 +541,14 @@ void ProbeLighting::bind(
         m_sunlight_scale[2]
     );
     glUniform1f(shader.uniform("probe_normal_bias"), normal_bias);
+    const auto direction = m_sunlight_direction.value_or(lighting::Float3{});
+    glUniform4f(
+        shader.uniform("probe_sunlight_direction"),
+        direction[0],
+        direction[1],
+        direction[2],
+        m_sunlight_direction.has_value() ? 1.0f : 0.0f
+    );
     glUniform1f(shader.uniform("probe_view_bias"), view_bias);
     glUniform1i(shader.uniform("probe_effect"), 0);
     glUniform1i(shader.uniform("probe_backlight"), backlight ? 1 : 0);
@@ -733,6 +756,7 @@ void ProbeLighting::draw_spheres(const renderer::FrameInput& input, renderer::Re
 
 void ProbeLighting::release() {
     m_sunlight_scale = {1, 1, 1};
+    m_sunlight_direction.reset();
     m_terrain_vertex_albedo = false;
     m_selection.release();
     m_full_residency = false;

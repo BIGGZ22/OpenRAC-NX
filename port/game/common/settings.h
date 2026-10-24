@@ -14,9 +14,14 @@
 #include <string>
 
 #include "renderer/gtao_settings.h"
+#include "renderer/temporal_settings.h"
 #include "renderer/texture_filter.h"
+#include "renderer/ui/fps_counter.h"
 
 namespace openrac::settings {
+
+// The F2 cycle: hidden, the existing frame counter, or separate CPU/GPU measurements.
+using FrameCounter = renderer::ui::fps_counter::Mode;
 
 // The window. Borderless covers the desktop at the desktop's mode; Fullscreen takes the display
 // for itself, at `Settings::fullscreen_width` x `fullscreen_height` (0 x 0: the desktop's mode).
@@ -90,6 +95,9 @@ struct Settings {
     float probe_normal_bias = 0.5f;  // receiver offsets in world units
     float probe_view_bias = 0.5f;
     bool gtao = true;  // ground-truth ambient occlusion when enhanced rendering is enabled
+    renderer::TemporalQuality temporal_quality =
+        renderer::TemporalQuality::Quality;  // Enhanced Vulkan only.
+    float temporal_sharpness = 0.2f;         // AMD RCAS strength in [0, 1].
     renderer::TextureFilter texture_filter = renderer::TextureFilter::EdgeAware;
     int anisotropy = 0;  // 0: mode default; otherwise 1 (off), 2, 4, 8, 16
 
@@ -99,7 +107,7 @@ struct Settings {
     VSync vsync = VSync::On;
     FrameRate frame_rate = FrameRate::Display;
     int frame_cap = 60;  // FrameRate::Capped's frames a second
-    bool show_fps = false;  // the frame-rate counter in the picture's corner
+    FrameCounter show_fps = FrameCounter::Off;  // Counter mode in the picture's corner.
     bool menu_bar = true;   // the menus along the window's top (not on macOS, whose menu bar has them); Alt hides and shows it
     bool mute_unfocused = false;  // silence while another window has the keyboard
     bool skip_cutscenes = true;   // Start skips an in-game cutscene (without the game's L1 L2 R1 R2 hold)
@@ -152,7 +160,11 @@ inline constexpr int kTouchCameraSpeeds[] = {25, 50, 75, 100, 125, 150, 200, 250
 // list's (a file's) steps to the nearer one that way, and the list's ends go no further.
 int step_listed(std::span<const int> list, int now, int by);
 
+// Advances the frame counter by `by` modes, wrapping in either direction.
+void step_frame_counter(int by);
+
 // What the options page shows for a value.
+const char* name(FrameCounter mode);
 const char* name(DisplayMode mode);
 const char* name(Aspect aspect);
 const char* name(Hud hud);

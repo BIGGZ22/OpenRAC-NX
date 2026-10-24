@@ -7,6 +7,57 @@
 #include "game/common/settings.h"
 #include "tests/check.h"
 
+namespace {
+// Temporal presets round-trip by stable file keys, and malformed values retain the enhanced default.
+void test_temporal_settings(const std::filesystem::path& file) {
+    using namespace openrac;
+
+    // These are the five published player choices, including an explicit opt-out.
+    for (std::size_t n = 0; n < std::size(renderer::kTemporalKeys); ++n) {
+        std::ofstream(file) << "temporal_quality = " << renderer::kTemporalKeys[n]
+                            << "\ntemporal_sharpness = 0.75\n";
+        settings::load(file);
+        CHECK(settings::get().temporal_quality == static_cast<renderer::TemporalQuality>(n));
+        CHECK(settings::get().temporal_sharpness == .75f);
+        settings::save();
+        settings::load(file);
+        CHECK(settings::get().temporal_quality == static_cast<renderer::TemporalQuality>(n));
+    }
+    std::ofstream(file) << "temporal_quality = unsupported\ntemporal_sharpness = nan\n";
+    settings::load(file);
+    CHECK(settings::get().temporal_quality == renderer::TemporalQuality::Quality);
+    CHECK(settings::get().temporal_sharpness == .2f);
+}
+
+// Persists all counter modes, wraps both directions and accepts existing boolean settings.
+void test_frame_counter_modes(const std::filesystem::path& file) {
+    namespace settings = openrac::settings;
+    using settings::FrameCounter;
+    settings::get().show_fps = FrameCounter::Off;
+    for (const auto expected : {FrameCounter::Basic, FrameCounter::Timings, FrameCounter::Off}) {
+        settings::step_frame_counter(1);
+        CHECK(settings::get().show_fps == expected);
+        settings::save();
+        settings::load(file);
+        CHECK(settings::get().show_fps == expected);
+    }
+    settings::step_frame_counter(-1);
+    CHECK(settings::get().show_fps == FrameCounter::Timings);
+    CHECK(std::string(settings::name(FrameCounter::Timings)) == "CPU / GPU");
+    for (const char* value : {"1", "on", "true", "yes"}) {
+        std::ofstream(file) << "show_fps = " << value << "\n";
+        settings::load(file);
+        CHECK(settings::get().show_fps == FrameCounter::Basic);
+    }
+    for (const char* value : {"0", "off", "3", "-1", "invalid"}) {
+        std::ofstream(file) << "show_fps = " << value << "\n";
+        settings::load(file);
+        CHECK(settings::get().show_fps == FrameCounter::Off);
+    }
+}
+
+}  // namespace
+
 int main() {
     using namespace openrac;
     const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
@@ -18,6 +69,9 @@ int main() {
     const auto file = folder / "settings.ini";
     settings::load(file);
     CHECK(settings::get().gtao);
+    CHECK(settings::get().temporal_quality == renderer::TemporalQuality::Quality);
+    test_temporal_settings(file);
+    test_frame_counter_modes(file);
     CHECK(settings::get().texture_filter == renderer::TextureFilter::EdgeAware);
     CHECK(settings::get().anisotropy == 0);
     CHECK(settings::get().anisotropy_samples(true) == 4);

@@ -9,7 +9,7 @@ import struct
 
 from formats import FormatError, span, unpack
 import games
-from mesh import Mesh
+from mesh import Mesh, unit_normal
 
 
 def tie_mesh(data: bytes, remap: bytes, name: str, fmt: games.Format = games.RAC1) -> Mesh:
@@ -35,6 +35,12 @@ def tie_mesh(data: bytes, remap: bytes, name: str, fmt: games.Format = games.RAC
     packet_count = header[layout.packet_count]
     table = span(data, packet_table, packet_count * 16)
     mesh = Mesh(name, light_slots=[])
+    normal_offset, = unpack("<I", header, layout.normals)
+    normal_table = None
+    if normal_offset:
+        normal_table = [unit_normal(values[:3])
+                        for values in struct.iter_unpack("<4h", span(data, normal_offset, 64 * 8))]
+        mesh.normals = []
     for packet_id in range(packet_count):
         entry = table[packet_id * 16:(packet_id + 1) * 16]
         start = packet_table + unpack("<I", entry)[0]
@@ -115,6 +121,8 @@ def tie_mesh(data: bytes, remap: bytes, name: str, fmt: games.Format = games.RAC
                 mesh.positions.append((x * scale / 1024, y * scale / 1024, z * scale / 1024))
                 mesh.uvs.append((s / 4096, t / 4096))
                 mesh.light_slots.append(slot & 0x3F)
+                if normal_table is not None:
+                    mesh.normals.append(normal_table[slot & 0x3F])
                 address += 3
             elif shader < 4 and destinations[shader - 1] == address:
                 if expected:

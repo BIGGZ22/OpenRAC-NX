@@ -33,14 +33,16 @@ bool ProbeSelection::supported() {
     }
     GLint bindings = 0;
     glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, &bindings);
-    return bindings >= 9;
+    GLint block_bytes = 0;
+    glGetIntegerv(0x8A30, &block_bytes);  // GL_MAX_UNIFORM_BLOCK_SIZE
+    return bindings >= 9 && block_bytes >= int(std::size_t{capacity} * 3 * 4 * sizeof(float));
 }
 
 void ProbeSelection::ensure_buffers() const {
     if (m_buffers[0]) {
         return;
     }
-    glGenBuffers(2, m_buffers.data());
+    glGenBuffers(3, m_buffers.data());
     std::array<float, capacity * 3 * 4> zeros{};
     glBindBuffer(wgl::GL_UNIFORM_BUFFER, m_buffers[0]);
     glBufferData(wgl::GL_UNIFORM_BUFFER, sizeof(zeros), zeros.data(), GL_STATIC_DRAW);
@@ -50,6 +52,13 @@ void ProbeSelection::ensure_buffers() const {
     glActiveTexture(GL_TEXTURE0 + 15);
     glBindTexture(wgl::GL_TEXTURE_BUFFER, m_mask_texture);
     glTexBuffer(wgl::GL_TEXTURE_BUFFER, wgl::GL_R32UI, m_buffers[1]);
+    glBindBuffer(wgl::GL_TEXTURE_BUFFER, m_buffers[2]);
+    glBufferData(
+        wgl::GL_TEXTURE_BUFFER, (selected_capacity + 1) * sizeof(unsigned), nullptr, GL_DYNAMIC_DRAW
+    );
+    glGenTextures(1, &m_secondary_texture);
+    glBindTexture(wgl::GL_TEXTURE_BUFFER, m_secondary_texture);
+    glTexBuffer(wgl::GL_TEXTURE_BUFFER, wgl::GL_R32UI, m_buffers[2]);
     glActiveTexture(GL_TEXTURE0);
 }
 
@@ -89,11 +98,13 @@ void ProbeSelection::dispatch(
     if (!available() || !depth || width <= 0 || height <= 0) {
         return;
     }
-    const unsigned words = (m_count + 31) / 32;
+    constexpr unsigned kWords = selected_capacity / 32;
     const auto tiles_x = (width + 15) / 16, tiles_y = (height + 15) / 16;
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, m_buffers[1]);
     if (width != m_width || height != m_height) {
-        std::vector<unsigned> zeros(std::size_t(tiles_x) * tiles_y * words, 0);
+        std::vector<unsigned> zeros(
+            selected_capacity + 1 + std::size_t(tiles_x) * tiles_y * kWords, 0
+        );
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_buffers[1]);
         glBufferData(
             GL_SHADER_STORAGE_BUFFER, zeros.size() * sizeof(unsigned), zeros.data(), GL_DYNAMIC_DRAW
@@ -110,6 +121,16 @@ void ProbeSelection::dispatch(
     glUniform1i(m_cull.uniform("region_count"), static_cast<int>(m_count));
     glUniform1i(m_cull.uniform("scene_depth"), 0);
     glUniformMatrix4fv(m_cull.uniform("world_to_clip"), 1, GL_FALSE, m_clip.data());
+    glUniform3f(
+        m_cull.uniform("camera_position"),
+        camera.position[0],
+        camera.position[1],
+        camera.position[2]
+    );
+    glUniform1i(m_cull.uniform("select_regions"), 1);
+    glDispatchCompute(1, 1, 1);
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    glUniform1i(m_cull.uniform("select_regions"), 0);
     glDispatchCompute(static_cast<unsigned>(tiles_x), static_cast<unsigned>(tiles_y), 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
     m_started = true;
@@ -125,14 +146,41 @@ void ProbeSelection::bind(
     GLint viewport[4]{};
     glGetIntegerv(GL_VIEWPORT, viewport);
     static const bool& reference = stats::probe(
-        "OPENRAC_PROBE_TILED_REFERENCE", "Evaluate all resident probe volumes per fragment"
+        "OPENRAC_PROBE_TILED_REFERENCE", "Evaluate all selected probe volumes per fragment"
     );
     const bool same_view =
         !camera || renderer::multiply(camera->projection, camera->view) == m_clip;
+    // Secondary views get their own nearest-128 lookup without changing the
+    // primary view's tile masks. Cache until their camera changes.
+    if (active() && !same_view && camera) {
+        const auto clip = renderer::multiply(camera->projection, camera->view);
+        if (!m_secondary_valid || clip != m_secondary_clip
+            || camera->position != m_secondary_position) {
+            glBindBufferBase(wgl::GL_UNIFORM_BUFFER, 7, m_buffers[0]);
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, m_buffers[2]);
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
+            m_cull.use();
+            glUniform1i(m_cull.uniform("region_count"), static_cast<int>(m_count));
+            glUniform1i(m_cull.uniform("select_regions"), 1);
+            glUniformMatrix4fv(m_cull.uniform("world_to_clip"), 1, GL_FALSE, clip.data());
+            glUniform3f(
+                m_cull.uniform("camera_position"),
+                camera->position[0],
+                camera->position[1],
+                camera->position[2]
+            );
+            glDispatchCompute(1, 1, 1);
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
+            shader.use();
+            m_secondary_clip = clip;
+            m_secondary_position = camera->position;
+            m_secondary_valid = true;
+        }
+    }
     const bool tiled = depth_matched && !reference && same_view && viewport[0] == 0
                        && viewport[1] == 0 && viewport[2] == m_width && viewport[3] == m_height;
     // Blended receivers can lie outside opaque depth bounds, even in the same view.
-    // They and secondary cameras use all resident regions, never opaque-only masks.
+    // They and secondary cameras use the selected lookup without opaque-only masks.
     glUniform1i(shader.uniform("probe_gpu_selection"), active() ? (tiled ? 1 : 2) : 0);
     glUniform1i(shader.uniform("probe_region_count"), static_cast<int>(m_count));
     glUniform2f(shader.uniform("probe_tile_extent"), float(m_width), float(m_height));
@@ -140,18 +188,23 @@ void ProbeSelection::bind(
     block(shader);
     glBindBufferBase(wgl::GL_UNIFORM_BUFFER, 7, m_buffers[0]);
     glActiveTexture(GL_TEXTURE0 + 15);
-    glBindTexture(wgl::GL_TEXTURE_BUFFER, m_mask_texture);
+    glBindTexture(wgl::GL_TEXTURE_BUFFER, same_view ? m_mask_texture : m_secondary_texture);
     glActiveTexture(GL_TEXTURE0);
 }
 
 void ProbeSelection::release() {
     m_cull.release();
     if (m_buffers[0]) {
-        glDeleteBuffers(2, m_buffers.data());
+        glDeleteBuffers(3, m_buffers.data());
     }
     if (m_mask_texture) {
         glDeleteTextures(1, &m_mask_texture);
     }
+    if (m_secondary_texture) {
+        glDeleteTextures(1, &m_secondary_texture);
+    }
+    m_secondary_texture = 0;
+    m_secondary_valid = false;
     m_buffers = {};
     m_mask_texture = 0;
     m_width = m_height = 0;

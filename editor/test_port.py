@@ -86,7 +86,7 @@ class PlacementTests(unittest.TestCase):
 
 
 class WriterTests(unittest.TestCase):
-    def export(self, out: Path) -> dict:
+    def export(self, out: Path, level: Level | None = None) -> dict:
         ties = {5: square("tie_5", ("tie", 1))}
         shrubs = {6: square("shrub_6", ("shrub", 2), 0.5)}
         mobys = {7: MobyClass(0.25, square("moby_7", ("moby", 4))), 8: None}
@@ -113,7 +113,19 @@ class WriterTests(unittest.TestCase):
                 mock.patch.object(port, "moby_classes", lambda level: mobys), \
                 mock.patch.object(port, "moby_instances", lambda gameplay, *_: moby_placements), \
                 mock.patch.object(godot, "decode", lambda block: empty_collision):
-            return PortLevelWriter(out, synthetic_level()).write(0)
+            return PortLevelWriter(out, synthetic_level() if level is None else level).write(0)
+
+    def test_export_includes_matching_probe_profile(self):
+        """A complete native export carries the exact authored settings for its disc and level."""
+        level = synthetic_level()
+        level.id, level.version = 1, "ntsc"
+        source = Path(__file__).resolve().parents[1] / "port/enhanced/lighting/profiles/rac1-ntsc/level_01/probe-bake.json"
+        with tempfile.TemporaryDirectory() as temp:
+            self.export(Path(temp), level)
+            directory = Path(temp) / "level_01"
+            manifest = json.loads((directory / "manifest.json").read_text())
+            self.assertEqual((manifest["game"], manifest["version"], manifest["level"]), ("rac1", "ntsc", 1))
+            self.assertEqual((directory / "probe-bake.json").read_bytes(), source.read_bytes())
 
     def test_files_manifest_and_placements(self):
         with tempfile.TemporaryDirectory() as temp:

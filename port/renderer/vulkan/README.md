@@ -45,11 +45,25 @@ them, SDL3 for the window's surface. The third-party libraries it wraps: volk (V
 the Vulkan Memory Allocator, and glslang (in `shader_compiler.cpp` only). The CMake target is
 `openrac_renderer_vulkan` (`port/cmake/Window.cmake`).
 
+Each program retains its last complete graphics pipeline key. Repeated draws compare that key
+before hashing a context-cache lookup. Relinking or deleting a program clears its retained
+pipeline before retirement. The context cache and pipeline pre-warm path remain available.
+
+Mesh material records select base, emission and edge-aware upscaled colour textures from the
+same bindless array, so changing the upscaled texture does not split compatible indirect batches.
+Cache readiness stays a shared uniform to keep its fragment branch uniform within a batch.
+Sampler and mip-view identity remain part of each array entry. Non-material shaders retain
+ordinary descriptor bindings.
+
 ## State and threads
 
 All of the backend's state is one `Context`, reached through `detail::g` (`vkgl_internal.h`): made
 by `open()` and destroyed by `close()`, null while the backend is closed. Only one backend is open
-at a time, used from the thread that opened it, as the renderers use GL. The one exception is
+at a time, with one host thread accessing it. The frontend's render worker records an owned world
+snapshot while the game simulates its next tick. A completed mutex/condition-variable handoff
+returns exclusive ownership to the window thread for debug UI, final composition and presentation.
+GPU submission keeps its existing two-frame queue; recording a world snapshot adds no submission.
+Resource changes, readbacks and shutdown drain the worker first. The one asynchronous callback is
 `on_event`, which SDL calls from its event thread when an Android app returns to the foreground; it
 only sets `surface_lost`, which is atomic. Two frames are in flight: each frame slot's objects are
 reused, and its deferred work run, once its fence has signalled. A static buffer of 64 KiB or more

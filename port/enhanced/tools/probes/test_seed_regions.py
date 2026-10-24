@@ -185,6 +185,18 @@ class MobySeeds(unittest.TestCase):
                                      exhaustive(boxes, spacing, budget))
                     self.assertEqual(json.dumps(boxes), original)
 
+    def test_local_merges_preserve_empty_space_and_padding(self):
+        boxes = [{'bounds': b, 'source_mobys': [i], 'source_transitions': []}
+                 for i, b in enumerate(([0,0,0,16,8,8], [8,4,0,24,12,8]))]
+        self.assertEqual(len(mobys.merge_regions(boxes, [4,4,4], 4096,
+                                                preserve_height=True)), 2)
+        # Contained padded boxes can still share one volume without losing coverage.
+        boxes[1]['bounds'] = [4,0,0,12,8,8]
+        merged = mobys.merge_regions(boxes, [4,4,4], 4096, preserve_height=True)
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]['bounds'], boxes[0]['bounds'])
+        self.assertEqual(merged[0]['source_mobys'], [0,1])
+
     def placement(self, cls, index, position):
         return {'class': cls, 'index': index, 'matrix': [0]*12+position+[1],
                 'fields': {'pvar_index': 0}}

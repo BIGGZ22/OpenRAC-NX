@@ -9,21 +9,20 @@
 // OPENRAC_SLOW_FRAME). The pacing's pure arithmetic is frontend/pacing.h's; frame() in
 // frontend.cpp reads each tick from the game and keeps it (Kept) for what is drawn here.
 //
-// Only the thread that opened the window runs any of it, as with the state it reads (state.h).
+// Pacing, input and presentation stay on the window thread. Vulkan world recording consumes an
+// owned snapshot on RenderWorker; finish_render returns exclusive graphics ownership before UI work.
 
 #include <algorithm>
-#include <array>
 #include <chrono>
-#include <cmath>
 #include <cstdint>
-#include <functional>
+#include <cstdlib>
+#include <exception>
 #include <limits>
 #include <memory>
 #include <optional>
-#include <span>
 #include <string>
 #include <thread>
-#include <vector>
+#include <utility>
 
 #include <SDL3/SDL.h>
 
@@ -46,9 +45,9 @@
 #include "renderer/gl.h"
 #include "renderer/renderer.h"
 #include "renderer/shadows.h"
+#include "renderer/texture_pool.h"
 #include "renderer/ui/fps_counter.h"
 #include "scene/level_renderer.h"
-#include "scene/moby_pose.h"
 #include "scene/screenshot.h"
 #include "settings.h"
 
@@ -62,7 +61,7 @@ namespace {
 // graphics card to finish them: this switch calls glFinish after each frame, so that the card's
 // time is not counted into a later call; it lowers the frame rate a little) and `show` (the
 // frame scaled to the window, and the swap). With the draw calls and triangles of the last frame.
-// frame_cost is the one; only the thread that opened the window touches it.
+// frame_cost is the one; only the window thread accumulates the completed job measurements.
 struct FrameCost {
     bool on = false;
     int every = 200;
@@ -134,13 +133,14 @@ void swapped(std::chrono::steady_clock::time_point started) {
     using namespace std::chrono;
     const auto before = steady_clock::now();
     platform::frame_work_done();
+    const auto swap_started = steady_clock::now();
     g->window->swap();
     const auto after = steady_clock::now();
     const double cost = duration<double>(before - started).count();
     pacing.cost = 0.8 * pacing.cost + 0.2 * cost;
-    if (settings::get().show_fps) {
-        renderer::ui::fps_counter::frame_drawn(after, cost);
-    }
+    renderer::ui::fps_counter::frame_drawn(
+        after, duration<double>(after - swap_started).count(), settings::get().show_fps
+    );
     if (pacing.interval_stale) {
         const float rate = g->window->refresh_rate();
         pacing.interval = rate > 20.0f ? 1.0 / rate : 0.0;
@@ -184,21 +184,6 @@ void slow_frame() {
     }
 }
 
-// The camera part way from the last tick's to this one's (a cut is not blended).
-host::GameState blend_camera(const host::GameState& from, const host::GameState& to, float t) {
-    host::GameState c = to;
-    const CameraPose pose = blend_pose(
-        {from.camera_position, from.forward, from.left, from.up},
-        {to.camera_position, to.forward, to.left, to.up},
-        t
-    );
-    c.camera_position = pose.position;
-    c.forward = pose.forward;
-    c.left = pose.left;
-    c.up = pose.up;
-    return c;
-}
-
 }  // namespace
 
 // Whether the frame cap lets a frame start now (within a millisecond: a sleep wakes that coarsely).
@@ -212,351 +197,14 @@ bool enhanced_graphics_available() {
     return g && gl::enhanced_rendering_available() && g->scene.probe_data_available();
 }
 
-void draw_kept(bool first) {
-    const auto started = std::chrono::steady_clock::now();
-    const float alpha = interpolating() ? alpha_at(next_display(started)) : 1.0f;
-    debug_overlay::begin(
-        first, g_held, alpha, g->kept.frame
-    );  // [debug tools] the frame's measurements
-    pacing.last_alpha = alpha;
-    frame_cost.mark = started;
-    // OPENRAC_PACING: each frame shown, when (ms), how far between ticks, the refresh interval.
-    static const bool& pacing_log =
-        stats::probe("OPENRAC_PACING", "each frame shown and when, in the log");
-    if (pacing_log) {
-        static const auto t0 = started;
-        log::info(
-            "pace {} {:.2f} ms alpha {:.3f} {} refresh {:.2f} ms cost {:.2f} ms",
-            g->kept.frame,
-            std::chrono::duration<double, std::milli>(started - t0).count(),
-            alpha,
-            first ? "tick" : "between",
-            pacing.interval * 1000.0,
-            pacing.cost * 1000.0
-        );
-    }
-    Kept& k = g->kept;
-    const host::GameState state =
-        k.has_prev_state && alpha < 1.0f ? blend_camera(k.prev_state, k.state, alpha) : k.state;
-    if (!g->level.models.empty()) {
-        std::vector<scene::Instance> live = k.live;
-        if (alpha < 1.0f) {
-            for (std::size_t i = 0; i < live.size() && i < k.addresses.size(); ++i) {
-                auto it = k.prev_matrices.find(k.addresses[i]);
-                if (it != k.prev_matrices.end()) {
-                    live[i].matrix = blend_matrix(it->second, live[i].matrix, alpha);
-                    const auto sphere = k.prev_spheres.find(k.addresses[i]);
-                    live[i].world_sphere = sphere == k.prev_spheres.end()
-                                               ? std::array<float, 4>{}
-                                               : moby_sphere_envelope(
-                                                     sphere->second,
-                                                     it->second,
-                                                     k.live[i].world_sphere,
-                                                     k.live[i].matrix,
-                                                     live[i].matrix
-                                                 );
-                }
-            }
-        }
-        if (alpha < 1.0f && !k.prev_poses.empty()) {
-            // The poses too: each joint part way from the last tick's to this one's, for a moby
-            // that is the same thing moving (its matrix was blended) with the same skeleton.
-            std::vector<scene::LevelScene::JointColumns> palette = k.palette;
-            for (std::size_t i = 0;
-                 i < live.size() && i < k.addresses.size() && i < k.joints.size();
-                 ++i) {
-                const auto pose = k.prev_poses.find(k.addresses[i]);
-                const int first = live[i].palette;
-                const int count = k.joints[i];
-                const auto last = k.prev_matrices.find(k.addresses[i]);
-                if (pose == k.prev_poses.end() || first < 0 || count <= 0
-                    || pose->second.second != count || last == k.prev_matrices.end()
-                    || !same_moby(last->second, k.live[i].matrix)
-                    || static_cast<std::size_t>(first + count) > palette.size()) {
-                    continue;
-                }
-                const scene::LevelScene::JointColumns* from =
-                    k.prev_palette.data() + pose->second.first;
-                for (int j = 0; j < count; ++j) {
-                    scene::LevelScene::JointColumns& to =
-                        palette[static_cast<std::size_t>(first + j)];
-                    for (std::size_t c = 0; c < to.size(); ++c) {
-                        to[c] = from[j][c] + (to[c] - from[j][c]) * alpha;
-                    }
-                }
-            }
-            g->scene.set_palette(palette);
-        } else {
-            g->scene.set_palette(k.palette);
-        }
-        g->scene.set_instances(scene::Layer::Mobys, live);
-    }
+namespace {
 
-    if (frame_cost.on) {
-        frame_cost.lap(frame_cost.scene);
-    }
-
-    int window_width = 0;
-    int window_height = 0;
-    g->window->drawable_size(window_width, window_height);
-    const float aspect = picture_aspect(window_width, window_height);
-    const Box box = frame_box(window_width, window_height, aspect);
-    // The frame: the picture's box in the window, at the player's render scale, with the player's
-    // samples a pixel. It is scaled to the box when it is shown (present).
-    int width = 0;
-    int height = 0;
-    frame_size(box.width, box.height, settings::get().render_scale, width, height);
-    // How much of the frame's width the game's 4:3 picture is: all of it, or its middle.
-    const float picture_scale =
-        aspect > kTvAspect && box.width > 0 && box.height > 0
-            ? std::min(
-                  1.0f, kTvAspect * static_cast<float>(box.height) / static_cast<float>(box.width)
-              )
-            : 1.0f;
-    std::string error;
-    const int samples = std::clamp(settings::get().msaa, 1, renderer::FrameBuffer::max_samples());
-    const bool sampleable_depth =
-        samples == 1 && enhanced_graphics_available() && settings::get().enhanced_graphics;
-    if (box.width > 0 && box.height > 0
-        && (g->frame.width() != width || g->frame.height() != height
-            || g->frame.samples() != samples
-            || (g->frame.depth_texture() != 0) != sampleable_depth)) {
-        if (!g->frame.create(width, height, error, samples, sampleable_depth) && samples > 1) {
-            // A card that refuses the samples it listed: the frame without them.
-            log::warn("{}; drawing without anti-aliasing", error);
-            g->frame.create(
-                width,
-                height,
-                error,
-                1,
-                enhanced_graphics_available() && settings::get().enhanced_graphics
-            );
-        }
-        log::info(
-            "frame {}x{} for a picture of {}x{} pixels, {} sample(s) a pixel",
-            g->frame.width(),
-            g->frame.height(),
-            box.width,
-            box.height,
-            g->frame.samples()
-        );
-    }
-    renderer::FrameInput input;
-    const auto& graphics = settings::get();
-    if (g->renderer) {
-        const int anisotropy = graphics.anisotropy_samples(
-            gl::enhanced_rendering_available() && graphics.enhanced_graphics
-        );
-        g->renderer->textures().set_anisotropy(static_cast<float>(anisotropy));
-    }
-    const bool enhanced = enhanced_graphics_available() && graphics.enhanced_graphics;
-    input.texture_filter = enhanced ? graphics.texture_filter : renderer::TextureFilter::Normal;
-    g->scene.set_probe_lighting(enhanced && graphics.probe_lighting, graphics.probe_gi_multiplier);
-    g->scene.set_probe_bias(graphics.probe_normal_bias, graphics.probe_view_bias);
-    g->scene.set_probe_spheres(graphics.probe_spheres);
-    input.sun_pixel_shadow = enhanced && graphics.enhanced_shadows && g->scene.sun_shadow_enabled()
-                             && k.has_camera && k.level >= 0 && k.level < 19;
-    input.hero_pixel_shadow = enhanced && graphics.enhanced_shadows
-                              && g->scene.hero_shadow_enabled() && k.hero_airborne.has_value()
-                              && k.has_camera && k.level >= 0 && k.level < 19;
-    input.hero_airborne = k.hero_airborne.value_or(false);
-    input.shadow_extrusion = k.shadow_state.extrusion;
-    if (k.shadow_state.enabled) {
-        input.shadow_heights = k.shadow_state.heights;
-    }
-    auto shadows = k.shadows;
-    if (alpha < 1.0f && k.shadow_moby != 0 && k.shadow_moby == k.prev_shadow_moby
-        && shadows.size() == k.prev_shadows.size()) {
-        const auto prev = k.prev_matrices.find(k.shadow_moby);
-        const auto now = std::find(k.addresses.begin(), k.addresses.end(), k.shadow_moby);
-        if (prev != k.prev_matrices.end() && now != k.addresses.end()
-            && same_moby(
-                prev->second, k.live[static_cast<std::size_t>(now - k.addresses.begin())].matrix
-            )) {
-            for (std::size_t i = 0; i < shadows.size(); ++i) {
-                for (int j = 0; j < 3; ++j) {
-                    shadows[i].a[j] =
-                        k.prev_shadows[i].a[j] + (shadows[i].a[j] - k.prev_shadows[i].a[j]) * alpha;
-                    shadows[i].b[j] =
-                        k.prev_shadows[i].b[j] + (shadows[i].b[j] - k.prev_shadows[i].b[j]) * alpha;
-                }
-                shadows[i].radius_a = k.prev_shadows[i].radius_a
-                                      + (shadows[i].radius_a - k.prev_shadows[i].radius_a) * alpha;
-                shadows[i].radius_b = k.prev_shadows[i].radius_b
-                                      + (shadows[i].radius_b - k.prev_shadows[i].radius_b) * alpha;
-            }
-            if (k.prev_shadow_state.enabled && k.shadow_state.enabled) {
-                for (int j = 0; j < 3; ++j) {
-                    input.shadow_extrusion[j] =
-                        k.prev_shadow_state.extrusion[j]
-                        + (k.shadow_state.extrusion[j] - k.prev_shadow_state.extrusion[j]) * alpha;
-                }
-                std::array<float, 2> heights{};
-                for (int j = 0; j < 2; ++j) {
-                    heights[j] =
-                        k.prev_shadow_state.heights[j]
-                        + (k.shadow_state.heights[j] - k.prev_shadow_state.heights[j]) * alpha;
-                }
-                input.shadow_heights = heights;
-            }
-        }
-    }
-    input.shadow_capsules = shadows;
-    // No camera yet (loading, fades between programs): a black frame, not the level's background.
-    const bool has_camera = k.has_camera;
-    input.clear_colour =
-        has_camera
-            ? std::array<
-                  float,
-                  4>{g->level.background[0], g->level.background[1], g->level.background[2], 1}
-            : std::array<float, 4>{0, 0, 0, 1};
-    for (auto& r : g->renderer ? g->renderer->renderers()
-                               : std::span<const std::unique_ptr<renderer::BucketRenderer>>{}) {
-        if (r->bucket() == renderer::Bucket::Particles) {
-            // The effect quads are there only when the game drew them.
-            r->enabled = has_camera;
-        } else if (r->bucket() != renderer::Bucket::Hud) {
-            r->enabled = has_camera && (k.draws & (1u << static_cast<unsigned>(r->bucket()))) != 0;
-        }
-    }
-    input.camera.view = state.view();
-    // The game's frustum: its horizontal and vertical tangents as the game set them (the frame is
-    // the TV's 4:3, which they were made for), not the window's shape. A wider picture keeps the
-    // vertical one and opens the horizontal one by as much as the picture is wider: the game's
-    // view is its middle.
-    input.camera.projection = state.projection(
-        (state.tan_half_fov_y > 0.0f ? state.tan_half_fov_x / state.tan_half_fov_y : 4.0f / 3.0f)
-            / picture_scale,
-        0.05f,
-        2000.0f
-    );
-    input.camera.position = state.camera_position;
-    g->scene.update_probe_regions(input.camera);
-    input.after_world_depth =
-        g->scene.compute_probe_selection()
-            ? std::function<void(unsigned, int, int)>([&](unsigned depth, int width, int height) {
-                  g->scene.select_visible_probe_regions(depth, input.camera, width, height);
-              })
-            : std::function<void(unsigned, int, int)>{};
-    input.gtao_settings = settings::get().gtao_settings;
-    // Honor the user's GTAO setting alongside probe GI and modern shadows.
-    // Mesh shaders apply AO to indirect lighting before direct light is added.
-    input.gtao = enhanced && graphics.gtao && has_camera && (k.draws & 0x1Fu) != 0;
-    input.frame = k.frame;
-    input.strip_vertices = k.strip_vertices;
-    input.strips = k.strips;
-    input.direct_before_world = std::span<const std::uint8_t>(k.packets).first(k.before_world);
-    input.packets[static_cast<std::size_t>(renderer::Bucket::Hud)] =
-        std::span<const std::uint8_t>(k.packets).subspan(k.before_world);
-    input.effects = k.effects;
-    input.sky_shells = k.sky_shells;
-    input.sky_shell_mask = k.sky_shell_mask;
-    input.effect_uploads = k.effect_uploads;
-    input.ui_quads = k.ui_quads;
-    // The mobys the game drew into a texture, at their markers (Kept::target_mobys): seen by the
-    // camera they were drawn with, through the frame's focal lengths, about the centre of the
-    // target the 2D layer was drawing into (its XYOFFSET's 2048), in its 512-pixel square.
-    input.target_mobys = [&](std::uint64_t marker,
-                             unsigned framebuffer,
-                             int size,
-                             float centre_x,
-                             float centre_y,
-                             bool clear_depth) {
-        const std::uint32_t first = static_cast<std::uint32_t>(marker);
-        const std::uint32_t count = static_cast<std::uint32_t>(marker >> 32) & 0xFFu;
-        std::vector<scene::Instance> instances;
-        const host::GameState* camera = nullptr;
-        for (const Kept::TargetMoby& t : k.target_mobys) {
-            if (t.address >= first && t.address < first + count * 0x100u) {
-                instances.push_back(t.instance);
-                camera = &t.camera;
-            }
-        }
-        if (camera == nullptr || !g->renderer || camera->focal_x <= 0.0f) {
-            return;
-        }
-        using namespace openrac::gl;
-        glViewport(0, 0, size, size);
-        glDisable(GL_SCISSOR_TEST);
-        if (clear_depth) {
-            glDepthMask(GL_TRUE);
-            glClearDepth(0.0);
-            glClear(GL_DEPTH_BUFFER_BIT);
-        }
-        const float half = 0.5f * static_cast<float>(renderer::kOffscreenPixels);
-        const float tan_x = half / camera->focal_x;
-        const float tan_y = half / camera->focal_y;
-        renderer::Mat4 projection =
-            renderer::perspective_reversed(2.0f * std::atan(tan_y), tan_x / tan_y, 0.05f, 2000.0f);
-        // The axis through the centre: x on and y down from the square's middle, in device units.
-        renderer::Mat4 offset = renderer::identity();
-        offset[12] = (centre_x - half) / half;
-        offset[13] = -(centre_y - half) / half;
-        renderer::FrameInput panel;
-        panel.camera.view = camera->view();
-        panel.camera.projection = renderer::multiply(offset, projection);
-        panel.camera.position = camera->camera_position;
-        renderer::RenderState target{
-            g->renderer->textures(), renderer::RenderTarget{framebuffer, size, size}, {}
-        };
-        g->scene.draw_mobys(instances, panel, target);
-    };
-    // A tick that draws no world and has no picture of its own to put under its 2D (the page
-    // menu's first ticks, before its snapshot of the frame comes; the tick it closes on): the
-    // console still shows the last frame there, so the 2D goes over the last world drawn, not black.
-    // Only right after the world was drawn (the menu opening) or right after a menu tick with its
-    // snapshot (the menu closing): other ticks without a world (a new game's captions between its
-    // scenes) are drawn on black, as they come.
-    constexpr std::size_t kSnapshotBytes = 0x40000;
-    const bool after_world = g->last_world_tick != 0 && k.frame - g->last_world_tick <= 3;
-    if (first && has_camera && (k.draws & 0x0Fu) == 0 && k.before_world < kSnapshotBytes
-        && (after_world || g->last_tick_menu) && g->last_world.width() == width
-        && g->last_world.height() == height) {
-        g->hold_last_world = true;
-    } else if (first) {
-        g->hold_last_world = false;
-    }
-    if (g->hold_last_world && !g->repeat_frame && g->last_world.width() == width
-        && g->last_world.height() == height) {
-        g->last_world.blit_to(g->frame.id(), width, height);
-        input.keep_colour = true;
-    }
-    // The last frame that drew its world, as the world alone (before the HUD's 2D goes over it):
-    // what the page menus read back for their background, and what a tick without a world of its
-    // own is drawn over.
-    if (first && has_camera && (k.draws & 0x1Fu) != 0 && width > 0 && height > 0) {
-        input.before_hud = [&]() {
-            if (g->last_world.width() != width || g->last_world.height() != height) {
-                std::string e;
-                g->last_world.create(width, height, e);
-            }
-            g->frame.blit_to(g->last_world.id(), width, height);
-            g->last_world_tick = k.frame;
-        };
-    }
-    if (g->renderer && !g->repeat_frame) {
-        // [debug tools] The passes hidden in the overlay; the render timed (common/stats.h).
-        debug_overlay::before_render(g->renderer.get());
-        const stats::Scope render_scope("render");
-        renderer::RenderTarget target{g->frame.id(), width, height, picture_scale};
-        target.depth_texture = g->frame.depth_texture();
-        target.resolve_framebuffer = g->frame.resolve_target();
-        target.resolves_itself = g->frame.resolves_itself();
-        target.wide_2d = picture_scale < 1.0f && settings::get().hud == settings::Hud::Edges;
-        g->renderer->render(input, target);
-    }
-    if (frame_cost.on) {
-        frame_cost.lap(frame_cost.submit);
-        gl::glFinish();
-        frame_cost.lap(frame_cost.gpu);
-    }
-    // What is shown: the frame with one sample a pixel (a multisampled one is resolved here, once),
-    // with the port's own overlays over it.
-    const unsigned shown = g->frame.resolved();
-    debug_menu::draw(shown, width, height);
-    if (settings::get().show_fps) {
-        renderer::ui::fps_counter::draw(shown, width, height);
-    }
+// Writes a requested capture only after the submitted frame is complete.
+void capture_frame(const FramePresentation& output) {
+    const bool first = output.first;
+    const unsigned shown = output.shown;
+    const int width = output.width;
+    const int height = output.height;
     // OPENRAC_SHOT=FRAME:FILE.png writes that frame (for checking without looking at the screen);
     // OPENRAC_SHOT_BETWEEN also writes the frames drawn between ticks (FILE<frame>_b<n>.png).
     static const bool& shot_between =
@@ -565,39 +213,19 @@ void draw_kept(bool first) {
     between_index = first ? 0 : between_index + 1;
     // OPENRAC_SHOT_FROM=FRAME: no shots before that frame.
     static const std::uint64_t shot_from = env_frame(env::Var::ShotFrom).value_or(0);
-    if ((first || shot_between) && shots().due(input.frame) && input.frame >= shot_from) {
-        const std::string path = shots().prefix + std::to_string(input.frame)
+    if ((first || shot_between) && shots().due(output.tick) && output.tick >= shot_from) {
+        const std::string path = shots().prefix + std::to_string(output.tick)
                                  + (first ? std::string() : "_b" + std::to_string(between_index))
                                  + ".png";
         scene::write_png(path, width, height, renderer::read_rgba(shown, width, height));
-        log::info("frame {} written to {}", input.frame, path);
+        log::info("frame {} written to {}", output.tick, path);
     }
-    slow_frame();
-    present(shown, width, height, window_width, window_height, false, aspect);
-    draw_touch_pad(window_width, window_height);
-    // [debug tools] The overlay, over the frame in the window.
-    debug_overlay::draw(
-        {g->window->sdl(),
-         window_width,
-         window_height,
-         box.x,
-         box.y,
-         box.width,
-         box.height,
-         g->renderer.get(),
-         &input.camera,
-         g->frame.width(),
-         g->frame.height(),
-         g->last_world.width(),
-         g->last_world.height(),
-         g->swap != platform::SwapInterval::Immediate,
-         interpolating(),
-         pacing.interval,
-         pacing.cost,
-         pacing.period.count()}
-    );
-    const stats::Scope swap_scope("swap");
-    swapped(started);
+}
+
+// Reports the diagnostic's blocking measurements after presentation.
+void report_frame_cost(const FramePresentation& output) {
+    const int width = output.width;
+    const int height = output.height;
     if (frame_cost.on) {
         frame_cost.lap(frame_cost.show);
         if (++frame_cost.frames >= frame_cost.every) {
@@ -607,7 +235,7 @@ void draw_kept(bool first) {
             log::info(
                 "cost tick {}: {:.3f} ms a frame over {} frames (scene {:.3f}, submit {:.3f}, "
                 "gpu {:.3f}, show {:.3f}); {} draw calls, {} triangles, frame {}x{} x{}",
-                g->kept.frame,
+                g->kept->frame,
                 (frame_cost.scene + frame_cost.submit + frame_cost.gpu + frame_cost.show) / n,
                 frame_cost.frames,
                 frame_cost.scene / n,
@@ -624,6 +252,195 @@ void draw_kept(bool first) {
             frame_cost.scene = frame_cost.submit = frame_cost.gpu = frame_cost.show = 0.0;
         }
     }
+}
+
+// Logs the submitted interpolation fraction using window-thread pacing state.
+void log_pacing(const FramePresentation& output) {
+    // OPENRAC_PACING: each frame shown, when (ms), how far between ticks, the refresh interval.
+    static const bool& pacing_log =
+        stats::probe("OPENRAC_PACING", "each frame shown and when, in the log");
+    if (pacing_log) {
+        static const auto t0 = output.started;
+        log::info(
+            "pace {} {:.2f} ms alpha {:.3f} {} refresh {:.2f} ms cost {:.2f} ms",
+            g->kept->frame,
+            std::chrono::duration<double, std::milli>(output.started - t0).count(),
+            output.alpha,
+            output.first ? "tick" : "between",
+            pacing.interval * 1000.0,
+            pacing.cost * 1000.0
+        );
+    }
+}
+
+// Pins the immutable captured scene and transfers graphics ownership to its persistent worker.
+void queue_frame(const std::shared_ptr<FramePresentation>& output) {
+    // The worker is persistent; every job owns poses, packets, textures and graphics settings.
+    if (!g->render_worker) {
+        // These renderer capability caches must be populated before the game and worker can query them.
+        [[maybe_unused]] const int samples = renderer::FrameBuffer::max_samples();
+        [[maybe_unused]] const float anisotropy = renderer::TexturePool::max_anisotropy();
+        g->render_worker = std::make_unique<RenderWorker>();
+        log::info("Vulkan world rendering on a dedicated thread; one snapshot in flight");
+    }
+    const auto snapshot_started = std::chrono::steady_clock::now();
+    auto snapshot =
+        std::make_shared<RenderSnapshot>(RenderSnapshot{g->kept, settings::get(), output});
+    stats::gauge(
+        "render snapshot ms",
+        std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - snapshot_started
+        )
+            .count()
+    );
+    g->pending_frame = output;
+    std::string error;
+    State& owner = *g;
+    const bool queued = g->render_worker->submit(
+        [&owner, snapshot = std::move(snapshot)] {
+            render_scene(owner, *snapshot->scene, snapshot->graphics, *snapshot->presentation);
+        },
+        error
+    );
+    // Job rejection means a previous failure, never an unbounded queue.
+    if (!queued) {
+        g->pending_frame.reset();
+        g->render_failed = true;
+        log::error("render thread: {}", error);
+    }
+}
+
+// Draws the debug UI after the render worker has released all referenced graphics state.
+void draw_overlay(const FramePresentation& output) {
+    const int window_width = output.window_width;
+    const int window_height = output.window_height;
+    const Box box = output.box;
+    // [debug tools] The overlay, over the frame in the window.
+    debug_overlay::draw(
+        {g->window->sdl(),
+         window_width,
+         window_height,
+         box.x,
+         box.y,
+         box.width,
+         box.height,
+         g->renderer.get(),
+         &output.camera,
+         g->frame.width(),
+         g->frame.height(),
+         g->last_world.width(),
+         g->last_world.height(),
+         g->swap != platform::SwapInterval::Immediate,
+         interpolating(),
+         pacing.interval,
+         pacing.cost,
+         pacing.period.count()}
+    );
+}
+
+// Composites debug UI and presents on the window thread, after exclusive graphics ownership returns.
+void present_frame(FramePresentation& output) {
+    // What is shown: the frame with one sample a pixel (a multisampled one is resolved here, once),
+    // with the port's own overlays over it.
+    const unsigned shown = output.shown;
+    const int width = output.width;
+    const int height = output.height;
+    const int window_width = output.window_width;
+    const int window_height = output.window_height;
+    const float aspect = output.aspect;
+    const auto resumed = std::chrono::steady_clock::now();
+    const auto started = output.started + (resumed - output.finished);
+    frame_cost.scene += output.scene_seconds;
+    frame_cost.submit += output.record_seconds;
+    frame_cost.gpu += output.gpu_seconds;
+    frame_cost.mark = resumed;
+    debug_menu::draw(shown, width, height);
+    if (settings::get().show_fps != settings::FrameCounter::Off) {
+        renderer::ui::fps_counter::draw(shown, width, height);
+    }
+    capture_frame(output);
+    slow_frame();
+    present(shown, width, height, window_width, window_height, false, aspect);
+    draw_touch_pad(window_width, window_height);
+    draw_overlay(output);
+    const stats::Scope swap_scope("swap");
+    swapped(started);
+    report_frame_cost(output);
+}
+
+}  // namespace
+
+bool render_pending() {
+    return g && static_cast<bool>(g->pending_frame);
+}
+
+bool finish_render() try {
+    // Synchronous frames and initialisation have no handoff to drain.
+    if (!render_pending()) {
+        return !g || !g->render_failed;
+    }
+    const auto started = std::chrono::steady_clock::now();
+    std::string error;
+    const bool complete = g->render_worker->finish(error);
+    auto output = std::move(g->pending_frame);
+    // A worker failure has already relinquished all graphics resources.
+    if (!complete) {
+        log::error("render thread: {}", error);
+        g->render_failed = true;
+        return false;
+    }
+    stats::gauge(
+        "render thread wait ms",
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started)
+            .count()
+    );
+    present_frame(*output);
+    return true;
+} catch (const std::exception& failure) {
+    g->render_failed = true;
+    log::error("cannot finish render: {}", failure.what());
+    return false;
+} catch (...) {
+    g->render_failed = true;
+    log::error("cannot finish render: unknown exception");
+    return false;
+}
+
+void draw_kept(bool first) try {
+    // One in-flight snapshot bounds both latency and ownership of the current scene.
+    if (!finish_render()) {
+        return;
+    }
+    auto output = std::make_shared<FramePresentation>();
+    output->started = std::chrono::steady_clock::now();
+    output->first = first;
+    output->alpha = interpolating() ? alpha_at(next_display(output->started)) : 1.0f;
+    g->window->drawable_size(output->window_width, output->window_height);
+    output->aspect = picture_aspect(output->window_width, output->window_height);
+    output->box = frame_box(output->window_width, output->window_height, output->aspect);
+    debug_overlay::begin(first, g_held, output->alpha, g->kept->frame);
+    pacing.last_alpha = output->alpha;
+    frame_cost.mark = output->started;
+    output->measure_cost = frame_cost.on;
+    log_pacing(*output);
+    static const bool requested = env::flag(env::Var::RenderThread);
+    const bool threaded = gl::is_vulkan() && requested;
+    // OpenGL contexts retain the original window-thread path.
+    if (!threaded) {
+        render_scene(*g, *g->kept, settings::get(), *output);
+        present_frame(*output);
+        return;
+    }
+    queue_frame(output);
+
+} catch (const std::exception& failure) {
+    g->pending_frame.reset();
+    g->render_failed = true;
+    log::error("cannot prepare render snapshot: {}", failure.what());
+} catch (...) {
+    g->pending_frame.reset();
+    g->render_failed = true;
+    log::error("cannot prepare render snapshot: unknown exception");
 }
 
 // ---- Between ticks ----
@@ -644,12 +461,21 @@ bool interpolating() {
 }
 
 bool wants_between() {
-    return interpolating() && g->kept.has_state && g->kept.has_camera;
+    return interpolating() && g->kept->has_state && g->kept->has_camera;
 }
 
 int between(std::chrono::steady_clock::time_point next_tick) {
     if (!g) {
         return 0;
+    }
+    // A new interpolation snapshot must not replace an in-flight one past the next tick's deadline.
+    if (render_pending()) {
+        if (!g->render_worker->ready_until(next_tick)) {
+            return 0;
+        }
+        if (!finish_render()) {
+            return -1;
+        }
     }
     // A frame only for a refresh the kept tick is still shown at (the next tick's, with the lag).
     const auto lag =
@@ -700,13 +526,18 @@ int between(std::chrono::steady_clock::time_point next_tick) {
     const bool first = pacing.first_pending;
     pacing.first_pending = false;
     draw_kept(first);
+    const bool displayed = finish_render();
     renderer::g_dump_draws = dump;
-    return 1;
+    return displayed ? 1 : -1;
 }
 
 // [debug tools] While the overlay holds the game (pause): the last tick drawn again, the window's
 // events read, until it lets a tick through. False once the window was closed.
 bool hold() {
+    // Pausing requires a complete presented frame before the debug UI reads it.
+    if (debug_overlay::holding() && !finish_render()) {
+        return false;
+    }
     while (g && g->window && debug_overlay::holding()) {
         SDL_Event event;
         while (platform::poll_event(event)) {
@@ -726,6 +557,10 @@ bool hold() {
         renderer::g_dump_draws = false;
         g_held = true;
         draw_kept(false);
+        const bool displayed = finish_render();
+        if (!displayed) {
+            return false;
+        }
         g_held = false;
         renderer::g_dump_draws = dump;
         // No faster than the display shows them (a 120 Hz screen's drawer moves at 120), and no

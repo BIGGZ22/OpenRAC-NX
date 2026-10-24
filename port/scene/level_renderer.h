@@ -27,8 +27,11 @@
 #include "renderer/gpu_draw.h"
 #include "renderer/renderer.h"
 #include "renderer/shader.h"
+#include "renderer/world/gpu.h"
 #include "scene/level.h"
 #include "scene/level_lighting.h"
+#include "scene/motion.h"
+#include "scene/shadow_transition.h"
 #include "scene/sun_shadow.h"
 
 namespace openrac::scene {
@@ -87,6 +90,15 @@ public:
 
     // Replaces a layer's instances (live mobys, each frame).
     void set_instances(Layer layer, const std::vector<Instance>& instances);
+
+    // Draws depth-tested rigid and skinned velocities into the caller's target, without changing history.
+    void draw_motion(
+        const renderer::Shader& shader,
+        std::span<const MotionInstance> instances,
+        const MotionView& view,
+        renderer::TexturePool& textures,
+        MotionSubmission submission = MotionSubmission::Batched
+    );
 
     // Draws these mobys now, as the moby layer draws its own, into what is bound (the game's
     // render to a texture: the vendor's screens); the layer's own instances are kept.
@@ -192,6 +204,37 @@ public:
     }
 
 private:
+    // One consecutive run of compatible motion instances, preserving draw order.
+    struct MotionBatch {
+        std::uint32_t model = 0;  // Shared geometry and material runs.
+        unsigned group = 0;       // Current moby geometry VAO.
+        int first = 0;            // First nine-texel pose record.
+        int count = 0;            // Instances submitted together.
+    };
+
+    // Builds stable pose records and batches; multi-material models retain instance-major order.
+    void prepare_motion_batches(std::span<const MotionInstance> instances);
+    // Draws the prepared pose-buffer batches using existing geometry and alpha textures.
+    void draw_motion_batches(const renderer::Shader& shader, renderer::TexturePool& textures);
+    renderer::world::RecordBuffer
+        m_motion_records;                       // Owned current/previous poses and opacity flags.
+    renderer::world::Words m_motion_words;      // Reused CPU packing storage.
+    std::vector<MotionBatch> m_motion_batches;  // Consecutive compatible instance runs.
+    std::vector<unsigned> m_motion_groups;      // Model-to-VAO lookup rebuilt for the live layer.
+    bool m_motion_records_ready = false;        // Includes the reference path's empty record.
+    // Draws one temporal object using the existing geometry VAO and current joint palette.
+    void draw_motion_instance(
+        const renderer::Shader& shader,
+        const MotionInstance& instance,
+        renderer::TexturePool& textures
+    );
+    // Applies original alpha coverage to each material run of a temporal object.
+    void draw_motion_materials(
+        const renderer::Shader& shader,
+        std::uint32_t model,
+        renderer::TexturePool& textures,
+        int instances = 1
+    );
     struct CasterBounds {
         renderer::Vec3 low{}, high{};
         bool valid = false;
@@ -381,6 +424,8 @@ private:
     // mesh.frag's opaque path alone, without discard (the static layers' opaque pass; draw_layer).
     renderer::Shader m_solid;
     renderer::Shader m_depth, m_depth_solid;
+    renderer::Shader m_surface_depth;        // Smooth-normal prepass with alpha testing.
+    renderer::Shader m_surface_depth_solid;  // Smooth-normal prepass for opaque static geometry.
     renderer::Shader m_sky;
     std::unique_ptr<renderer::FrameBuffer> m_hero_map;
     renderer::Shader m_hero_depth, m_shadow_solid;
@@ -408,6 +453,7 @@ private:
     renderer::Mat4 m_hero_matrix = renderer::identity();
     std::optional<renderer::Vec3> m_hero_centre;
     bool m_hero_enabled = false, m_hero_ready = false, m_hero_airborne = false;
+    ShadowTransition m_hero_transition;  // Shared ease-out for projection and overlap darkening.
     std::optional<bool> m_hero_logged_airborne;
     std::array<std::unique_ptr<renderer::FrameBuffer>, kSunCascades> m_sun_maps;
     SunCascades m_sun_cascades;

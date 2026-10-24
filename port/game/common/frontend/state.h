@@ -24,7 +24,10 @@
 #include <utility>
 #include <vector>
 
+#include "enhanced/fsr3/fsr3.h"
 #include "enhanced/game/scripted_moby_colour.h"
+#include "game/common/frontend/geometry.h"
+#include "game/common/frontend/render_worker.h"
 #include "game/common/profile.h"
 #include "openrac/guest.h"
 #include "platform/input.h"
@@ -89,6 +92,59 @@ struct Kept {
     std::uint64_t frame = 0;
 };
 
+// Poses and draw properties owned by one CPU capture; nothing refers to live game memory.
+struct TickMobys {
+    std::vector<scene::Instance> live;                     // Captured world instances.
+    std::vector<std::uint32_t> addresses;                  // Game identities, never dereferenced.
+    std::vector<int> joints;                               // Joint count per instance.
+    std::vector<scene::LevelScene::JointColumns> palette;  // Owned skinning matrices.
+    std::vector<renderer::ShadowCapsule> shadows;          // Captured authored shadow proxies.
+    std::uint32_t shadow_moby = 0;                         // Identity of the shadow owner.
+    scene::MobyShadowState shadow_state;                   // Captured shadow direction and scale.
+    std::vector<Kept::TargetMoby> target_mobys;            // Mobys drawn in private camera spaces.
+};
+
+// The producer's next scene while the worker owns the previous rendered snapshot.
+// Only the game thread touches this single optional slot; frame() consumes it after finish_render().
+struct PreparedTick {
+    host::GameState state;  // Owned camera, visibility and game-object values.
+    TickMobys mobys;        // Owned instances and poses for that camera.
+    int level = -1;         // Pins the interpretation to the loaded level's immutable models.
+    double seconds = 0;     // CPU capture wall time, measured before the graphics handoff.
+};
+
+// Presentation metadata produced with a snapshot and consumed on the window thread after finish().
+struct FramePresentation {
+    std::chrono::steady_clock::time_point started{};  // Beginning of this displayed frame's work.
+    std::chrono::steady_clock::time_point
+        finished{};           // Worker completion, excluding handoff idle time.
+    renderer::Camera camera;  // Camera of the submitted scene, for the debug UI.
+    std::uint64_t tick = 0;   // Submitted window-frame number, including interpolation metadata.
+
+    int window_width = 0;   // Drawable window extent, read on the window thread.
+    int window_height = 0;  // Drawable window height.
+    int width = 0;          // Internal render target width.
+    int height = 0;         // Internal render target height.
+    float aspect = 0;       // Requested picture aspect.
+    float alpha = 1;        // Interpolation amount fixed at submission.
+    Box box{};              // Picture rectangle in the window.
+
+    bool first = false;         // First displayed frame for this game tick.
+    bool measure_cost = false;  // Enables the deliberately blocking frame-cost diagnostic.
+    double scene_seconds = 0;   // Snapshot interpolation and pose upload time.
+    double record_seconds = 0;  // World and native HUD command recording time.
+    double gpu_seconds = 0;     // Blocking diagnostic GPU completion time.
+    unsigned shown = 0;         // Resolved world framebuffer, filled by the render job.
+};
+
+// Dynamic scene data and settings owned by one render job; no span or pointer refers to game RAM.
+struct RenderSnapshot {
+    std::shared_ptr<const Kept> scene;  // Captured storage stays immutable until job completion.
+    settings::Settings graphics;        // Graphics settings fixed for this snapshot.
+    // The producer and job share this result until finish() publishes the worker's writes.
+    std::shared_ptr<FramePresentation> presentation;
+};
+
 // Everything the window holds while it is open: the window and the renderer, the level drawn, what
 // the game drew since the last frame (gathered for frame()), and the window as the settings left it.
 struct State {
@@ -104,6 +160,8 @@ struct State {
     bool capture_wanted = false;  // a mod's asking (capture_mouse)
     bool keyboard_taken = false;  // a mod took the keyboard (take_keyboard)
     std::unique_ptr<renderer::Renderer> renderer;
+    std::unique_ptr<enhanced::Fsr3>
+        temporal;  // Optional enhanced upscaler, released before the window.
     renderer::FrameBuffer frame;
     renderer::FrameBuffer picture;  // show_picture's: a movie frame, a boot still
     // The last frame the game drew its world in: what its draw buffer still holds on a frame it
@@ -173,11 +231,22 @@ struct State {
     bool muted = false;
     // The tick's own frame was left undrawn this many ticks in a row (frame(): the game is late).
     int skipped = 0;
-    Kept kept;
+    // The producer retains the latest captured scene for interpolation; jobs share its immutable storage.
+    std::shared_ptr<Kept> kept = std::make_shared<Kept>();
+    std::optional<PreparedTick> prepared_tick;    // At most one owned next-frame CPU capture.
+    std::unique_ptr<RenderWorker> render_worker;  // Single-slot Vulkan world renderer, or none.
+    std::shared_ptr<FramePresentation>
+        pending_frame;  // Window-thread owned; worker writes its result.
+    std::vector<renderer::ImageUpload>
+        pending_images;          // Game-thread uploads held until the worker finishes.
+    bool render_failed = false;  // A caught render error terminates the frontend cleanly.
 };
 
-// The frontend's state: made by open, dropped by close (frontend.h); null before and after. Only
-// the thread that opened the window touches it.
+// The frontend's state: made by open, dropped by close (frontend.h); null before and after.
+// Game collection, pacing and the window belong to the window thread. While a job is pending,
+// only the render worker changes renderer, scene, temporal, frame and retained-world GPU state.
+// CPU preparation may read level models and shadow availability, immutable until a level change.
+// The producer drains the worker before resource changes, readbacks, UI drawing or destruction.
 extern std::unique_ptr<State> g;
 
 // When frames reach the display, for drawing between ticks (set_tick, between): the tick the kept
@@ -306,6 +375,15 @@ void particle_quads(std::span<const std::uint8_t> ram, const host::GameState& st
 
 // Whether the frame cap lets a frame start now (frontend/interpolation.cpp).
 bool frame_due(std::chrono::steady_clock::time_point now);
+
+// Records an owned scene on the exclusive graphics owner thread; no game RAM is accessed.
+// The caller pins `owner` and its static level until this function and its callbacks return.
+void render_scene(
+    State& owner,
+    const Kept& snapshot,
+    const settings::Settings& graphics,
+    FramePresentation& output
+);
 
 // Draws the kept tick, the camera and mobys part way from the last tick's to its own (as far as
 // the refresh it will be shown at is between them, when frames are drawn between ticks), and shows

@@ -198,6 +198,10 @@ void finish() {
 
 #ifdef OPENRAC_FRONTEND
 [[noreturn]] void leave() {
+    // Join rendering while the window, profiler and GPU owners still exist.
+    if (g_window) {
+        frontend::close();
+    }
 #if defined(__ANDROID__)
     finish();
     stats::close_dump();
@@ -219,6 +223,20 @@ int vsync() {
     // [debug tools] The game's own code stops here and goes on when this returns: its time is the
     // tick's (common/stats.h). The tick's frame of measurements begins.
     stats::game_yielded();
+    // Render snapshots own their values, so next-tick writes precede the overlapping CPU capture.
+    apply_writes();
+#ifdef OPENRAC_FRONTEND
+    // Prepare owned CPU data before waiting; graphics and profiling storage still transfer at completion.
+    if (g_window) {
+        const auto* ram = runtime::Memory::get().base();
+        const std::span<const std::uint8_t> memory(ram, GUEST_RAM_SIZE);
+
+        // Only a completed handoff may present or begin the next graphics measurement frame.
+        if (!frontend::prepare_frame(memory) || !frontend::finish_render()) {
+            leave();
+        }
+    }
+#endif
 
     struct Resume {
         ~Resume() { stats::game_resumed(); }
@@ -226,7 +244,6 @@ int vsync() {
 
     stats::begin_frame(stats::FrameKind::Tick, static_cast<std::uint64_t>(g_frame));
     g_vsync_since_kick = true;
-    apply_writes();
     // With a window, the renderer draws the frame from the game's memory; without one, a frame is
     // only paced, at the game's frame rate.
 #ifdef OPENRAC_FRONTEND
@@ -298,6 +315,12 @@ int vsync() {
     }
 
     if (g_options.frames >= 0 && g_frame >= g_options.frames) {
+#ifdef OPENRAC_FRONTEND
+        // A fixed-length run can stop with its last owned snapshot still recording.
+        if (g_window) {
+            leave();
+        }
+#endif
         std::exit(0);  // finish() runs at exit
     }
 
@@ -406,7 +429,15 @@ int vsync() {
     }
 #endif
     {
-        const stats::Scope wait("wait");  // [debug tools]
+        std::optional<stats::Scope> wait;
+        bool render_pending = false;
+#ifdef OPENRAC_FRONTEND
+        render_pending = g_window && frontend::render_pending();
+#endif
+        // The render job owns the profiler's section stack while the game can sleep or simulate.
+        if (!render_pending) {
+            wait.emplace("wait");
+        }
         std::this_thread::sleep_until(g_next_frame);
     }
 #ifdef OPENRAC_FRONTEND

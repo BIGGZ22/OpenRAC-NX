@@ -105,6 +105,11 @@ Format format_of(GLenum internal) {
             return {VK_FORMAT_B10G11R11_UFLOAT_PACK32, VK_IMAGE_ASPECT_COLOR_BIT, 4};
         case kGlRg32f:
             return {VK_FORMAT_R32G32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, 8};
+        // Temporal reconstruction uses float depth and two-channel half-float motion outputs.
+        case 0x822E:  // GL_R32F
+            return {VK_FORMAT_R32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, 4};
+        case 0x822F:  // GL_RG16F
+            return {VK_FORMAT_R16G16_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, 4};
         case GL_DEPTH_COMPONENT:
         case GL_DEPTH_COMPONENT24:
         case GL_DEPTH_COMPONENT32F:
@@ -147,7 +152,12 @@ int texel_bytes(VkFormat f) {
 }
 
 ImagePtr make_image(
-    const Format& format, int width, int height, int levels, VkSampleCountFlagBits samples
+    const Format& format,
+    int width,
+    int height,
+    int levels,
+    VkSampleCountFlagBits samples,
+    VkImageUsageFlags extra_usage
 ) {
     // Called by the last owner to let go: the image's Vulkan objects go first, while the device
     // is open, then the Image itself.
@@ -170,7 +180,7 @@ ImagePtr make_image(
     info.arrayLayers = 1;
     info.samples = samples;
     info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
+    info.usage = extra_usage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
                  | (depth ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
                           : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
     if (samples == VK_SAMPLE_COUNT_1_BIT) {
@@ -192,6 +202,7 @@ ImagePtr make_image(
         return nullptr;
     }
     image->format = format.vk;
+    image->usage = info.usage;
     image->aspect = format.aspect;
     image->width = std::max(width, 1);
     image->height = std::max(height, 1);

@@ -126,7 +126,7 @@ std::string value_of(int row) {
         case kFrameCap:
             return s.frame_rate == settings::FrameRate::Capped ? std::to_string(s.frame_cap) : std::string("Off");
         case kShowFps:
-            return s.show_fps ? "On" : "Off";
+            return settings::name(s.show_fps);
         case kMuteUnfocused:
             return s.mute_unfocused ? "On" : "Off";
         case kSkipCutscenes:
@@ -240,7 +240,7 @@ void step_value(int row, int by) {
             }
             break;
         case kShowFps:
-            s.show_fps = !s.show_fps;
+            settings::step_frame_counter(by);
             break;
         case kMuteUnfocused:
             s.mute_unfocused = !s.mute_unfocused;
