@@ -2,8 +2,9 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // The debug overlay's drawer (debug/overlay.h): the menus on a touch screen, a panel that slides
-// out from the left with the port's settings, the enhanced graphics, the fixes and the developer
-// tools on cards, drawn in the launcher's colours with rows as high as a thumb.
+// out from the left with the port's settings, the enhanced graphics, the touch controls, the fixes
+// and the developer tools on cards, drawn in the launcher's colours (ui_colors.h) with rows as high
+// as a thumb; and the bar shown while the on-screen pad's layout is edited.
 
 #include <algorithm>
 #include <cfloat>

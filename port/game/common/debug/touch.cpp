@@ -3,7 +3,7 @@
 //
 // The debug overlay's touch handling (debug/overlay.h): whether the drawer is offered, the drawer's
 // opening and shutting, and the fingers it takes as ImGui's pointer, away from the on-screen pad;
-// with the drag that scrolls the drawer and the panel.
+// with the drag that scrolls the drawer and the panel, and the editing of the pad's layout.
 
 #include <algorithm>
 #include <cfloat>

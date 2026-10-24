@@ -381,10 +381,11 @@ void edit_touch(bool on);
 // the drawer's, which the game then does not see. Defined in debug/touch.cpp.
 bool drawer_event(const SDL_Event& e);
 
-// Slides the drawer towards s.drawer_open, in under a fifth of a second, and draws it as far out
-// as it is (s.drawer_at): the port's settings, the enhanced graphics, the fixes and, unfolded, the
-// developer tools. A touch beside it or the gamepad's B shuts it; once shut, it asks for the
-// screenshot taken in it (s.shot_when_shut). Defined in debug/drawer.cpp.
+// Slides the drawer towards s.drawer_open with the launcher's easing, and draws it as far out as
+// it is (s.drawer_at), in the launcher's colours (ui_colors.h): the port's settings, the enhanced
+// graphics, the touch controls, the fixes and, unfolded, the developer tools. A touch beside it or
+// the gamepad's B shuts it; once shut, it asks for the screenshot taken in it (s.shot_when_shut).
+// Defined in debug/drawer.cpp.
 void drawer(const Shown& shown);
 
 // Draws the bar in the middle of the screen while the on-screen pad's layout is edited, to make

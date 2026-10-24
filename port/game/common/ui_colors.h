@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// The launcher's colours in the game: the options drawer (debug_overlay.cpp) wears the theme the
+// The launcher's colours in the game: the options drawer (debug/drawer.cpp) wears the theme the
 // player picked in the launcher, and on Android the picked game's accent, as the launcher does. The
 // launcher hands them over in OPENRAC_UI_COLORS (launcher/core/src/theme.rs), by app.css's names;
 // a game started without it, or a name it does not hold, keeps the launcher's own (app.css's
