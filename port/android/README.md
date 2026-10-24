@@ -136,8 +136,8 @@ game's log.
     flash.
 14. **The launcher's look.** Picking another game on Games changes the
     launcher's colour (rac2 light blue, rac3 yellow, rac4 red, Size Matters
-    blue), pages slide in as the tabs change, and the drawer in the game wears
-    the theme picked in Settings.
+    blue, Secret Agent Clank sky blue), pages slide in as the tabs change, and
+    the drawer in the game wears the theme picked in Settings.
 15. **Your files.** The Files app's sidebar lists OpenRAC with the free space,
     holding Saves and settings, Games, Disc images, GPU drivers and
     Screenshots; Settings' Open Files opens it there. Uninstall and keep the

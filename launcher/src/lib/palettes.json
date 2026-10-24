@@ -152,6 +152,15 @@
       "--amber": "#7aa8ff",
       "--gold": "#c2d6ff",
       "--brand": "#3f78f0"
+    },
+    "rac6": {
+      "--bar-top": "#38bdf8",
+      "--bar-bottom": "#0ea5e9",
+      "--bar-ink": "#032233",
+      "--bar-ink-deep": "#01131f",
+      "--amber": "#5cc8fa",
+      "--gold": "#bae6fd",
+      "--brand": "#0ea5e9"
     }
   }
 }

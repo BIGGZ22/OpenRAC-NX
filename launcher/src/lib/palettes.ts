@@ -1,7 +1,7 @@
 // The launcher's themes (Settings → General): its surfaces, text, lines and states. The accent is
 // not a theme's: on Android it is the picked game's (themes.ts, accentProperties), elsewhere the
 // launcher's orange, under every theme. "openrac" is app.css's own colours, the website's. The
-// game's options drawer wears the same (port/game/common/debug_overlay.cpp, look).
+// game's options drawer wears the same (port/game/common/ui_colors.h).
 
 import data from "./palettes.json";
 
