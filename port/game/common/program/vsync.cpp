@@ -284,9 +284,10 @@ int vsync() {
         last_drew = keep || draws != 0;
         g_draws = 0;
 
-        if (!keep && !frontend::frame(
-                         std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), g_chain, draws
-                     )) {
+        if (!keep
+            && !frontend::frame(
+                std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), g_chain, draws
+            )) {
             leave();
         }
 

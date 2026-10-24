@@ -48,8 +48,12 @@ void move_old_data_home(const fs::path& base) {
     fs::create_directories(base, error);
     fs::copy(old, base, fs::copy_options::recursive | fs::copy_options::skip_existing, error);
     if (error) {
-        log::warn("the cards and settings in {} could not be copied to {}: {}", old.string(),
-                  base.string(), error.message());
+        log::warn(
+            "the cards and settings in {} could not be copied to {}: {}",
+            old.string(),
+            base.string(),
+            error.message()
+        );
         return;
     }
     fs::rename(old, fs::path(old).concat(".moved"), error);

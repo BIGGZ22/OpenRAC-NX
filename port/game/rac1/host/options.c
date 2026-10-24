@@ -21,7 +21,8 @@ RAC1_TYPE_func_001FE540_result func_001FE540(int id) {
 #define LANGUAGE RAC1_ADDR(0x0015EE88u)
 #define SOUND RAC1_ADDR(0x0015EEE8u)
 
-static const char *const sound_keys[3] = {"game_playback", "game_music_volume", "game_sound_volume"};
+static const char* const sound_keys[3] =
+    {"game_playback", "game_music_volume", "game_sound_volume"};
 
 /* Whether the Sound page has the remembered values: from the sound's start on. */
 static int sound_put;

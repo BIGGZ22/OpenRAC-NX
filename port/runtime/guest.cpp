@@ -391,7 +391,7 @@ gaddr openrac_folded_address(const uint32_t* places, int count, gaddr caller, ui
     std::uint32_t high[32] = {};
     bool known[32] = {};
     gaddr result = 0;
-    gaddr other = 0;  // a function's address the code forms that is none of the places
+    gaddr other = 0;      // a function's address the code forms that is none of the places
     bool called = false;  // the code calls one of the places
     int seen = 0;
     for (std::uint32_t i = 0; i * 4 < size && result == 0; ++i) {
@@ -438,8 +438,13 @@ gaddr openrac_folded_address(const uint32_t* places, int count, gaddr caller, ui
         // split_places.tsv. (A C that calls through the address, where the code has a jal to one
         // of them, gets a copy of the same function: nothing to say.)
         if (other != 0 && !called) {
-            warn("the copy at {:#x} (overlay {}) takes {:#x}, not one its C names; it gets {:#x}", caller,
-                 overlay, other, fallback);
+            warn(
+                "the copy at {:#x} (overlay {}) takes {:#x}, not one its C names; it gets {:#x}",
+                caller,
+                overlay,
+                other,
+                fallback
+            );
         }
         result = fallback;
     }
