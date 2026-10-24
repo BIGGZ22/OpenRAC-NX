@@ -481,7 +481,7 @@ export async function refresh() {
 /** Fetches every game's latest progress from bytematch.dev (the matched figures and the functional
  *  C beside them); the Rust side fetches and keeps a copy in the launcher's own folder, for
  *  offline use. */
-export async function syncProgressWeb() {
+async function syncProgressWeb() {
   if (!app.config?.root) return;
   const library = ++librarySeq;
   try {
