@@ -39,6 +39,96 @@ void check_red_pixel(const renderer::FrameBuffer& target, int expected) {
     CHECK(std::abs(static_cast<int>(pixels[0]) - expected) <= 1);
 }
 
+// Builds a mesh-material shader whose cached colour and original alpha have independent sources.
+bool build_upscaled_material_shader(renderer::Shader& shader) {
+    std::string error;
+    return shader.build(
+        "bindless upscaled colour snapshots",
+        R"(#version 410 core
+in mat4 model;
+void main() {
+    vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+    gl_Position = vec4(p * 2.0 - 1.0, 0, 1) + vec4(model[0].xyz, 0);
+}
+)",
+        R"(#version 410 core
+uniform sampler2D tex_T0;
+uniform sampler2D upscaled_texture_colours;
+uniform int upscaled_texture_colours_ready;
+uniform vec4 material_colour;
+layout(location = 0) out vec4 result;
+void main() {
+    result = texture(tex_T0, vec2(0.5));
+    if (upscaled_texture_colours_ready != 0) {
+        result.rgb = texture(upscaled_texture_colours, vec2(0.5)).rgb;
+    }
+    result *= material_colour;
+}
+)",
+        error
+    );
+}
+
+// Checks deferred material snapshots when both texture selection and cached-colour readiness change.
+void test_bindless_upscaled_colours(unsigned vertex_array, bool reference) {
+    // Drivers without descriptor indexing keep the ordinary sampler path.
+    if (!vkgl::gpu_materials_active()) {
+        return;
+    }
+
+    renderer::Shader shader;
+    CHECK(build_upscaled_material_shader(shader));
+    renderer::FrameBuffer target;
+    std::string error;
+    // Four pixels retain four draws until the single readback completes the recording.
+    CHECK(target.create(4, 1, error));
+    glBindFramebuffer(GL_FRAMEBUFFER, target.id());
+    glBindVertexArray(vertex_array);
+    glDisable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_SCISSOR_TEST);
+    std::array<unsigned, 2> textures{};
+    glGenTextures(static_cast<int>(textures.size()), textures.data());
+    // Different alpha values reveal accidental replacement of original texture coverage.
+    const std::array<std::array<unsigned char, 4>, 2> colours = {
+        {{255, 0, 0, 64}, {0, 255, 0, 192}}
+    };
+
+    // Each role uses a distinct image, with nearest sampling to keep expectations exact.
+    for (std::size_t n = 0; n < textures.size(); ++n) {
+        glActiveTexture(GL_TEXTURE0 + static_cast<unsigned>(n));
+        glBindTexture(GL_TEXTURE_2D, textures[n]);
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, colours[n].data()
+        );
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+
+    shader.use();
+    glUniform1i(shader.uniform("tex_T0"), 0);
+    glUniform4f(shader.uniform("material_colour"), 1, 1, 1, 1);
+    const auto before = vkgl::submission_counters();
+
+    // Readiness changes must preserve each draw even when all ordinary descriptors remain shared.
+    for (int n = 0; n < 4; ++n) {
+        glViewport(n, 0, 1, 1);
+        glUniform1i(shader.uniform("upscaled_texture_colours"), n % 2);
+        glUniform1i(shader.uniform("upscaled_texture_colours_ready"), n / 2);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
+
+    const auto after = vkgl::submission_counters();
+    // Dynamic uniform offsets retain one set; the reference allocates a new uniform snapshot for every draw.
+    CHECK(after.descriptor_sets - before.descriptor_sets == (reference ? 4u : 1u));
+    const auto pixels = target.read_rgba();
+    // Only the last draw reads green cached colour; every draw keeps the red source's alpha.
+    const std::vector<unsigned char> expected =
+        {255, 0, 0, 64, 255, 0, 0, 64, 255, 0, 0, 64, 0, 255, 0, 64};
+    CHECK(pixels == expected);
+    glDeleteTextures(static_cast<int>(textures.size()), textures.data());
+}
+
 // Checks that changing the depth comparison cannot reuse the preceding draw's pipeline.
 // The caller owns the bound full-screen shader, vertex array and target for this test.
 void test_pipeline_depth_state(const renderer::FrameBuffer& target) {
@@ -879,6 +969,7 @@ void main() {
     }
     CHECK(glGetError() == GL_NO_ERROR);
     test_pipeline_state_changes(vao);
+    test_bindless_upscaled_colours(vao, reference);
     glDeleteTextures(2, textures.data());
     glDeleteVertexArrays(1, &vao);
     texel_buffer_fallbacks();
