@@ -38,6 +38,155 @@ namespace {
 
 VertexArray g_default_vertex_array;  // vertex array 0
 
+// ---- Dynamic state, recorded when it changes ----
+
+// Returns whether a draw leaves out the state its command buffer holds already (vk-state-skip).
+// Off, every draw records all of it, as before; the tracker is kept up to date either way.
+bool skip_repeats() {
+    return renderer::render_opt::enabled(renderer::render_opt::Opt::VkStateSkip);
+}
+
+// Records the GL viewport and scissor, or a pass's indexed viewports with their scissors, one
+// command each, into `cmd` without RecordedState: for more viewports than it can remember.
+void record_viewports_untracked(VkCommandBuffer cmd) {
+    std::vector<VkViewport> viewports;
+    std::vector<VkRect2D> scissors;
+
+    // Each indexed viewport is its own scissor too.
+    for (const auto& r : g->indexed_viewports) {
+        const auto x = static_cast<float>(r[0]);
+        const auto y = static_cast<float>(r[1]);
+        const auto width = static_cast<float>(r[2]);
+        const auto height = static_cast<float>(r[3]);
+        viewports.push_back({x, y, width, height, 0.0f, 1.0f});
+        scissors.push_back(
+            {{r[0], r[1]}, {static_cast<std::uint32_t>(r[2]), static_cast<std::uint32_t>(r[3])}}
+        );
+    }
+
+    vkCmdSetViewport(cmd, 0, static_cast<std::uint32_t>(viewports.size()), viewports.data());
+    vkCmdSetScissor(cmd, 0, static_cast<std::uint32_t>(scissors.size()), scissors.data());
+    count_command(Command::DynamicState, 2);  // the viewports and the scissors
+    g->recorded.viewport_count = 0;
+    g->recorded.scissor_count = 0;
+}
+
+// Records into `cmd` the viewports and scissors a draw into `t` uses: the GL viewport and the
+// scissor clipped to `t`, or the indexed viewports a pass set, each its own scissor. Each of the
+// two commands is left out when it would set what `cmd` holds.
+void record_viewports(VkCommandBuffer cmd, const Target& t) {
+    const std::size_t count = std::max<std::size_t>(1, g->indexed_viewports.size());
+
+    // A draw into more viewports than the tracker holds is recorded in full.
+    if (count > kTrackedViewports) {
+        record_viewports_untracked(cmd);
+        return;
+    }
+
+    const State& s = g->state;
+    std::array<VkViewport, kTrackedViewports> viewports{};
+    std::array<VkRect2D, kTrackedViewports> scissors{};
+
+    // The GL viewport and scissor, unless a pass drew into indexed viewports, each its own scissor.
+    if (g->indexed_viewports.empty()) {
+        viewports[0] =
+            {static_cast<float>(s.viewport[0]),
+             static_cast<float>(s.viewport[1]),
+             static_cast<float>(s.viewport[2]),
+             static_cast<float>(s.viewport[3]),
+             0.0f,
+             1.0f};
+        scissors[0] = scissor_rect(t);
+    } else {
+        // Each of the pass's viewports.
+        for (std::size_t n = 0; n < count; ++n) {
+            const auto& r = g->indexed_viewports[n];
+            viewports[n] =
+                {static_cast<float>(r[0]),
+                 static_cast<float>(r[1]),
+                 static_cast<float>(r[2]),
+                 static_cast<float>(r[3]),
+                 0.0f,
+                 1.0f};
+            scissors[n] = {
+                {r[0], r[1]}, {static_cast<std::uint32_t>(r[2]), static_cast<std::uint32_t>(r[3])}
+            };
+        }
+    }
+
+    RecordedState& recorded = g->recorded;
+    const auto n = static_cast<std::uint32_t>(count);
+    const bool skip = skip_repeats();
+
+    // VkViewport and VkRect2D have no padding, so equal bytes are equal state.
+    if (!skip || recorded.viewport_count != n
+        || std::memcmp(viewports.data(), recorded.viewports.data(), count * sizeof(VkViewport))
+               != 0) {
+        vkCmdSetViewport(cmd, 0, n, viewports.data());
+        count_command(Command::DynamicState);
+        recorded.viewport_count = n;
+        recorded.viewports = viewports;
+    }
+
+    // The scissors, apart: a 2D draw often moves the scissor and keeps the viewport.
+    if (!skip || recorded.scissor_count != n
+        || std::memcmp(scissors.data(), recorded.scissors.data(), count * sizeof(VkRect2D)) != 0) {
+        vkCmdSetScissor(cmd, 0, n, scissors.data());
+        count_command(Command::DynamicState);
+        recorded.scissor_count = n;
+        recorded.scissors = scissors;
+    }
+}
+
+// Records `value` into `known` and returns true when it differs from what `known` holds, or
+// when vk-state-skip is off; false when the command that sets it can be left out.
+template <typename Value>
+bool changes(std::optional<Value>& known, const Value& value, bool skip) {
+    // The command buffer holds this value already.
+    if (skip && known == value) {
+        return false;
+    }
+
+    known = value;
+    return true;
+}
+
+// Records into `cmd` the blend constants and the three stencil states of the GL state, each
+// command left out when it would set what `cmd` holds.
+void record_blend_and_stencil(VkCommandBuffer cmd) {
+    const State& s = g->state;
+    RecordedState& recorded = g->recorded;
+    const bool skip = skip_repeats();
+    std::array<std::uint32_t, 4> blend_bits{};
+    std::memcpy(blend_bits.data(), s.blend_colour, sizeof blend_bits);
+
+    // The blend constants, by their bits.
+    if (changes(recorded.blend_bits, blend_bits, skip)) {
+        vkCmdSetBlendConstants(cmd, s.blend_colour);
+        count_command(Command::DynamicState);
+    }
+
+    const auto reference = static_cast<std::uint32_t>(s.stencil_ref);
+
+    // The stencil reference, compare mask and write mask, one command each, for both faces.
+    if (changes(recorded.stencil_reference, reference, skip)) {
+        vkCmdSetStencilReference(cmd, VK_STENCIL_FACE_FRONT_AND_BACK, reference);
+        count_command(Command::DynamicState);
+    }
+
+    // The compare mask.
+    if (changes(recorded.stencil_compare_mask, s.stencil_value_mask, skip)) {
+        vkCmdSetStencilCompareMask(cmd, VK_STENCIL_FACE_FRONT_AND_BACK, s.stencil_value_mask);
+        count_command(Command::DynamicState);
+    }
+
+    // The write mask.
+    if (changes(recorded.stencil_write_mask, s.stencil_write_mask, skip)) {
+        vkCmdSetStencilWriteMask(cmd, VK_STENCIL_FACE_FRONT_AND_BACK, s.stencil_write_mask);
+        count_command(Command::DynamicState);
+    }
+}
+
 }  // namespace
 
 // ---- Draws ----
@@ -292,36 +441,8 @@ void draw(
         vkCmdBindVertexBuffers(cmd, 0, n, buffers, offsets);
         count_command(Command::BindBuffers);
     }
-    VkViewport viewport{
-        static_cast<float>(s.viewport[0]),
-        static_cast<float>(s.viewport[1]),
-        static_cast<float>(s.viewport[2]),
-        static_cast<float>(s.viewport[3]),
-        0.0f,
-        1.0f
-    };
-    const VkRect2D scissor = scissor_rect(t);
-    if (g->indexed_viewports.empty()) {
-        vkCmdSetViewport(cmd, 0, 1, &viewport);
-        vkCmdSetScissor(cmd, 0, 1, &scissor);
-    } else {
-        std::vector<VkViewport> viewports;
-        std::vector<VkRect2D> scissors;
-        for (const auto& r : g->indexed_viewports) {
-            viewports.push_back({float(r[0]), float(r[1]), float(r[2]), float(r[3]), 0, 1});
-            scissors.push_back({{r[0], r[1]}, {unsigned(r[2]), unsigned(r[3])}});
-        }
-        vkCmdSetViewport(cmd, 0, static_cast<std::uint32_t>(viewports.size()), viewports.data());
-        vkCmdSetScissor(cmd, 0, static_cast<std::uint32_t>(scissors.size()), scissors.data());
-    }
-    count_command(Command::DynamicState, 2);  // the viewports and the scissors
-    vkCmdSetBlendConstants(cmd, s.blend_colour);
-    vkCmdSetStencilReference(
-        cmd, VK_STENCIL_FACE_FRONT_AND_BACK, static_cast<std::uint32_t>(s.stencil_ref)
-    );
-    vkCmdSetStencilCompareMask(cmd, VK_STENCIL_FACE_FRONT_AND_BACK, s.stencil_value_mask);
-    vkCmdSetStencilWriteMask(cmd, VK_STENCIL_FACE_FRONT_AND_BACK, s.stencil_write_mask);
-    count_command(Command::DynamicState, 4);  // the blend constant and the three stencil states
+    record_viewports(cmd, t);
+    record_blend_and_stencil(cmd);
     if (indexed) {
         vkCmdBindIndexBuffer(cmd, index.buffer, index.offset, vk_index);
         count_command(Command::BindBuffers);

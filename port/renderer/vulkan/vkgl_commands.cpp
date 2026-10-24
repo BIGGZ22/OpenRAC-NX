@@ -129,6 +129,9 @@ void begin_rendering(const Target& t, const Clear& clear) {
     g->rendering = true;
     g->rendering_target = t;
     g->bound_pipeline = VK_NULL_HANDLE;
+
+    // A new pass trusts nothing recorded before it (RecordedState): more than Vulkan asks.
+    g->recorded.forget();
 }
 
 }  // namespace
@@ -290,6 +293,9 @@ void begin_buffers() {
     }
     g->upload_used = false;
     ++g->recording;
+
+    // A command buffer begun afresh holds no dynamic state and no binds.
+    g->recorded.forget();
 }
 
 bool timing_begin(std::uint64_t serial, int section) {
