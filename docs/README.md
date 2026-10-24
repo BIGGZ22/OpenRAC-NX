@@ -7,7 +7,7 @@ the first table; go to a game's documents when you work on that game.
 
 | Document | For |
 |---|---|
-| [README.md](../README.md) | What OpenRAC is, how to play, progress |
+| [README.md](../README.md) | What OpenRAC is and how to play |
 | [DEVELOPING.md](DEVELOPING.md) | Working from a checkout: the launcher from source, setting up the decompilations, the port, the level editor by hand |
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Ground rules, the commit convention, pull requests, tests |
 | [AGENTS.md](../AGENTS.md) and [CLAUDE.md](../CLAUDE.md) | Rules for AI agents |
