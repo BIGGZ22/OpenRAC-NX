@@ -11,7 +11,10 @@
 namespace openrac::renderer {
 
 // How carefully the horizons are refined: three silhouette-refinement steps, or seven.
-enum class GtaoQuality { Performance, Quality };
+enum class GtaoQuality {
+    Performance,
+    Quality
+};
 
 // The ambient occlusion's settings, with the defaults the player's settings start from
 // (docs/port/SETTINGS.md, the `gtao_*` keys).
