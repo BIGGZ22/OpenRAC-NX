@@ -58,6 +58,7 @@
 #include "openrac/guest.h"
 #include "openrac/memory.h"
 #include "openrac/sound_engine.h"
+#include "program/program.h"
 
 #ifdef OPENRAC_FRONTEND
 #include "debug_overlay.h"
@@ -113,6 +114,7 @@ namespace {
 
 namespace fs = std::filesystem;
 using namespace openrac;
+using namespace openrac::program;
 
 struct Options {
     fs::path data;
@@ -147,10 +149,19 @@ std::optional<std::string> env_string(env::Var var) {
 
     return std::string(*found);
 }
+}  // namespace
+
+namespace openrac::program {
+
 long g_frame = 0;
-gaddr g_chain = 0;  // the display list sent this frame
-bool g_vsync_since_kick = true;  // a vertical blank was waited for since the last frame was sent
+gaddr g_chain = 0;
+bool g_vsync_since_kick = true;
 bool g_window = false;
+
+}  // namespace openrac::program
+
+namespace {
+
 std::chrono::steady_clock::time_point g_next_frame;
 // The game's ticks a second: 60 for every version. The PAL game runs in its own 60 Hz mode
 // (options_menu.cpp keeps it there), so its time base is a sixtieth of a second too.
@@ -600,51 +611,10 @@ void watch_sound() {
 
 }  // namespace
 
-// ---- What the library replacements call (openrac/game_host.h) ----
+namespace openrac::program {
 
-extern "C" {
-
-// What the game's renderers drew since the last frame (openrac_game_draw), and whether it reports.
-static unsigned g_draws = 0;
-static bool g_reports_draws = false;
-
-void openrac_game_crash(const char* reason) {
-    log::error("{}", reason);
-    crash::report(reason, crash::Kind::Trap);
-    std::_Exit(3);
-}
-
-void openrac_game_warn(const char* message) {
-    log::warn("{}", message);
-}
-
-void openrac_game_moby_colour(gaddr object, unsigned colour) {
-#ifdef OPENRAC_FRONTEND
-    if (g_window) {
-        frontend::moby_colour(object, colour, openrac_game_loaded_overlay());
-    }
-#else
-    (void)object;
-    (void)colour;
-#endif
-}
-
-// hostgen namespaces external calls from translated game C with game_.
-extern "C" void game_openrac_game_moby_colour(unsigned object, unsigned colour) {
-    openrac_game_moby_colour(object, colour);
-}
-
-void openrac_game_draw(unsigned layers) {
-    g_draws |= layers;
-    g_reports_draws = true;
-#ifdef OPENRAC_FRONTEND
-    // The world's terrain: the camera it is drawn with is the frame's world camera.
-    if (g_window && (layers & OPENRAC_DRAW_TERRAIN) != 0) {
-        const auto* ram = runtime::Memory::get().base();
-        frontend::world_drawn(std::span<const std::uint8_t>(ram, 32u * 1024 * 1024));
-    }
-#endif
-}
+unsigned g_draws = 0;
+bool g_reports_draws = false;
 
 // OPENRAC_WRITE=FRAME:ADDRESS:VALUE[:FRAMES],...: a 32-bit word written into the game's memory at
 // each vertical blank from FRAME for FRAMES blanks (default 1), hexadecimal address and value; the
@@ -690,7 +660,7 @@ static std::chrono::microseconds tick_period() {
     return period;
 }
 
-int openrac_game_vsync(void) {
+int vsync() {
     // [debug tools] The game's own code stops here and goes on when this returns: its time is the
     // tick's (common/stats.h). The tick's frame of measurements begins.
     stats::game_yielded();
@@ -850,100 +820,6 @@ int openrac_game_vsync(void) {
     return static_cast<int>(g_frame & 1);
 }
 
-void openrac_game_dma_send(gaddr channel, gaddr tag) {
-    g_chain = tag;
-    // A frame sent to VIF1 with no vertical blank waited for since the last one: on the console
-    // the loop is paced by the DMA and the interrupts (the title loop never calls sceGsSyncV), so
-    // the frame ends here, with the vertical blank's handlers, as if the hardware had done it.
-    if (channel == 0x10009000u) {
-        if (!g_vsync_since_kick) {
-            openrac_game_vsync();
-            openrac_game_run_vsync_handlers();
-        }
-        g_vsync_since_kick = false;
-    }
-    log::debug("frame {}: DMA chain at {:#010x} to channel {:#010x}", g_frame, tag, channel);
-}
-
-void openrac_game_set_display(const openrac_game_display* d) {
-    static openrac_game_display last{};
-    if (std::memcmp(&last, d, sizeof(last)) != 0) {
-        last = *d;
-        log::info("display: {}x{} at page {} (width {}), format {:#x}, at {},{}", d->width, d->height,
-                  d->frame_base, d->frame_width, d->psm, d->x, d->y);
-        // The draw buffer follows the display buffer: a 512-line display (PAL) puts it at block
-        // 0x1000, 448 lines tall, the 448-line one of a 60 Hz mode at 0xE00, 416 lines tall. Missed,
-        // the game's copy of the draw buffer into the display was drawn from an empty texture over
-        // the picture (the PAL game in its 60 Hz mode showed its menus over black), and the frame
-        // the pause menu reads back came out 32 lines short (a black band at the bottom).
-#ifdef OPENRAC_FRONTEND
-        if (d->frame_width > 0 && d->height > 0) {
-            renderer::set_draw_buffer_block(static_cast<std::uint32_t>(d->frame_base) * 32
-                                                + static_cast<std::uint32_t>(d->height * d->frame_width),
-                                            d->height >= 512 ? 448 : 416);
-        }
-#endif
-    }
-}
-
-// The video mode the game asks the console for (sceGsResetGraph, SetGsCrt): 2 is NTSC, 60 fields a
-// second, 3 is PAL, 50. The game's tick is one field: a PAL game that changes to its 60 Hz mode
-// counts its time in sixtieths from then on (rac1/pal: func_002157C0 sets the time base when a
-// level starts). The port keeps the PAL game in that mode and ticks every game 60 times a second.
-void openrac_game_set_video_mode(int interlace, int mode, int field_mode) {
-    // Logged only: the port paces every game at 60 Hz whatever the mode (tick_rate()).
-    log::info("video mode {:#x} (interlace {}, field mode {}){}", mode, interlace, field_mode,
-              mode == 3 ? " (PAL 50 Hz: the port keeps 60)" : "");
-}
-
-void openrac_game_load_image(const openrac_game_image* image) {
-    log::debug(
-        "texture upload {}x{} format {:#x} to block {}",
-        image->width,
-        image->height,
-        image->psm,
-        image->base
-    );
-#ifdef OPENRAC_FRONTEND
-    if (g_window && image->width > 0 && image->height > 0) {
-        const std::size_t bytes = renderer::image_bytes(
-            static_cast<std::uint8_t>(image->psm), image->width, image->height
-        );
-        frontend::upload_image(
-            static_cast<std::uint32_t>(image->base),
-            static_cast<std::uint32_t>(image->width_units),
-            static_cast<std::uint8_t>(image->psm),
-            static_cast<std::uint32_t>(image->x),
-            static_cast<std::uint32_t>(image->y),
-            static_cast<std::uint32_t>(image->width),
-            static_cast<std::uint32_t>(image->height),
-            std::span<const std::uint8_t>(static_cast<const std::uint8_t*>(G(image->pixels)), bytes)
-        );
-    }
-#endif
-}
-
-void openrac_game_store_image(const openrac_game_image* image) {
-    if (image->width <= 0 || image->height <= 0) {
-        return;
-    }
-    const std::size_t bytes =
-        static_cast<std::size_t>(image->width) * static_cast<std::size_t>(image->height) * 4;
-    auto* out = static_cast<std::uint8_t*>(G(image->pixels));
-#ifdef OPENRAC_FRONTEND
-    if (g_window && frontend::store_image(static_cast<std::uint32_t>(image->base),
-                                          static_cast<std::uint32_t>(image->width_units),
-                                          static_cast<std::uint8_t>(image->psm), image->x, image->y,
-                                          image->width, image->height, std::span<std::uint8_t>(out, bytes))) {
-        return;
-    }
-#endif
-    // Nothing to answer with: black, as an empty frame buffer reads.
-    if (image->psm == 0) {
-        std::memset(out, 0, bytes);
-    }
-}
-
 /*
  * The movie player, after ReRAC's movie mode (crates/rc-game/src/movie_player.rs,
  * crates/rc-engine/src/movie_render.rs; ISC License, Copyright (c) 2026 ReRAC contributors):
@@ -952,7 +828,7 @@ void openrac_game_store_image(const openrac_game_image* image) {
  * been handed over less what the device still holds), so picture and sound cannot drift apart.
  * When the video ends (or is skipped) the last picture stays up for the console's FadeToBlack(4).
  */
-int openrac_game_play_movie(uint32_t lsn, uint32_t bytes, int channel, int start_skips) {
+int play_movie(uint32_t lsn, uint32_t bytes, int channel, int start_skips) {
     if (g_options.skip_movies) {
         log::info("movie at sector {}: skipped by --skip-movies (development probe)", lsn);
         return 1;  // the same result as the movie player's Start-skip path
@@ -1074,205 +950,7 @@ int openrac_game_play_movie(uint32_t lsn, uint32_t bytes, int channel, int start
 #endif
 }
 
-int openrac_game_mobys_drawn(gaddr first, int count) {
-#ifdef OPENRAC_FRONTEND
-    if (g_window && count > 0) {
-        const auto* ram = runtime::Memory::get().base();
-        frontend::mobys_drawn(std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), first, count);
-        return count <= 0xFF ? 1 : 0;
-    }
-#else
-    (void)first;
-    (void)count;
-#endif
-    return 0;
-}
-
-void openrac_game_effect_quad(const openrac_game_quad* quad) {
-#ifdef OPENRAC_FRONTEND
-    if (g_window) {
-        const auto* ram = runtime::Memory::get().base();
-        frontend::effect_quad(std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), *quad);
-    }
-#else
-    (void)quad;
-#endif
-}
-
-void openrac_game_sky_shell(int shell, const float* matrix) {
-#ifdef OPENRAC_FRONTEND
-    if (g_window) {
-        frontend::sky_shell(shell, matrix);
-    }
-#else
-    (void)shell;
-    (void)matrix;
-#endif
-}
-
-int openrac_game_hud_side(void) {
-#ifdef OPENRAC_FRONTEND
-    if (g_window) {
-        return frontend::hud_side();
-    }
-#endif
-    return 0;
-}
-
-float openrac_game_picture_wider(void) {
-#ifdef OPENRAC_FRONTEND
-    if (g_window) {
-        return frontend::picture_wider();
-    }
-#endif
-    return 1.0f;
-}
-
-int openrac_game_ui_quad(const openrac_game_ui_rect* quad) {
-#ifdef OPENRAC_FRONTEND
-    if (g_window) {
-        return frontend::ui_quad(*quad);
-    }
-#else
-    (void)quad;
-#endif
-    return -1;
-}
-
-void openrac_game_particle(const uint8_t* record, uint32_t pixels, uint32_t clut, int log2_side) {
-#ifdef OPENRAC_FRONTEND
-    if (g_window) {
-        const auto* ram = runtime::Memory::get().base();
-        frontend::particle(std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), record, pixels, clut, log2_side);
-    }
-#else
-    (void)record;
-    (void)pixels;
-    (void)clut;
-    (void)log2_side;
-#endif
-}
-
-void openrac_game_sky_sprite(const uint8_t* record, uint64_t tex0) {
-#ifdef OPENRAC_FRONTEND
-    if (g_window) {
-        frontend::sky_sprite(record, tex0);
-    }
-#else
-    (void)record;
-    (void)tex0;
-#endif
-}
-
-void openrac_game_moby_chain(gaddr moby, gaddr marks) {
-#ifdef OPENRAC_FRONTEND
-    const auto* ram = runtime::Memory::get().base();
-    const auto pose = viewer::moby_pose_matrices(std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), moby);
-    const auto* mark = static_cast<const std::uint8_t*>(G(marks));
-    const std::size_t count = std::min<std::size_t>(mark[0x7F], pose.size());
-    for (std::size_t j = 0; j < count; ++j) {
-        if (mark[j] != 0) {
-            std::memcpy(G(0x70000000u + static_cast<gaddr>(j) * 0x40), pose[j].data(), 0x40);
-        }
-    }
-#else
-    (void)moby;
-    (void)marks;
-#endif
-}
-
-gaddr openrac_game_text(int id) {
-#ifdef OPENRAC_FRONTEND
-    if (g_window) {
-        return frontend::text(id);
-    }
-#endif
-    (void)id;
-    return 0;
-}
-
-// [verbose log] The first pad's buttons each time they change, and its sticks when one moves far.
-static void log_pad(int port, const uint16_t* buttons, const uint8_t analog[4]) {
-    static uint16_t last = 0xFFFF;
-    static uint8_t last_analog[4] = {0x80, 0x80, 0x80, 0x80};
-    if (port != 0 || !log::verbose_on()) {
-        return;
-    }
-    bool moved = false;
-    for (int i = 0; i < 4; ++i) {
-        moved = moved || std::abs(int(analog[i]) - int(last_analog[i])) >= 0x30;
-    }
-    if (*buttons == last && !moved) {
-        return;
-    }
-    last = *buttons;
-    std::memcpy(last_analog, analog, 4);
-    log::verbose("frame {}: pad 0 buttons {:#06x} (active low), sticks {} {} {} {}", g_frame, *buttons, analog[0],
-                 analog[1], analog[2], analog[3]);
-}
-
-// The pad's report as the pad library builds it (lib/pad.c's scePad2Read: buttons, the sticks,
-// twelve pressures), through the mods' callbacks, back into buttons and sticks: for the port's own
-// readers of the pad (the movie player), so a mod's keys skip a movie as the pad's Start does.
-static const unsigned kPressureBit[12] = {5, 7, 4, 6, 12, 13, 14, 15, 10, 11, 8, 9};
-
-static void report_from(uint16_t buttons, const uint8_t analog[4], uint8_t out[18]) {
-    out[0] = static_cast<uint8_t>(buttons);
-    out[1] = static_cast<uint8_t>(buttons >> 8);
-    std::memcpy(out + 2, analog, 4);
-    for (int n = 0; n < 12; ++n) {
-        out[6 + n] = (buttons >> kPressureBit[n]) & 1 ? 0 : 0xFF;
-    }
-}
-
-int openrac_game_pad_through_mods(int port, uint16_t* buttons, uint8_t analog[4]) {
-    const int connected = openrac_game_pad(port, buttons, analog);
-    if (openrac_game_pad_report_hook != nullptr) {
-        uint8_t report[18];
-        report_from(*buttons, analog, report);
-        openrac_game_pad_report_hook(port, report, 18);
-        openrac_game_pad_after_mods(port, report, 18);
-        *buttons = static_cast<uint16_t>(report[0] | (report[1] << 8));
-        std::memcpy(analog, report + 2, 4);
-    }
-    return connected;
-}
-
-void openrac_game_pad_after_mods(int port, uint8_t* report, int size) {
-#ifdef OPENRAC_FRONTEND
-    if (g_window && size >= 2) {
-        uint16_t buttons = static_cast<uint16_t>(report[0] | (report[1] << 8));
-        const uint16_t before = buttons;
-        frontend::skip_after_mods(port, buttons);
-        report[0] = static_cast<uint8_t>(buttons);
-        report[1] = static_cast<uint8_t>(buttons >> 8);
-        // What the skip pressed is pressed hard, as the pad library gives a pressed button.
-        for (int n = 0; n < 12 && 6 + n < size; ++n) {
-            if (((before & ~buttons) >> kPressureBit[n]) & 1) {
-                report[6 + n] = 0xFF;
-            }
-        }
-    }
-#endif
-    (void)port;
-    (void)report;
-    (void)size;
-}
-
-int openrac_game_pad(int port, uint16_t* buttons, uint8_t analog[4]) {
-#ifdef OPENRAC_FRONTEND
-    if (g_window && frontend::pad(port, buttons, analog)) {
-        log_pad(port, buttons, analog);
-        return 1;
-    }
-#endif
-    (void)port;
-    *buttons = 0xFFFF;  // nothing pressed (active low)
-    std::memset(analog, 0x80, 4);
-    return 0;
-}
-
-}  // extern "C"
+}  // namespace openrac::program
 
 // A level's program straight from the player's image (<data>/iso_data/<game>/disc.iso, kept by the
 // set-up), for rac1, whose disc layout is known. The image is opened once.
