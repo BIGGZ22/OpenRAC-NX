@@ -27,7 +27,7 @@ const DRAWER: &[&str] = &[
 ];
 
 /// The variable the game reads them from: `name=#rrggbb[aa]` pairs, comma-separated, each name
-/// app.css's without its dashes ("panel-hi=#22222f,line=#9ca1d438,...").
+/// app.css's without its leading dashes ("panel-hi=#22222f,line=#9ca1d438,...").
 pub const ENV: &str = "OPENRAC_UI_COLORS";
 
 /// The drawer's colours for theme `theme` (an unknown one is the launcher's own) and, on Android,

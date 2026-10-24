@@ -42,7 +42,7 @@ struct Colors {
 };
 
 // `text` read over the defaults: NAME=#RRGGBB or NAME=#RRGGBBAA pairs, comma-separated, each NAME
-// app.css's without its dashes ("panel-hi=#22222f,line=#9ca1d438").
+// app.css's without its leading dashes ("panel-hi=#22222f,line=#9ca1d438").
 Colors parse(std::string_view text);
 
 // The colours this run was started with (OPENRAC_UI_COLORS), read once.
