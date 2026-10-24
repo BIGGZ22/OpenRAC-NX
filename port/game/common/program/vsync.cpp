@@ -198,6 +198,10 @@ void finish() {
 
 #ifdef OPENRAC_FRONTEND
 [[noreturn]] void leave() {
+    // The sound's stream goes before the window, whose end is SDL's (Platform: SDL_Quit). Left to
+    // the exit, its destructor freed the stream into SDL's freed state: the heap was corrupted
+    // and the program faulted on its way out.
+    close_sound();
     // Join rendering while the window, profiler and GPU owners still exist.
     if (g_window) {
         frontend::close();
