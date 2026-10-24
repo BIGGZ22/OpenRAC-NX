@@ -7,10 +7,10 @@
 // asks the profile, and the game's folder answers with its own addresses and layouts.
 //
 // One profile per game version, which picks the version's tables as rac1_version.h does for C. A
-// game's program links one definition of game_profile() (cmake/Games.cmake): the game's own, from
-// port/game/<game>/profile.cpp (rac1's for both of its discs), or for a game with none
-// game/common/profile_none.cpp, which reports no game state. The C side of what a game gives the
-// host is openrac/game_host.h.
+// game's program links one definition of game_profile() (cmake/Games.cmake): its version's own
+// (port/game/<id>/profile.cpp), else its game's (port/game/<game>/profile.cpp, rac1's for both of
+// its discs), else game/common/profile_none.cpp, which reports no game state. The C side of what a
+// game gives the host is openrac/game_host.h.
 
 #pragma once
 
@@ -75,8 +75,12 @@ struct GameState {
 
 // What one game version tells the host program about its memory.
 //
-// Each implementation is a constant of its game's folder, made once and never changed: the host
-// keeps a reference to it for the program's life, and calls it from the window's thread only.
+// The base answers as a game nothing is known of: no game state (the camera as GameState starts
+// it, no live moby), no display list known to be shown, no shadows, no hero, no extracted levels.
+// A game's profile derives from it and overrides what its folder knows; a game with none uses the
+// base itself (game/common/profile_none.cpp). Each profile is a constant of its game's folder,
+// made once and never changed: the host keeps a reference to it for the program's life, and calls
+// it from the window's thread only.
 class GameProfile {
 public:
     virtual ~GameProfile() = default;
@@ -84,23 +88,50 @@ public:
     // Reads the camera and the live mobys from the game's 32 MB of main memory, `ram`. `level` is
     // the level program loaded now (-1 for the boot program, the title and the menus): each has its
     // globals at other addresses. A table pointer outside memory leaves the moby list empty.
-    virtual GameState read_state(std::span<const std::uint8_t> ram, int level) const = 0;
+    virtual GameState read_state(std::span<const std::uint8_t> /*ram*/, int /*level*/) const {
+        return {};
+    }
 
     // Reads the moby at game address `moby` as the renderers place it; none when its position or
     // scale is unusable.
     virtual std::optional<LiveMoby> read_moby(
-        std::span<const std::uint8_t> ram, std::uint32_t moby
-    ) const = 0;
+        std::span<const std::uint8_t> /*ram*/, std::uint32_t /*moby*/
+    ) const {
+        return std::nullopt;
+    }
 
     // Whether the game's moby update leaves the moby whose record starts at `moby` undrawn by its
     // distance from the camera at `eye`, looking along the unit axis `forward` (game units).
     virtual bool beyond_draw_distance(
-        const std::uint8_t* moby, const renderer::Vec3& eye, const renderer::Vec3& forward
-    ) const = 0;
+        const std::uint8_t* /*moby*/,
+        const renderer::Vec3& /*eye*/,
+        const renderer::Vec3& /*forward*/
+    ) const {
+        return false;
+    }
 
     // Returns the game address of the display list of the frame being shown: the one of the
-    // game's two list buffers it is not building. `level` as for read_state().
-    virtual std::uint32_t shown_chain(std::span<const std::uint8_t> ram, int level) const = 0;
+    // game's two list buffers it is not building; 0 when none is known. `level` as for
+    // read_state(). Not asked of a game that sends_display_list().
+    virtual std::uint32_t shown_chain(std::span<const std::uint8_t> /*ram*/, int /*level*/) const {
+        return 0;
+    }
+
+    // Whether the frame shown is the display list the game sends each tick, rather than one of
+    // two list buffers it alternates (shown_chain()).
+    virtual bool sends_display_list() const { return false; }
+
+    // Returns the executable's address of the four shadow directions the hero's shadow is cast
+    // along (relocated to the loaded program's copy when read); 0 for a game without them.
+    virtual std::uint32_t shadow_directions() const { return 0; }
+
+    // Returns the executable's address of the hero's state record (relocated when read); 0 for a
+    // game without one.
+    virtual std::uint32_t hero_state() const { return 0; }
+
+    // Whether the port has the game's levels extracted (editor/port.py), so that a level whose
+    // scenery cannot be read is something missing, not a game with no scenery yet.
+    virtual bool has_levels() const { return false; }
 };
 
 // Returns the profile of the game version `game` (its port id, "rac1-pal"), which lives as long as

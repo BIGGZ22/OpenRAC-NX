@@ -7,9 +7,8 @@
 // particles (particle, particle_quads), the mobys' scripted colours (moby_colour) and the 2D
 // layer's quads drawn natively (ui_quad); and what the game asks of the picture's shape while it
 // draws (hud_side, picture_wider). frontend.cpp's frame() turns what is gathered here into the
-// frame. The game addresses read for the lights, the shadows and the hero (light_bank_address,
-// shadow_directions_address, hero_state_address) are rac1's for now: a game's GameProfile names
-// them later (P2-36 of the restructure).
+// frame. The light bank's address is the game's C table's (openrac_front_end, light_bank_address);
+// what else the frame reads of the game's memory, the game's profile names (game/common/profile.h).
 
 #include <algorithm>
 #include <array>
@@ -64,27 +63,6 @@ gaddr light_bank_address() {
     return openrac_game_front_end != nullptr ? openrac_game_front_end->light_bank : 0;
 }
 
-// The four shadow directions in each version's executable (relocated when read).
-gaddr shadow_directions_address() {
-    if (g->game == "rac1-pal") {
-        return 0x001CAE00u;
-    }
-    if (g->game == "rac1-ntsc") {
-        return 0x001CAA80u;
-    }
-    return 0;
-}
-
-gaddr hero_state_address() {
-    if (g->game == "rac1-pal") {
-        return 0x0013F450u;
-    }
-    if (g->game == "rac1-ntsc") {
-        return 0x0013F350u;
-    }
-    return 0;
-}
-
 // Uploads a level's geometry; while the boot program runs (the title and the main menu), the title
 // world's, or level 0's when the title world was not extracted.
 void use_level(int number) {
@@ -125,10 +103,11 @@ void use_level(int number) {
                  / "placements.json";
     }
     debug_overlay::notice({});
-    // Only Ratchet & Clank's levels are extracted for the port so far. The other games (Going
-    // Commando, Up Your Arsenal, Deadlocked at their menus) have no scenery to read: their whole
-    // picture is the 2D path, both its parts, and nothing is missing to tell the player about.
-    const bool has_levels = g->game == "rac1-pal" || g->game == "rac1-ntsc";
+    // Only Ratchet & Clank's levels are extracted for the port so far (its profile says so). The
+    // other games (Going Commando, Up Your Arsenal, Deadlocked at their menus) have no scenery to
+    // read: their whole picture is the 2D path, both its parts, and nothing is missing to tell the
+    // player about.
+    const bool has_levels = g->profile->has_levels();
     if (!has_levels && !viewer::load_level(dir, g->level, error, edited)) {
         log::info(
             "level {}: no scenery for this game yet ({}); the 2D path is drawn alone", wanted, error
@@ -196,7 +175,7 @@ void use_level(int number) {
     for (std::size_t layer = 0; layer < viewer::kLayerCount; ++layer) {
         // The caster is drawn after its shadow, so its proxy cannot darken
         // Ratchet himself. Opaque scenery has already filled the depth buffer.
-        if (shadow_directions_address() != 0
+        if (g->profile->shadow_directions() != 0
             && layer == static_cast<std::size_t>(viewer::Layer::Mobys)) {
             if (g->renderer->add(std::make_unique<renderer::ShadowRenderer>(), error) == nullptr) {
                 log::error("shadow renderer: {}", error);

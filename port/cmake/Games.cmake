@@ -308,10 +308,12 @@ function(openrac_add_game config)
       # The scene draws the level and the live mobys.
       target_link_libraries(${target} PRIVATE openrac_scene_renderer openrac_viewer_lib
                                               openrac_platform openrac_imgui)
-      # What the window reads of the game's memory: the game's profile (game/common/profile.h),
-      # openrac_game_<game>_profile from port/game/<game>/profile.cpp, or for a game with none the
-      # one that reports no game state.
-      if(TARGET openrac_game_${game_name}_profile)
+      # What the window reads of the game's memory: the game's profile (game/common/profile.h), the
+      # version's own (port/game/<id>/profile.cpp), else the game's, openrac_game_<game>_profile
+      # from port/game/<game>/profile.cpp, else the one that reports no game state.
+      if(EXISTS "${config_dir}/profile.cpp")
+        target_sources(${target} PRIVATE "${config_dir}/profile.cpp")
+      elseif(TARGET openrac_game_${game_name}_profile)
         target_link_libraries(${target} PRIVATE openrac_game_${game_name}_profile)
       else()
         target_sources(${target} PRIVATE "${OPENRAC_GAME_DIR}/common/profile_none.cpp")

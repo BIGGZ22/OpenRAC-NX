@@ -1113,10 +1113,10 @@ TickMobys pose_mobys(
         instance.hero_shadow_caster = m.class_id == 0 && !extra && g->loaded >= 0 && g->loaded < 19
                                       && instance.moby_light[3] < 1.5f && instance.tint[3] > 0;
         live_joints.push_back(instance.palette >= 0 ? joints : 0);
-        if (shadow_directions_address() != 0 && g->loaded >= 0 && g->loaded < 19 && animate
+        if (g->profile->shadow_directions() != 0 && g->loaded >= 0 && g->loaded < 19 && animate
             && m.class_id == 0 && !extra && instance.moby_light[3] < 1.5f
             && instance.tint[3] > 0.0f) {
-            const auto directions = OPENRAC_DATA(shadow_directions_address());
+            const auto directions = OPENRAC_DATA(g->profile->shadow_directions());
             shadow_state = viewer::moby_shadow_state(ram, m.address, directions, state.view());
             if (shadow_state.enabled) {
                 shadows = viewer::moby_shadows(ram, m.address, m.matrix, shadow_state.scale);
@@ -1216,8 +1216,8 @@ void keep_tick(
     k.shadow_moby = mobys.shadow_moby;
     k.prev_shadow_state = k.shadow_state;
     k.shadow_state = mobys.shadow_state;
-    k.hero_airborne = hero_state_address() != 0
-                          ? viewer::hero_airborne(ram, OPENRAC_DATA(hero_state_address()))
+    k.hero_airborne = g->profile->hero_state() != 0
+                          ? viewer::hero_airborne(ram, OPENRAC_DATA(g->profile->hero_state()))
                           : std::nullopt;
     k.state = state;
     k.has_state = true;
@@ -1251,8 +1251,8 @@ const std::vector<renderer::UiQuad>* keep_2d_path(
     // The 2D path: the frame's direct GIF data, drawn by the direct renderer.
     // RAC1 keeps two alternating list buffers and the sent list is one tick behind; Deadlocked
     // submits the title's list through VIF1 DMA without that RAC1 buffer-index convention, and
-    // so does Going Commando.
-    const bool sent_chain = g->game == "rac4-ntsc" || g->game == "rac2-ntsc";
+    // so does Going Commando: their profiles say so (sends_display_list).
+    const bool sent_chain = g->profile->sends_display_list();
     const std::uint32_t shown = sent_chain ? chain : g->profile->shown_chain(ram, level);
     std::vector<renderer::EffectVertex> strip_vertices;
     std::vector<renderer::EffectStrip> strips;

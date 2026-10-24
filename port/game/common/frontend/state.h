@@ -291,13 +291,6 @@ void apply_mouse_capture();
 // 0 for a game without one (frontend/world.cpp).
 gaddr light_bank_address();
 
-// The four shadow directions in each version's executable (relocated when read); 0 for a game
-// without them (frontend/world.cpp).
-gaddr shadow_directions_address();
-
-// The hero's state in each version's executable; 0 for a game without one (frontend/world.cpp).
-gaddr hero_state_address();
-
 // Uploads level `number`'s geometry and makes the renderers that draw it. Below 0 the boot program
 // runs: the title world (level 0 where it was not extracted), or at -2 the flight between planets
 // where it was (frontend/world.cpp).

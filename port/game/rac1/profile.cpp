@@ -3,7 +3,8 @@
 //
 // Ratchet & Clank's profiles (game/common/profile.h): one per disc, PAL (SCES-50916) and NTSC-U
 // (SCUS-97199), each answering the host program with game_state.h's reads over its own tables of
-// addresses (game_state.cpp), the boot program's and each level program's.
+// addresses (game_state.cpp), the boot program's and each level program's, and with the
+// executable's addresses the frontend reads for the hero's shadow and state.
 //
 // It defines game_profile() for the programs that link it, and so picks which disc's profile a
 // game id names, as rac1_addresses() does.
@@ -25,13 +26,32 @@ namespace {
 // table in game_state.h.
 constexpr int kLevels = 19;
 
-// One disc's profile: its boot program's table and its level programs' tables.
+// What one disc's executable keeps at addresses of its own, outside game_state.h's tables.
+struct ExecutableAddresses {
+    std::uint32_t shadow_directions;  // The four directions the hero's shadow is cast along.
+    std::uint32_t hero_state;         // The hero's record (games/rac1's D_0013F450 on PAL).
+};
+
+// Each disc's executable addresses: PAL's as games/rac1 has them, NTSC-U's the same data in
+// SCUS-97199 (rac1-ntsc's rac1_version.h pairs the hero's record).
+constexpr ExecutableAddresses kPalExecutable{0x001CAE00u, 0x0013F450u};
+constexpr ExecutableAddresses kNtscExecutable{0x001CAA80u, 0x0013F350u};
+
+// One disc's profile: its boot program's table, its level programs' tables and its executable's
+// addresses. Ratchet & Clank's levels are extracted for the port, and its frame is one of two list
+// buffers it alternates (the defaults of host::GameProfile).
 class Profile final : public host::GameProfile {
 public:
-    // Makes the profile of the disc whose tables are `boot` and `levels`, which outlive it.
-    constexpr Profile(const GameAddresses& boot, const GameAddresses (&levels)[kLevels]) noexcept
+    // Makes the profile of the disc whose tables are `boot`, `levels` and `executable`, which
+    // outlive it.
+    constexpr Profile(
+        const GameAddresses& boot,
+        const GameAddresses (&levels)[kLevels],
+        const ExecutableAddresses& executable
+    ) noexcept
         : m_boot(boot),
-          m_levels(levels) {}
+          m_levels(levels),
+          m_executable(executable) {}
 
     host::GameState read_state(std::span<const std::uint8_t> ram, int level) const override {
         return read_game_state(ram, addresses(level));
@@ -53,6 +73,12 @@ public:
         return rac1::shown_chain(ram, addresses(level));
     }
 
+    std::uint32_t shadow_directions() const override { return m_executable.shadow_directions; }
+
+    std::uint32_t hero_state() const override { return m_executable.hero_state; }
+
+    bool has_levels() const override { return true; }
+
 private:
     // Returns the table of the program loaded: a level's, or the boot program's when `level` is
     // not one (-1 before the first level).
@@ -67,11 +93,12 @@ private:
 
     const GameAddresses& m_boot;               // The boot program's table, a constant.
     const GameAddresses (&m_levels)[kLevels];  // The level programs' tables, constants.
+    const ExecutableAddresses& m_executable;   // The executable's addresses, a constant.
 };
 
 // The two discs' profiles, constants for the program's life.
-const Profile kPalProfile{kRac1Pal, kRac1PalLevels};
-const Profile kNtscProfile{kRac1Ntsc, kRac1NtscLevels};
+const Profile kPalProfile{kRac1Pal, kRac1PalLevels, kPalExecutable};
+const Profile kNtscProfile{kRac1Ntsc, kRac1NtscLevels, kNtscExecutable};
 
 }  // namespace
 }  // namespace openrac::game::rac1
