@@ -195,6 +195,8 @@ private:
     };
 
     TextureHandle new_entry();
+    // Creates entry `e`'s GL texture and uploads its texels: the one place a texture is made.
+    void create_gl(Entry& e);
     TextureHandle convert_upload(const gs::Tex0& tex0, const gs::Texa& texa);
     std::vector<std::uint8_t> texture_raster(const Stored& stored, const gs::Tex0& tex0) const;
     std::vector<std::uint32_t> palette(

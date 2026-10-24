@@ -392,40 +392,52 @@ const std::string& TexturePool::name(TextureHandle texture) const {
 unsigned TexturePool::gl_texture(TextureHandle texture) {
     Entry& e = m_entries[texture - 1];
     e.last_used = m_frame;
+
+    // A texture is made at its first use.
     if (e.gl == 0) {
-        glGenTextures(1, &e.gl);
-        glBindTexture(GL_TEXTURE_2D, e.gl);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            static_cast<GLint>(GL_RGBA8),
-            e.image.width,
-            e.image.height,
-            0,
-            GL_RGBA,
-            GL_UNSIGNED_BYTE,
-            e.image.pixels.data()
-        );
-        if (e.mipmaps) {
-            glGenerateMipmap(GL_TEXTURE_2D);
-            glTexParameteri(
-                GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(GL_LINEAR_MIPMAP_LINEAR)
-            );
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(GL_LINEAR));
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, static_cast<GLint>(GL_REPEAT));
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(GL_REPEAT));
-            if (m_anisotropy > 1.0f) {
-                glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, m_anisotropy);
-            }
-        } else {
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-            const GLint filter = static_cast<GLint>(e.linear ? GL_LINEAR : GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
-        }
+        create_gl(e);
     }
+
     return e.gl;
+}
+
+void TexturePool::create_gl(Entry& e) {
+    glGenTextures(1, &e.gl);
+    glBindTexture(GL_TEXTURE_2D, e.gl);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);  // rows of whole RGBA8 texels, four bytes each
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        static_cast<GLint>(GL_RGBA8),
+        e.image.width,
+        e.image.height,
+        0,
+        GL_RGBA,
+        GL_UNSIGNED_BYTE,
+        e.image.pixels.data()
+    );
+
+    // 3D geometry's: a mip chain, sampled trilinear and repeated (add()).
+    if (e.mipmaps) {
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glTexParameteri(
+            GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(GL_LINEAR_MIPMAP_LINEAR)
+        );
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(GL_LINEAR));
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, static_cast<GLint>(GL_REPEAT));
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(GL_REPEAT));
+
+        // 1 is no anisotropic filter, which a driver without the extension also has.
+        if (m_anisotropy > 1.0f) {
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, m_anisotropy);
+        }
+    } else {
+        // One level, nearest or bilinear as add() said, until a draw sets its own filter.
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+        const GLint filter = static_cast<GLint>(e.linear ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+    }
 }
 
 // ---- Optional colour reconstruction ----
