@@ -22,6 +22,7 @@ that gates fails. An advisory is printed with `(advisory)` and does not fail.
 | Files | Rule | Gates |
 |---|---|---|
 | every C and C++ file in scope | line 1 is an SPDX licence line; no tab; no em or en dash | yes |
+| every C and C++ file in scope | no `getenv`, `std::getenv` or `SDL_getenv` of an `OPENRAC_` name, or of a name that is not a literal, outside `common/env.cpp` and `runtime/host_env.cpp` (see [the getenv rule](#the-getenv-rule)) | yes; a stale exception is advisory |
 | C++ files added since `--since` | lines 1 and 2 are the `//` licence and copyright lines; clang-format reports nothing; no `static` at namespace scope; no raw `new`, `delete`, `malloc`, `free`; no `using namespace` in a header; `extern "C"` only in a file named for a C contract, in `game/common/lib/` or in a test; no `printf` family or `std::cout`/`std::cerr` outside tests and `main` files | yes |
 | C files added since `--since` | line 2 is the copyright line; clang-format reports nothing | advisory |
 | lines changed since `--since` (`--touched`) | clang-format would not change them (through `git-clang-format`) | advisory; `--strict-touched` makes it gate |
@@ -38,6 +39,27 @@ so prose and messages may say "new" or "free". They are text patterns, not a
 parser: a finding that is wrong is a bug in this tool, fixed here with a test,
 not a reason to bend the code.
 
+## The getenv rule
+
+The port's `OPENRAC_*` variables have one door (section 16 of the
+conventions): C++ reads them through `common/env.h`, C through the contract
+`openrac/host_env.h`. `getenv` itself is called only by the table,
+`common/env.cpp`, and the C side of the contract, `runtime/host_env.cpp`.
+Anywhere else, a call of `getenv`, `std::getenv` or `SDL_getenv` is an error
+when its name is a literal that starts with `OPENRAC_`, or is not a literal at
+all (a computed name may be one of the port's). A variable the port does not
+own (`HOME`, `SDL_VIDEO_DRIVER`) may be read by its literal name; C++ reads it
+through `env::system_variable`. Vendored code (a path part named
+`third_party`) is not checked, nor is anything outside the scope above.
+
+`GETENV_EXCEPTIONS`, at the top of `check_conventions.py`, names the files
+that still read `OPENRAC_` variables with `getenv` and what moves each: rac1's
+host C until P2-38, and `tests/vulkan_uniform_test.cpp`, which reads its
+switch to know what to expect. The package that moves a file's reads removes
+its entry in the same commit series. An entry whose file reads none any more,
+or is gone, is printed as a stale advisory rather than a failure, since other
+work removes reads meanwhile. Never add an entry for new code.
+
 ## clang-format
 
 The format rules run the clang-format it finds: `--clang-format BIN`, else
@@ -52,5 +74,4 @@ A rule belongs here when the conventions page states it and a program can
 count it without false findings on the code it applies to. Add it as a
 function of the file's text, with a test for what it finds and for what it must
 not find, and list it in the table above and in section 2 of the conventions
-page. The planned additions: `getenv` outside `common/env.cpp` once
-`common/env.h` lands (P1-03).
+page.
