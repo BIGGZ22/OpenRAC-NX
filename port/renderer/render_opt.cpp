@@ -73,6 +73,9 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::MobyPoseInPlace, "moby-pose-in-place",
      "the mobys regrouped only when they change, their poses written in place between ticks",
      true, Tolerance{}},
+    {Opt::ShadowAtlasDiscard, "shadow-atlas-discard",
+     "the shadow atlas pass neither loads nor stores its unsampled colour and its stencil",
+     true, Tolerance{}},
 }};
 // clang-format on
 

@@ -45,10 +45,11 @@ enum class Opt : std::uint8_t {
     // vk-extended-dynamic-state: cull, front face, depth and stencil not in the pipeline's key
     VkExtendedDynamicState,
     MobyPoseInPlace,       // moby-pose-in-place: mobys regrouped per tick, posed in place
+    ShadowAtlasDiscard,    // shadow-atlas-discard: the atlas's colour and stencil not kept
 };
 
-// The number of entries: MobyPoseInPlace is the last enumerator of Opt.
-inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::MobyPoseInPlace) + 1;
+// The number of entries: ShadowAtlasDiscard is the last enumerator of Opt.
+inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::ShadowAtlasDiscard) + 1;
 
 // How far the frames an optimisation draws may differ from its reference path's. The default,
 // zero, is byte-identical frames; anything else is a tolerance the maintainers accepted, named in
