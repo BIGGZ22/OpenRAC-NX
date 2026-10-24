@@ -7,13 +7,13 @@ frame written to a PNG. The viewer program (`viewer/`) and the game programs (`g
 with it. It is not the renderer: the level is drawn as buckets of `renderer/`'s frame, with the
 port's OpenGL calls (`renderer/gl.h`), which the Vulkan backend carries out in a Vulkan build. What
 the renderers read of a running game besides the mobys (the camera, which mobys are live) is the
-game state, which stays in `viewer/` until P2-03 moves it into `game/rac1`.
+game state, which each game keeps in its own folder (rac1's `game/rac1/game_state.h`) and the game
+programs read through the game's profile (`game/common/profile.h`).
 
 Libraries `openrac_scene` (the CPU side: the level's loading, the poses, the shadows, the PNG) and
 `openrac_scene_renderer` (the level renderer, together with the enhanced renderer's passes it calls;
 see Depends on). The files came from `viewer/` (restructure package P2-02) and keep its namespace,
-`openrac::viewer`, until P2-37 renames it `openrac::scene`. Until then `viewer/` keeps a header of
-the same name forwarding to each one, for `game/common`.
+`openrac::viewer`, until P2-37 renames it `openrac::scene`. Every user includes them from `scene/`.
 
 ## Interface
 

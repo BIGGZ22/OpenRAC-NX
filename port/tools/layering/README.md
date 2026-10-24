@@ -114,8 +114,7 @@ restructure package that removes it
 |---|---|---|
 | platform -> renderer/vulkan | `platform/window.cpp` opens the Vulkan backend | no package yet |
 | renderer -> enhanced | `renderer/renderer.h` includes GTAO's headers | P2-07 (renderer owns the interface, enhanced registers) |
-| enhanced -> viewer | the probe tools and probe lighting include `viewer/level.h` | P2-02 (level) |
-| game/common -> viewer | `frontend.cpp`, `main.cpp` and `debug_overlay.*` include the viewer's world drawing and game state | P2-02 (world drawing), P2-03 (game state) |
+| scene -> enhanced | `scene/level.h` includes the emissive lighting's description; the level renderer draws the enhanced renderer's probe lighting, early lighting and shadows itself | P2-39 (scene owns the lighting and shadow hooks, enhanced registers with them) |
 
 The list only shrinks. A new include against the layers fails the check and
 is fixed in the change that adds it: move the code to the right module, or

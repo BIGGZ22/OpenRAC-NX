@@ -92,13 +92,3 @@ except	scene/level_renderer.cpp:15	enhanced/viewer/shadow_atlas.h	P2-39: scene o
 except	scene/level_renderer.h:26	enhanced/viewer/early_lighting.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
 except	scene/level_renderer.h:27	enhanced/viewer/probe_lighting.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
 except	scene/level_renderer.h:28	enhanced/viewer/sun_shadow.h	P2-39: scene owns the lighting and shadow hooks, enhanced registers with them
-# game/common -> viewer: the game program uses the viewer's game state, and reaches the scene through
-# the headers viewer/ keeps forwarding to scene/ until P2-37.
-except	game/common/debug_overlay.cpp:45	viewer/screenshot.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/frontend.cpp:58	viewer/level.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/frontend.cpp:59	viewer/level_renderer.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/frontend.cpp:60	viewer/moby_pose.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/frontend.cpp:61	viewer/moby_shadow.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/frontend.cpp:62	viewer/screenshot.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/main.cpp:74	viewer/level.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/main.cpp:75	viewer/moby_pose.h	P2-37 includes scene/ directly and removes the forwarder

@@ -38,7 +38,6 @@ module's ([scene/README.md](../scene/README.md)), which the game programs draw w
 | `camera.h` | the free camera |
 | `third_party.c` | cgltf and stb, compiled once as C (`openrac_viewer_third_party`), for the scene |
 | `shaders/` | the level renderer's shaders, embedded into `openrac_scene_renderer` |
-| `level.h`, `level_renderer.h`, `moby_pose.h`, `moby_shadow.h`, `pvs.h`, `screenshot.h` | one-line forwarders to the same headers in `scene/`, kept while `game/common` still includes them here; P2-37 removes them |
 
 The library `openrac_viewer_lib` is `camera.cpp`; it links the scene, so the tests that draw a
 level link it alone. The program and `viewer_test` also link `openrac_game_rac1_profile`, rac1's

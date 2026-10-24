@@ -36,8 +36,8 @@
 #include "imgui_gl.h"
 #include "renderer/gl.h"
 #include "renderer/gl_stats.h"
+#include "scene/screenshot.h"
 #include "settings.h"
-#include "viewer/screenshot.h"
 
 namespace openrac::frontend::debug_overlay {
 

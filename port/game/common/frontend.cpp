@@ -53,13 +53,13 @@
 #include "renderer/gl_stats.h"
 #include "renderer/renderer.h"
 #include "renderer/shadows.h"
+#include "scene/level.h"
+#include "scene/level_renderer.h"
+#include "scene/moby_pose.h"
+#include "scene/moby_shadow.h"
+#include "scene/screenshot.h"
 #include "settings.h"
 #include "touch_overlay.h"
-#include "viewer/level.h"
-#include "viewer/level_renderer.h"
-#include "viewer/moby_pose.h"
-#include "viewer/moby_shadow.h"
-#include "viewer/screenshot.h"
 
 extern "C" int openrac_game_loaded_overlay(void);
 

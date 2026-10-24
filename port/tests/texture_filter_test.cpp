@@ -15,7 +15,7 @@
 #include "renderer/texture_pool.h"
 #include "renderer_gl_context.h"
 #include "renderer_shaders.h"
-#include "viewer/level_renderer.h"
+#include "scene/level_renderer.h"
 #include "viewer_shaders.h"
 using namespace openrac;
 using namespace openrac::gl;
