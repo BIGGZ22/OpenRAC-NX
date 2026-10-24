@@ -88,7 +88,7 @@ band and faintly behind its page. A file that is not there is left out: the
 game's colours show, as on the site.
 
 The site serves its backdrops from its server, not its repository, so a new
-one is copied from there (`size-matters-bg.webp` is not in the launcher yet).
+one is copied from there.
 The game list shows each picture 64 × 44 from a thumbnail,
 `<name>-thumb.webp` (192 × 132, a few KB), so that it does not decode every
 game's full picture: `python3 scripts/media.py thumbs` makes them again after

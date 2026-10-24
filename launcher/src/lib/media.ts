@@ -1,7 +1,6 @@
 // Each game's picture (public/img), under OpenRAC's game ids, with the site's file names: under
 // its page's band and faintly behind the page. Where these come from is in docs/STYLE.md.
-// A picture that is not there (size-matters-bg.webp until it is copied from the site) is left
-// out where it is shown, and the game's colours carry it.
+// A picture that is not there is left out where it is shown, and the game's colours carry it.
 const GAME_ART: Record<string, string> = {
   rac1: "/img/rac1-bg.webp",
   rac2: "/img/gc-bg.webp",
