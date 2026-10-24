@@ -23,7 +23,7 @@
     position: sticky;
     top: 0;
     align-self: start;
-    height: calc(100vh - 60px);
+    height: calc(100vh - var(--nav-top));
     overflow-y: auto;
   }
 

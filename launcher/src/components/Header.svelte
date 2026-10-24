@@ -64,8 +64,8 @@
   <!-- The first run: the name, not yet a way back to the games. -->
   {#if setup}
     <div class="brand" title={app.info?.version ? `OpenRAC Launcher ${app.info.version}` : undefined}>
-      <Logo height={40} />
-      <span class="brand-mark"><Logo mark height={44} label="" /></span>
+      <Logo height={34} />
+      <span class="brand-mark"><Logo mark height={37} label="" /></span>
       {#if app.info?.version}<small class="ver">{app.info.version}</small>{/if}
     </div>
   {:else}
@@ -75,8 +75,8 @@
       aria-label="OpenRAC: your games"
       title={app.info?.version ? `OpenRAC Launcher ${app.info.version}` : undefined}
     >
-      <Logo height={40} />
-      <span class="brand-mark"><Logo mark height={44} label="" /></span>
+      <Logo height={34} />
+      <span class="brand-mark"><Logo mark height={37} label="" /></span>
       <!-- The launcher's version beside the logo, on every page (also in the tooltip, for a phone's
            width, which shows the mark alone). -->
       {#if app.info?.version}<small class="ver">{app.info.version}</small>{/if}
@@ -179,10 +179,11 @@
     align-items: center;
     gap: 22px;
     flex: none;
-    height: 60px;
+    height: var(--nav-top);
     width: 100%;
     padding: 0 18px;
-    background: linear-gradient(to bottom, var(--bar-top), var(--bar-bottom));
+    /* Wide stripes of two close golds: the bar's colour, quieter than one bright yellow. */
+    background: repeating-linear-gradient(35deg, var(--bar-stripe) 0 20px, var(--bar-stripe-alt) 20px 40px);
     border-bottom: 1px solid rgb(0 0 0 / 0.3);
     color: var(--bar-name);
     box-shadow:
@@ -253,13 +254,13 @@
   .brand .ver {
     display: inline-flex;
     align-items: center;
-    height: 17px;
-    padding: 0 7px;
+    height: 15px;
+    padding: 0 6px;
     margin-left: 2px;
     border-radius: 999px;
     background: var(--bar-ink-deep);
     color: var(--gold);
-    font-size: 0.6875rem;
+    font-size: 0.625rem;
     font-weight: 700;
     line-height: 1;
     font-variant-numeric: tabular-nums;
@@ -297,7 +298,7 @@
   .tab {
     position: relative;
     border-radius: 999px;
-    padding: 7px 15px;
+    padding: 5px 14px;
     font-size: 0.9375rem;
     /* Heavier than the page's text, to stand beside the logo's strokes. */
     font-weight: 600;
@@ -356,7 +357,7 @@
   .preview {
     display: inline-flex;
     align-items: center;
-    height: 26px;
+    height: 24px;
     padding: 0 10px;
     border-radius: 999px;
     background: rgb(0 0 0 / 0.12);
@@ -371,7 +372,7 @@
     display: inline-flex;
     align-items: center;
     gap: 2px;
-    height: 34px;
+    height: 30px;
     padding: 0 3px;
     border-radius: 999px;
     background: var(--bar-ink-deep);
@@ -381,8 +382,8 @@
   .discord {
     display: grid;
     place-items: center;
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     color: var(--gold);
     transition:
@@ -423,7 +424,7 @@
     color: var(--gold);
     border: 1px solid rgb(0 0 0 / 0.3);
     border-radius: 999px;
-    padding: 6px 14px 6px 11px;
+    padding: 4px 14px 4px 11px;
     transition: transform 0.15s ease;
   }
 
@@ -530,7 +531,7 @@
     }
 
     .tab {
-      padding: 7px 11px;
+      padding: 5px 11px;
     }
   }
 

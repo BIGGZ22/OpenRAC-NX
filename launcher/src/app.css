@@ -26,6 +26,8 @@
   /* The header bar's gradient and the dark brown it writes on. */
   --bar-top: #e5a013;
   --bar-bottom: #cd8300;
+  --bar-stripe: #c99222;
+  --bar-stripe-alt: #bd8619;
   --bar-ink: #2a1800;
   --bar-ink-deep: #1b1206;
   /* The logo on the bar. */
@@ -65,7 +67,7 @@
      a narrow window and Android set them below, the same on every page. */
   /* What the navigation takes of the window: the header bar on top, or on Android the rail on
      the left or the bar at the bottom (Header.svelte). */
-  --nav-top: 60px;
+  --nav-top: 50px;
   --nav-left: 0px;
   --nav-bottom: 0px;
   color-scheme: dark;
