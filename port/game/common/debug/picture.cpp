@@ -41,7 +41,8 @@ struct Projector {
 }  // namespace
 
 void picture_marks(const Shown& shown) {
-    if (shown.camera == nullptr || shown.box_width <= 0 || (!s.labels && !s.pick && s.selected == 0)) {
+    if (shown.camera == nullptr || shown.box_width <= 0
+        || (!s.labels && !s.pick && s.selected == 0)) {
         return;
     }
     const ImGuiIO& io = ImGui::GetIO();
@@ -55,7 +56,8 @@ void picture_marks(const Shown& shown) {
     p.y = static_cast<float>(shown.window_height - shown.box_y - shown.box_height) / scale;
     ImDrawList* draw = ImGui::GetBackgroundDrawList();
     const viewer::LiveMoby* h = hero();
-    const bool clicked = s.pick && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !io.WantCaptureMouse;
+    const bool clicked =
+        s.pick && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !io.WantCaptureMouse;
     float best = 40.0f * 40.0f;
     std::uint32_t picked = 0;
     for (const viewer::LiveMoby& m : s.state.mobys) {
@@ -76,11 +78,15 @@ void picture_marks(const Shown& shown) {
         }
         if (selected || (s.labels && (h == nullptr || distance(m, *h) <= s.radius))) {
             const std::string name = class_name(m.class_id);
-            const std::string label = name.empty() ? std::format("{}", m.class_id) : std::format("{} {}", m.class_id, name);
+            const std::string label = name.empty() ? std::format("{}", m.class_id)
+                                                   : std::format("{} {}", m.class_id, name);
             draw->AddCircleFilled(at, 2.5f, IM_COL32(255, 255, 255, 220));
             draw->AddText(ImVec2(at.x + 7.0f, at.y - 5.0f), IM_COL32(0, 0, 0, 255), label.c_str());
-            draw->AddText(ImVec2(at.x + 6.0f, at.y - 6.0f), selected ? IM_COL32(255, 230, 80, 255) : IM_COL32(255, 255, 255, 255),
-                          label.c_str());
+            draw->AddText(
+                ImVec2(at.x + 6.0f, at.y - 6.0f),
+                selected ? IM_COL32(255, 230, 80, 255) : IM_COL32(255, 255, 255, 255),
+                label.c_str()
+            );
         }
     }
     if (picked != 0) {
@@ -105,19 +111,24 @@ void status_badge() {
     if (s.paused) {
         line = keys ? "PAUSED    F5 resume    F6 one tick" : "PAUSED";
     } else if (s.stretch != 1.0) {
-        line = keys ? std::format("SPEED 1/{}    F8 faster    F7 slower", static_cast<int>(s.stretch))
-                    : std::format("SPEED 1/{}", static_cast<int>(s.stretch));
+        line =
+            keys ? std::format("SPEED 1/{}    F8 faster    F7 slower", static_cast<int>(s.stretch))
+                 : std::format("SPEED 1/{}", static_cast<int>(s.stretch));
     }
     if (line.empty() && s.toast.empty() && s.notice.empty()) {
         return;
     }
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport->WorkSize.x * 0.5f, viewport->WorkPos.y + 10.0f),
-                            ImGuiCond_Always, ImVec2(0.5f, 0.0f));
+    ImGui::SetNextWindowPos(
+        ImVec2(viewport->WorkPos.x + viewport->WorkSize.x * 0.5f, viewport->WorkPos.y + 10.0f),
+        ImGuiCond_Always,
+        ImVec2(0.5f, 0.0f)
+    );
     ImGui::SetNextWindowBgAlpha(0.82f);
-    const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize
-                                   | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing
-                                   | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs;
+    const ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize
+        | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing
+        | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs;
     if (ImGui::Begin("OpenRAC status", nullptr, flags)) {
         if (!line.empty()) {
             text_coloured(s.paused ? kRed : kYellow, "{}", line);

@@ -55,8 +55,12 @@ void menu_bar() {
         return;
     }
     if (ImGui::BeginMenu("View")) {
-        if (ImGui::MenuItem("Full screen", "F11")) press(SDLK_F11);
-        if (ImGui::MenuItem("Frame counter", "F2", settings::get().show_fps)) press(SDLK_F2);
+        if (ImGui::MenuItem("Full screen", "F11")) {
+            press(SDLK_F11);
+        }
+        if (ImGui::MenuItem("Frame counter", "F2", settings::get().show_fps)) {
+            press(SDLK_F2);
+        }
         ImGui::Separator();
         if (ImGui::MenuItem("Hide these menus", "Alt")) {
             settings::get().menu_bar = false;
@@ -72,7 +76,8 @@ void menu_bar() {
         using namespace options_menu;
         for (const int row :
              {kAspect, kHud, kRenderScale, kMsaa, kAnisotropy, kFrameRate, kVSync}) {
-            const bool shown_for = row != kHud || settings::get().aspect != settings::Aspect::Standard;
+            const bool shown_for =
+                row != kHud || settings::get().aspect != settings::Aspect::Standard;
             if (ImGui::MenuItem(label(row), value(row).c_str(), false, shown_for)) {
                 change_setting(row, 1);
             }
@@ -85,22 +90,40 @@ void menu_bar() {
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Sound")) {
-        if (ImGui::MenuItem("Volume up", "F10")) press(SDLK_F10);
-        if (ImGui::MenuItem("Volume down", "F9")) press(SDLK_F9);
+        if (ImGui::MenuItem("Volume up", "F10")) {
+            press(SDLK_F10);
+        }
+        if (ImGui::MenuItem("Volume down", "F9")) {
+            press(SDLK_F9);
+        }
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Developer")) {
-        if (ImGui::MenuItem("Debug overlay", "F3", s.visible)) press(SDLK_F3);
+        if (ImGui::MenuItem("Debug overlay", "F3", s.visible)) {
+            press(SDLK_F3);
+        }
         ImGui::Separator();
-        if (ImGui::MenuItem("Pause", "F5", s.paused)) press(SDLK_F5);
-        if (ImGui::MenuItem("Step one tick", "F6")) press(SDLK_F6);
-        if (ImGui::MenuItem("Slower", "F7", false, s.stretch < 16.0)) press(SDLK_F7);
-        if (ImGui::MenuItem("Faster", "F8", false, s.stretch > 1.0)) press(SDLK_F8);
+        if (ImGui::MenuItem("Pause", "F5", s.paused)) {
+            press(SDLK_F5);
+        }
+        if (ImGui::MenuItem("Step one tick", "F6")) {
+            press(SDLK_F6);
+        }
+        if (ImGui::MenuItem("Slower", "F7", false, s.stretch < 16.0)) {
+            press(SDLK_F7);
+        }
+        if (ImGui::MenuItem("Faster", "F8", false, s.stretch > 1.0)) {
+            press(SDLK_F8);
+        }
         ImGui::Separator();
-        if (ImGui::MenuItem("Screenshot", "F12")) press(SDLK_F12);
+        if (ImGui::MenuItem("Screenshot", "F12")) {
+            press(SDLK_F12);
+        }
         if (s.developer) {
             ImGui::Separator();
-            if (ImGui::MenuItem("Level select", "F1")) press(SDLK_F1);
+            if (ImGui::MenuItem("Level select", "F1")) {
+                press(SDLK_F1);
+            }
         }
         ImGui::EndMenu();
     }

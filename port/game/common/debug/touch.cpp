@@ -50,7 +50,8 @@ void drag_scroll(bool& scrolled) {
     if (ImGui::IsMouseClicked(0)) {
         scrolled = false;
     }
-    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) && ImGui::IsMouseDown(0)
+    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)
+        && ImGui::IsMouseDown(0)
         && (scrolled || std::abs(ImGui::GetMouseDragDelta(0).y) > dp(10.0f))) {
         if (!scrolled) {
             ImGui::ClearActiveID();
