@@ -10,7 +10,7 @@
 #include "renderer/shader.h"
 #include "scene/level.h"
 
-namespace openrac::scene {
+namespace openrac::lighting {
 std::string probe_mesh_fragment();
 std::string probe_early_fragment();
 std::string probe_shader_source(std::string source);
@@ -51,10 +51,10 @@ public:
 
     // Activation through OPENRAC_PROBE_GI, else the level's bake under probe_root(). Missing or
     // invalid assets report why and leave the original lighting active.
-    void load(const LevelData& level);
+    void load(const scene::LevelData& level);
     void bind(
         const renderer::Shader& shader,
-        Layer layer,
+        scene::Layer layer,
         bool all_static_receivers = false,
         const renderer::Camera* camera = nullptr,
         bool depth_matched = true
@@ -108,4 +108,4 @@ private:
     renderer::Shader m_sphere_shader;
     unsigned m_sphere_vao = 0, m_sphere_buffer = 0, m_sphere_indices = 0;
 };
-}  // namespace openrac::scene
+}  // namespace openrac::lighting

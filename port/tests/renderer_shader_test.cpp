@@ -112,7 +112,7 @@ int main() {
     namespace viewer_src = openrac::scene::shaders;
     build("direct", renderer_src::direct_vert, renderer_src::direct_frag);
     build("effect", renderer_src::effect_vert, renderer_src::direct_frag);
-    const std::string mesh_fragment = openrac::scene::probe_mesh_fragment();
+    const std::string mesh_fragment = openrac::lighting::probe_mesh_fragment();
     build("mesh", viewer_src::mesh_vert, mesh_fragment.c_str());
     if (openrac::gl::enhanced_rendering_available()) {
         build("shadow depth", viewer_src::shadow_depth_vert, viewer_src::hero_shadow_frag);

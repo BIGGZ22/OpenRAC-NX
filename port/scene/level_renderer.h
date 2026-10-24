@@ -358,8 +358,8 @@ private:
     unsigned m_lights = 0;            // RGBA8 texture, the ties' lit colours
     std::vector<float> m_light_sets;  // the level's 16 directional light sets (LevelData)
     std::array<float, 64> m_point_lights{};
-    ProbeLighting m_probes;
-    EarlyLighting m_early_lighting;
+    lighting::ProbeLighting m_probes;
+    lighting::EarlyLighting m_early_lighting;
     bool m_early_capable = false;
     void bind_hero_shadow(const renderer::Shader& shader) const;
     void bind_shadow_atlas(const renderer::Shader& shader) const;

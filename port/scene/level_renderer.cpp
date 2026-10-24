@@ -146,8 +146,8 @@ bool LevelScene::upload(
     const LevelData& level, renderer::TexturePool& textures, std::string& error
 ) {
     // mesh.frag again with OPENRAC_SOLID, after its version line (which has to stay the first).
-    const std::string fragment = probe_mesh_fragment();
-    m_early_capable = EarlyLighting::supported();
+    const std::string fragment = lighting::probe_mesh_fragment();
+    m_early_capable = lighting::EarlyLighting::supported();
     std::string solid(fragment);
     solid.insert(solid.find('\n') + 1, "#define OPENRAC_SOLID 1\n");
     if (!m_mesh.build("mesh", shaders::mesh_vert, fragment, error)
@@ -156,7 +156,7 @@ bool LevelScene::upload(
         return false;
     }
     if (m_early_capable) {
-        std::string early = probe_early_fragment(), early_solid(early);
+        std::string early = lighting::probe_early_fragment(), early_solid(early);
         early_solid.insert(early_solid.find('\n') + 1, "#define OPENRAC_SOLID 1\n");
         if (!m_early_mesh.build("early lit mesh", shaders::mesh_vert, early, error)
             || !m_early_solid.build("early lit solid", shaders::mesh_vert, early_solid, error)) {
@@ -179,13 +179,14 @@ bool LevelScene::upload(
             );
             return source;
         };
-        if (!m_colour_opaque.build(
-                "opaque colour batch", shaders::mesh_vert, opaque_source(fragment), error
-            )
+        if (!m_colour_opaque
+                 .build("opaque colour batch", shaders::mesh_vert, opaque_source(fragment), error)
             || (m_early_capable
                 && !m_early_colour_opaque.build(
-                    "early opaque colour batch", shaders::mesh_vert,
-                    opaque_source(probe_early_fragment()), error
+                    "early opaque colour batch",
+                    shaders::mesh_vert,
+                    opaque_source(lighting::probe_early_fragment()),
+                    error
                 ))) {
             return false;
         }
@@ -220,11 +221,15 @@ bool LevelScene::upload(
                 return source;
             };
             const char* names[] = {"solid static colour", "alpha static colour", "opaque moby colour"};
-            if (!m_colour_specialised[variant].build(
-                    names[variant], vertex, specialise(fragment), error)
-                || (m_early_capable && !m_early_colour_specialised[variant].build(
-                    std::string("early ") + names[variant], vertex,
-                    specialise(probe_early_fragment()), error))) {
+            if (!m_colour_specialised[variant]
+                     .build(names[variant], vertex, specialise(fragment), error)
+                || (m_early_capable
+                    && !m_early_colour_specialised[variant].build(
+                        std::string("early ") + names[variant],
+                        vertex,
+                        specialise(lighting::probe_early_fragment()),
+                        error
+                    ))) {
                 return false;
             }
         }
@@ -1904,7 +1909,7 @@ void LevelScene::draw_sky(const renderer::FrameInput& input, renderer::RenderSta
 }
 
 bool LevelScene::needs_early_lighting(const renderer::FrameInput& input) const {
-    return probe_data_available() && m_early_capable && EarlyLighting::supported()
+    return probe_data_available() && m_early_capable && lighting::EarlyLighting::supported()
            && m_probes.mode != 4
            && (m_probes.active() || (m_sun_enabled && input.sun_pixel_shadow)
                || (m_hero_enabled && input.hero_pixel_shadow));

@@ -7,7 +7,7 @@
 #include "renderer/world/gl_world.h"
 #include "viewer_shaders.h"
 
-namespace openrac::scene {
+namespace openrac::lighting {
 using namespace openrac::gl;
 namespace wgl = renderer::world::gl;
 
@@ -39,7 +39,7 @@ bool EarlyLighting::render(
         return false;
     }
     if (!m_compute.id()) {
-        std::string source = shaders::early_lighting_comp;
+        std::string source = scene::shaders::early_lighting_comp;
         source = probe_shader_source(std::move(source));
         source.insert(
             source.find('\n') + 1, "#define OPENRAC_PROBE_PIXEL early_pixel\nivec2 early_pixel;\n"
@@ -138,4 +138,4 @@ void EarlyLighting::release() {
     m_ready = false;
     m_failed = false;
 }
-}  // namespace openrac::scene
+}  // namespace openrac::lighting

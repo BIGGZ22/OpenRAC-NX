@@ -8,7 +8,7 @@
 #include "renderer/world/gl_world.h"
 #include "viewer_shaders.h"
 
-namespace openrac::scene {
+namespace openrac::lighting {
 using namespace openrac::gl;
 namespace wgl = renderer::world::gl;
 
@@ -64,7 +64,9 @@ bool ProbeSelection::prepare(
         || offsets.size() != grids.size()) {
         return false;
     }
-    if (!m_cull.build_compute("tiled probe-volume culling", shaders::probe_selection_comp, error)) {
+    if (!m_cull.build_compute(
+            "tiled probe-volume culling", scene::shaders::probe_selection_comp, error
+        )) {
         return false;
     }
     m_count = static_cast<unsigned>(grids.size());
@@ -158,4 +160,4 @@ void ProbeSelection::release() {
     m_count = 0;
     m_started = false;
 }
-}  // namespace openrac::scene
+}  // namespace openrac::lighting

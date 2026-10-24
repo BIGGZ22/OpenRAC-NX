@@ -111,7 +111,7 @@ void check() {
     std::string error;
     renderer::Shader fill, sample;
     CHECK(fill.build("early lighting fixture depth", vertex, depth_fragment, error));
-    std::string source = scene::probe_shader_source(fragment);
+    std::string source = lighting::probe_shader_source(fragment);
     // Common uniforms are already declared above for the reference path.
     std::string reconstruction = scene::shaders::early_lighting_glsl;
     for (const char* line : {"uniform mat4 early_projection;\n", "uniform vec2 early_extent;\n"}) {
@@ -122,7 +122,7 @@ void check() {
     if (!error.empty()) {
         std::fprintf(stderr, "%s\n", error.c_str());
     }
-    scene::ProbeLighting probes;
+    lighting::ProbeLighting probes;
     lighting::ProbeGrid grid;
     grid.origin = {-16, -16, -.025f};
     grid.spacing = {32, 32, .05f};
@@ -159,7 +159,7 @@ void check() {
     glActiveTexture(GL_TEXTURE0);
     float ao_strength = 0;
     int hero_mode = 0;
-    scene::EarlyLighting early;
+    lighting::EarlyLighting early;
     renderer::TexturePool textures;
     unsigned vao = 0;
     glGenVertexArrays(1, &vao);
@@ -411,7 +411,7 @@ int main() {
         std::puts(why.c_str());
         return test::kSkip;
     }
-    if (!scene::EarlyLighting::supported()) {
+    if (!lighting::EarlyLighting::supported()) {
         return test::kSkip;
     }
     check();

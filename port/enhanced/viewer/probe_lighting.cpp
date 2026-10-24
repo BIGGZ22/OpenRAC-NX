@@ -20,7 +20,7 @@
 #include "renderer/gl.h"
 #include "viewer_shaders.h"
 
-namespace openrac::scene {
+namespace openrac::lighting {
 using namespace openrac::gl;
 
 namespace {
@@ -61,7 +61,7 @@ std::string probe_shader_source(std::string source) {
     if (!enhanced_rendering_available()) {
         return source;
     }
-    source.insert(source.find('\n') + 1, shaders::probes_glsl);
+    source.insert(source.find('\n') + 1, scene::shaders::probes_glsl);
     static const bool& gather_off = stats::probe(
         "OPENRAC_SHADOW_GATHER_OFF", "Reference: 16 individual shadow texel fetches (reload level)"
     );
@@ -86,15 +86,15 @@ std::string probe_shader_source(std::string source) {
 }
 
 std::string probe_mesh_fragment() {
-    return probe_shader_source(shaders::mesh_frag);
+    return probe_shader_source(scene::shaders::mesh_frag);
 }
 
 std::string probe_early_fragment() {
     if (!enhanced_rendering_available()) {
         return probe_mesh_fragment();
     }
-    std::string source = shaders::mesh_frag;
-    source += shaders::early_lighting_glsl;
+    std::string source = scene::shaders::mesh_frag;
+    source += scene::shaders::early_lighting_glsl;
     source.insert(source.find('\n') + 1, "#define OPENRAC_EARLY_LIGHTING 1\n");
     return probe_shader_source(std::move(source));
 }
@@ -328,7 +328,7 @@ std::filesystem::path& probe_root_storage() {
 }
 
 // The level's bake under the probe root: <root>/level_NN/sparse.orpg, NN its folder's name.
-std::string level_bake(const LevelData& level) {
+std::string level_bake(const scene::LevelData& level) {
     const auto& root = probe_root();
     if (root.empty()) {
         return {};
@@ -358,7 +358,7 @@ const std::filesystem::path& probe_root() {
     return probe_root_storage();
 }
 
-void ProbeLighting::load(const LevelData& level) {
+void ProbeLighting::load(const scene::LevelData& level) {
     if (!enhanced_rendering_available()) {
         return;
     }
@@ -499,7 +499,7 @@ void ProbeLighting::load(const LevelData& level) {
 
 void ProbeLighting::bind(
     const renderer::Shader& shader,
-    Layer layer,
+    scene::Layer layer,
     bool all_static_receivers,
     const renderer::Camera* camera,
     bool depth_matched
@@ -508,16 +508,17 @@ void ProbeLighting::bind(
         return;
     }
     m_selection.bind(shader, camera, depth_matched);
-    const bool static_receiver = layer == Layer::Terrain
-                                 || ((mode == 2 || all_static_receivers)
-                                     && (layer == Layer::Ties || layer == Layer::Shrubs));
-    const int receiver = static_receiver ? 1 : (layer == Layer::Mobys ? 2 : 0);
+    const bool static_receiver =
+        layer == scene::Layer::Terrain
+        || ((mode == 2 || all_static_receivers)
+            && (layer == scene::Layer::Ties || layer == scene::Layer::Shrubs));
+    const int receiver = static_receiver ? 1 : (layer == scene::Layer::Mobys ? 2 : 0);
     glUniform1i(shader.uniform("probe_receiver"), receiver);
     glUniform1i(shader.uniform("probe_mode"), active() && receiver ? mode : 0);
     glUniform1f(shader.uniform("probe_gi_multiplier"), gi_multiplier);
     glUniform1i(
         shader.uniform("probe_terrain_albedo"),
-        m_terrain_vertex_albedo && layer == Layer::Terrain ? 1 : 0
+        m_terrain_vertex_albedo && layer == scene::Layer::Terrain ? 1 : 0
     );
     glUniform3f(
         shader.uniform("probe_sunlight_scale"),
@@ -598,8 +599,8 @@ void ProbeLighting::draw_spheres(const renderer::FrameInput& input, renderer::Re
         std::string error;
         if (!m_sphere_shader.build(
                 "probe placement spheres",
-                shaders::probe_spheres_vert,
-                shaders::probe_spheres_frag,
+                scene::shaders::probe_spheres_vert,
+                scene::shaders::probe_spheres_frag,
                 error
             )) {
             log::warn("probe spheres disabled: {}", error);
@@ -766,4 +767,4 @@ void ProbeLighting::release() {
     m_camera_started = false;
     m_region_time = {};
 }
-}  // namespace openrac::scene
+}  // namespace openrac::lighting

@@ -71,7 +71,7 @@ void check(
     bool camera_bias = false,
     bool bias_occluder = false
 ) {
-    scene::ProbeLighting probes;
+    lighting::ProbeLighting probes;
     std::string error;
     const auto packed_dense =
         dense ? std::optional{openrac::test::gpu_probes(*dense)} : std::nullopt;
@@ -181,7 +181,7 @@ void coverage_seam(
                     usable ? lighting::Float2{1024, 1048576} : lighting::Float2{0.01f, 0.0001f};
             }
         }
-        scene::ProbeLighting probes;
+        lighting::ProbeLighting probes;
         std::string error;
         const auto packed_dense = openrac::test::gpu_probes(dense);
         CHECK(probes.upload(openrac::test::gpu_probes(coarse), error, &packed_dense));
@@ -465,7 +465,7 @@ void material_path(
         CHECK(frame.read_rgba() == direct);  // GI multiplier never changes direct light
     }
     CHECK(glGetError() == GL_NO_ERROR);
-    if (layer == scene::Layer::Terrain && !glow && scene::ProbeSelection::supported()) {
+    if (layer == scene::Layer::Terrain && !glow && lighting::ProbeSelection::supported()) {
         // Exercise the real prepass hook with AO disabled, then enabled. The
         // resolved depth must select green GI before the colour pass shades it.
         auto local_grid = volume.grid;
@@ -502,7 +502,7 @@ void material_path(
 }
 
 void compute_regions(renderer::Shader&, renderer::FrameBuffer&, unsigned vao) {
-    if (!scene::ProbeSelection::supported()) {
+    if (!lighting::ProbeSelection::supported()) {
         std::printf("Tiled probe fixture unavailable on this context\n");
         return;
     }
@@ -552,7 +552,7 @@ void compute_regions(renderer::Shader&, renderer::FrameBuffer&, unsigned vao) {
         );
         regions.push_back(std::move(region));
     }
-    scene::ProbeLighting probes;
+    lighting::ProbeLighting probes;
     std::string error;
     CHECK(probes.upload_regions(
         openrac::test::gpu_probes(base), openrac::test::gpu_regions(regions), error
@@ -766,7 +766,7 @@ void camera_regions(renderer::Shader& shader, renderer::FrameBuffer& frame, unsi
         if (variant == 3) {
             regions.resize(129, regions.back());  // Force two-slot streaming fallback.
         }
-        scene::ProbeLighting probes;
+        lighting::ProbeLighting probes;
         std::string error;
         CHECK(probes.upload_regions(
             openrac::test::gpu_probes(base), openrac::test::gpu_regions(regions), error
@@ -932,7 +932,7 @@ void dense_sphere_fade() {
     for (auto& p : dense.probes) {
         p.valid = true;
     }
-    scene::ProbeLighting probes;
+    lighting::ProbeLighting probes;
     std::string error;
     CHECK(probes.upload_regions(
         openrac::test::gpu_probes(base), {openrac::test::gpu_probes(dense)}, error
@@ -1015,7 +1015,7 @@ void sphere_overlay() {
     // The visible sphere must be drawn at this relocated centre (x=0),
     // rather than the nominal x=-0.5 position.
     volume.probes[0].offset = {0.5f, 0, 0};
-    scene::ProbeLighting probes;
+    lighting::ProbeLighting probes;
     std::string error;
     CHECK(probes.upload(openrac::test::gpu_probes(volume), error));
     probes.show_spheres = true;
