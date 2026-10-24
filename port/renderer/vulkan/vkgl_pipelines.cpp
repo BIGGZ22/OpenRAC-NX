@@ -1154,9 +1154,11 @@ VkPipeline pipeline_for(
     k.inputs = count;
     k.viewports = static_cast<std::uint32_t>(std::max<std::size_t>(1, g->indexed_viewports.size()));
     std::memcpy(k.input, inputs, sizeof(Input) * count);
-    // Repeated draws bypass hashing only when every baked graphics field matches.
+    // Repeated draws bypass hashing only when every baked graphics field matches
+    // (vk-last-pipeline); off, every draw looks its key up in the table.
     const std::string_view bytes(reinterpret_cast<const char*>(&k), sizeof k);
-    if (p.last_pipeline != VK_NULL_HANDLE && bytes == p.last_pipeline_key) {
+    if (p.last_pipeline != VK_NULL_HANDLE && bytes == p.last_pipeline_key
+        && renderer::render_opt::enabled(renderer::render_opt::Opt::VkLastPipeline)) {
         return p.last_pipeline;
     }
     const std::uint64_t hash = hash_key(k);

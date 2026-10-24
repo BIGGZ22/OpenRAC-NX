@@ -82,6 +82,12 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::VkPersistentDescriptors, "vk-persistent-descriptors",
      "descriptor sets of textures, samplers and the frame's ring kept across frames, not made anew",
      true, Tolerance{}},
+    {Opt::VkLastPipeline, "vk-last-pipeline",
+     "a program's last pipeline taken again when its whole key is the same, before any hashing",
+     true, Tolerance{}},
+    {Opt::FsrMotionBatch, "fsr-motion-batch",
+     "FSR's object motion drawn in batches from one pose buffer, not one draw per object",
+     true, Tolerance{}},
 }};
 // clang-format on
 

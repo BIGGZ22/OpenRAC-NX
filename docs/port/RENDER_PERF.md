@@ -60,6 +60,8 @@ before and after, and how its frames are shown to be the same.
 | `shadow-atlas-discard` | on | none (exact) | The shadow atlas pass neither loads nor stores its unsampled colour and its stencil ([R-16](#r-16-mobys-posed-in-place), lane RB's note). |
 | `spirv-disk-cache` | on | none (exact) | What glslang made of each program and stage is kept beside the pipeline cache, so a warm start and a level load run no glslang ([R-12](#r-12-spir-v-kept-between-runs)). |
 | `vk-persistent-descriptors` | on | none (exact) | On the path without bindless materials, a descriptor set binding only textures, samplers and the frame's ring is kept across frames instead of made each frame ([R-14](#r-14-descriptor-sets-kept-across-frames)). |
+| `vk-last-pipeline` | on | none (exact) | Each program keeps its last graphics pipeline and the whole key it was found by; a draw with the same key takes it back before hashing the key or looking it up ([vk-last-pipeline](#vk-last-pipeline-a-programs-last-pipeline)). |
+| `fsr-motion-batch` | on | none (exact) | Enhanced Vulkan with FSR only: the object-motion pass instances consecutive objects of one geometry and material from one pose buffer instead of one draw per object ([fsr-motion-batch](#fsr-motion-batch-object-motion-in-batches)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -1558,3 +1560,29 @@ OPENRAC_GL_API=vulkan port/build/release/openrac_render_bench --frames 60 --warm
 
 On real levels: `python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt moby-pose-in-place`
 (the `moby instances` section with `--sections`), and the same with `shadow-atlas-discard`.
+
+## vk-last-pipeline: a program's last pipeline
+
+From PR #47. Each `Program` keeps the last graphics pipeline its draws found and the whole
+`PipelineKey` it was found by (`Program::last_pipeline`, `last_pipeline_key`). `pipeline_for`
+builds the key as before and, when its bytes equal the kept key, returns that pipeline before
+hashing the key or looking it up in `Context::pipelines` or the pre-warm worker. A relink or a
+delete of the program clears it before its pipelines are retired (`release_program`), so a kept
+pipeline is never one the table no longer holds. Off, every draw looks its key up as before
+(`vk-draw-cache`'s path, or its reference). No counter changes: the draw does the same Vulkan work
+either way, and the saving is the CPU time of the hash and the table probe in `vk_draw_ms`.
+
+**Equivalence.** `render_equivalence_vulkan` draws the entry on and off in every scenario,
+Enhanced off and on, byte for byte under the validation layer. `vulkan_uniform` has the author's
+test of alternating depth and blend states through one program.
+
+## fsr-motion-batch: object motion in batches
+
+From PR #47, enhanced Vulkan with FSR only. FSR's object-motion pass
+([port/enhanced/fsr3/README.md](../../port/enhanced/fsr3/README.md)) uploads each frame's current
+and previous poses into one buffer and instances consecutive objects that share a geometry and a
+material run (`scene::MotionSubmission::Batched`). Off, it draws each object on its own
+(`MotionSubmission::Individual`) with the same pose history, depth and alpha coverage; this was
+`OPENRAC_FSR_MOTION_BATCH_OFF` before it joined the registry. The synthetic scene does not run
+FSR, so `render_equivalence_vulkan` compares it only as a switch that changes nothing there;
+`fsr3_motion` (enhanced preset) draws the two submissions and compares their motion targets.

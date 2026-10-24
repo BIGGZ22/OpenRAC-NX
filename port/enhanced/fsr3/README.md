@@ -77,7 +77,8 @@ Input colour is LDR. Translucent objects and particles have reactive coverage ra
 motion vectors. Animated sky shells use camera motion. Dynamic velocities upload current and previous
 poses together, then instance consecutive objects sharing one geometry/material run. Multi-material
 objects retain instance-major ordering to preserve equal-depth alpha coverage. The individual-draw
-reference is available through `OPENRAC_FSR_MOTION_BATCH_OFF`.
+reference is the registry's `fsr-motion-batch` switched off (`OPENRAC_RENDER_OPT_OFF=fsr-motion-batch`,
+[RENDER_PERF.md](../../../docs/port/RENDER_PERF.md#fsr-motion-batch-object-motion-in-batches)).
 
 ## Further reading
 

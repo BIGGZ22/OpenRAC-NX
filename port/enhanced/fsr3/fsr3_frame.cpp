@@ -9,6 +9,7 @@
 #include "common/stats.h"
 #include "enhanced/fsr3/fsr3_internal.h"
 #include "renderer/gl.h"
+#include "renderer/render_opt.h"
 #include "scene/level_renderer.h"
 
 namespace openrac::enhanced {
@@ -155,12 +156,11 @@ void Fsr3::State::draw_motion() {
     glDepthFunc(GL_GEQUAL);
     {
         const stats::Scope timing("FSR object motion", stats::kGpu);
-        static const bool& individual = stats::probe(
-            "OPENRAC_FSR_MOTION_BATCH_OFF", "Reference: individual object-motion draws"
-        );
-        // The reference uses identical pose history, depth and material coverage.
+        // The reference (fsr-motion-batch off) uses identical pose history, depth and coverage.
         const auto submission =
-            individual ? scene::MotionSubmission::Individual : scene::MotionSubmission::Batched;
+            renderer::render_opt::enabled(renderer::render_opt::Opt::FsrMotionBatch)
+                ? scene::MotionSubmission::Batched
+                : scene::MotionSubmission::Individual;
         scene->draw_motion(object_motion, velocities, view, *textures, submission);
     }
     glDisable(GL_DEPTH_TEST);

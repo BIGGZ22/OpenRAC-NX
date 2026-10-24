@@ -49,10 +49,12 @@ enum class Opt : std::uint8_t {
     SpirvDiskCache,      // spirv-disk-cache: SPIR-V kept between runs, glslang not run again
     // vk-persistent-descriptors: descriptor sets of long-lived resources kept across frames
     VkPersistentDescriptors,
+    VkLastPipeline,  // vk-last-pipeline: a program's last pipeline taken again by its key
+    FsrMotionBatch,  // fsr-motion-batch: FSR object motion drawn in pose-buffer batches
 };
 
-// The number of entries: VkPersistentDescriptors is the last enumerator of Opt.
-inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::VkPersistentDescriptors) + 1;
+// The number of entries: FsrMotionBatch is the last enumerator of Opt.
+inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::FsrMotionBatch) + 1;
 
 // How far the frames an optimisation draws may differ from its reference path's. The default,
 // zero, is byte-identical frames; anything else is a tolerance the maintainers accepted, named in
