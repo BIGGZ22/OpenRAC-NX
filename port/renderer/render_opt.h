@@ -37,10 +37,11 @@ enum class Opt : std::uint8_t {
     VkDrawCache,  // vk-draw-cache: Vulkan pipelines and descriptor sets found without allocating
     AttachmentDiscard,     // attachment-discard
     GpuResidentInstances,  // gpu-resident-instances: static instances kept on the GPU
+    ShadowStaticCache,     // shadow-static-cache: static shadow casters kept between frames
 };
 
-// The number of entries: GpuResidentInstances is the last enumerator of Opt.
-inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::GpuResidentInstances) + 1;
+// The number of entries: ShadowStaticCache is the last enumerator of Opt.
+inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::ShadowStaticCache) + 1;
 
 // How far the frames an optimisation draws may differ from its reference path's. The default,
 // zero, is byte-identical frames; anything else is a tolerance the maintainers accepted, named in

@@ -52,6 +52,9 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::GpuResidentInstances, "gpu-resident-instances",
      "static instances kept in device memory: a view's GPU batch sends planes, PVS and a group",
      true, Tolerance{}},
+    {Opt::ShadowStaticCache, "shadow-static-cache",
+     "a sun cascade's static casters drawn again only when its key changes, else copied",
+     false, Tolerance{}},
 }};
 // clang-format on
 
