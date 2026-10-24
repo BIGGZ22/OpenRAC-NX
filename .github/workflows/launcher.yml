@@ -405,6 +405,9 @@ jobs:
           version=$base
           endpoint="https://github.com/$GITHUB_REPOSITORY/releases/latest/download/latest.json"
           if [[ "$GITHUB_REF" != refs/tags/launcher-v* ]] && [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+            # Newer than any release, also when master was not raised after one (scripts/dev_version.sh).
+            base=$(scripts/dev_version.sh src-tauri/tauri.conf.json "$GITHUB_REPOSITORY")
+            version=$base
             channel="launcher-dev-$(printf '%s' "$GITHUB_REF_NAME" | tr -c 'A-Za-z0-9._-' '-')"
             endpoint="https://github.com/$GITHUB_REPOSITORY/releases/download/$channel/latest.json"
             export OPENRAC_LAUNCHER_BUILD="dev.$GITHUB_RUN_NUMBER"
@@ -554,7 +557,8 @@ jobs:
             echo "::notice::no update signatures (TAURI_SIGNING_PRIVATE_KEY is not set): nothing to publish"
             exit 0
           fi
-          base=$(node -p "require('./launcher/src-tauri/tauri.conf.json').version")
+          # The builds' own version (Build the installers, above).
+          base=$(launcher/scripts/dev_version.sh launcher/src-tauri/tauri.conf.json "$GH_REPO")
           version="$base-dev.$GITHUB_RUN_NUMBER"
           channel="launcher-dev-$(printf '%s' "$GITHUB_REF_NAME" | tr -c 'A-Za-z0-9._-' '-')"
           python3 tools/updater_manifest.py installers --tag "$channel" --repo "$GH_REPO" \
