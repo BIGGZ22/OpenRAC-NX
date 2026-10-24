@@ -2,14 +2,17 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // The screen (vkgl_internal.h): the default framebuffer, the swapchain and its present mode, moving
-// on to the next frame, a new surface when the old one went, and copying a finished frame to the
-// window.
+// on to the next frame, a new surface when the old one went, copying a finished frame to the
+// window, and the render counters published as the frame's gauges.
 
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 #include <volk.h>
@@ -17,6 +20,8 @@
 #include <SDL3/SDL.h>
 
 #include "common/log.h"
+#include "common/stats.h"
+#include "renderer/vulkan/vkgl.h"
 #include "renderer/vulkan/vkgl_internal.h"
 
 namespace openrac::vkgl::detail {
@@ -24,6 +29,72 @@ namespace openrac::vkgl::detail {
 using namespace openrac::gl;
 
 namespace {
+
+// ---- The render counters ----
+
+// How a render counter's gauge reads it: the part the frame added, or the total so far (the
+// cumulative counts, and the bytes held now for the mirror of GL's buffers).
+enum class Span : std::uint8_t {
+    Frame,
+    Total,
+};
+
+// One render counter published as a gauge (docs/port/RENDER_PERF.md, "The counters").
+struct Gauge {
+    std::string_view name;                      // The gauge's name, vk_ and the counter's.
+    std::uint64_t SubmissionCounters::* value;  // The counter it reads.
+    Span span;                                  // Whether it shows the frame's part or the total.
+};
+
+// The render counters other than the commands, in the order of SubmissionCounters.
+// clang-format off: one gauge per row.
+constexpr auto kGauges = std::to_array<Gauge>({
+    {"vk_pipelines_created", &SubmissionCounters::pipelines_created, Span::Total},
+    {"vk_pipelines_created_after_warmup", &SubmissionCounters::pipelines_created_after_warmup,
+     Span::Total},
+    {"vk_descriptor_sets_allocated", &SubmissionCounters::descriptor_sets_allocated, Span::Frame},
+    {"vk_descriptor_writes", &SubmissionCounters::descriptor_writes, Span::Frame},
+    {"vk_render_passes", &SubmissionCounters::render_passes, Span::Frame},
+    {"vk_attachment_load_bytes", &SubmissionCounters::attachment_load_bytes, Span::Frame},
+    {"vk_attachment_store_bytes", &SubmissionCounters::attachment_store_bytes, Span::Frame},
+    {"vk_barriers", &SubmissionCounters::barriers, Span::Frame},
+    {"vk_barriers_all_commands", &SubmissionCounters::barriers_all_commands, Span::Frame},
+    {"vk_submits", &SubmissionCounters::submits, Span::Frame},
+    {"vk_frames_presented", &SubmissionCounters::frames_presented, Span::Total},
+    {"vk_fullscreen_copies", &SubmissionCounters::fullscreen_copies, Span::Frame},
+    {"vk_ring_bytes", &SubmissionCounters::ring_bytes, Span::Frame},
+    {"vk_texture_creations", &SubmissionCounters::texture_creations, Span::Frame},
+    {"vk_texture_upload_bytes", &SubmissionCounters::texture_upload_bytes, Span::Frame},
+    {"vk_buffer_static_bytes_host_visible", &SubmissionCounters::buffer_static_bytes_host_visible,
+     Span::Total},
+    {"vk_cpu_mirror_bytes", &SubmissionCounters::cpu_mirror_bytes, Span::Total},
+    {"vk_gpu_payload_bytes", &SubmissionCounters::gpu_payload_bytes, Span::Frame},
+    {"vk_shader_compiles", &SubmissionCounters::shader_compiles, Span::Total},
+});
+// clang-format on
+
+// The gauge of each kind of command, in the order of Command.
+constexpr std::array<std::string_view, kCommandKinds> kCommandGauges = {
+    "vk_cmds_bind_pipeline",
+    "vk_cmds_bind_descriptors",
+    "vk_cmds_bind_buffers",
+    "vk_cmds_dynamic_state",
+    "vk_cmds_draw",
+    "vk_cmds_barrier",
+    "vk_cmds_copy",
+    "vk_cmds_dispatch",
+    "vk_cmds_render_pass",
+    "vk_cmds_query",
+    "vk_cmds_other",
+};
+
+// Returns the value of `gauge` from the counters `now`, given those of the frame before.
+double gauge_value(
+    const Gauge& gauge, const SubmissionCounters& now, const SubmissionCounters& before
+) {
+    const std::uint64_t total = now.*gauge.value;
+    return static_cast<double>(gauge.span == Span::Total ? total : total - before.*gauge.value);
+}
 
 // ---- The device, the screen and the frames ----
 
@@ -54,6 +125,7 @@ void swapchain_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout from, V
         1,
         &b
     );
+    count_barrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 }
 
 // The surface and swapchain made again: back from the background on Android, the window is a new
@@ -226,6 +298,39 @@ bool make_swapchain() {
     return true;
 }
 
+void publish_counters() {
+    ++g->submission.frames_presented;
+    const SubmissionCounters& now = g->submission;
+
+    // Nobody is measuring: the next frame that is measured shows only its own part.
+    if (!stats::enabled()) {
+        g->published = now;
+        return;
+    }
+
+    const SubmissionCounters& before = g->published;
+
+    // The counts and bytes, each as its row of the table says.
+    for (const Gauge& gauge : kGauges) {
+        stats::gauge(gauge.name, gauge_value(gauge, now, before));
+    }
+
+    stats::gauge(
+        "vk_cmds_recorded", static_cast<double>(commands_recorded(now) - commands_recorded(before))
+    );
+
+    // The frame's commands of each kind.
+    for (std::size_t kind = 0; kind < kCommandKinds; ++kind) {
+        stats::gauge(
+            kCommandGauges[kind], static_cast<double>(now.commands[kind] - before.commands[kind])
+        );
+    }
+
+    stats::gauge("shader_compile_s", now.shader_compile_s);
+    stats::gauge("vk_gpu_timestamps", g->timestamp_bits != 0 ? 1.0 : 0.0);
+    g->published = now;
+}
+
 void advance() {
     g->frame = (g->frame + 1) % kFrames;
     Frame& f = frame();
@@ -304,6 +409,7 @@ bool present_to_screen() {
         &blit,
         same ? VK_FILTER_NEAREST : VK_FILTER_LINEAR
     );
+    count_copy(g->swapchain_extent.width, g->swapchain_extent.height);
     swapchain_barrier(
         cmd, screen, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
     );

@@ -90,6 +90,7 @@ void begin_rendering(const Target& t, const Clear& clear) {
         {{0, 0}, {static_cast<std::uint32_t>(t.width), static_cast<std::uint32_t>(t.height)}};
     info.layerCount = 1;
     const State& s = g->state;
+    const VkExtent2D area = info.renderArea.extent;
     if (t.colour != nullptr) {
         t.colour->touched = g->recording;
         // Also when it is in that layout already: what an earlier pass wrote is then done.
@@ -101,6 +102,7 @@ void begin_rendering(const Target& t, const Clear& clear) {
         std::memcpy(colour.clearValue.color.float32, s.clear_colour, sizeof s.clear_colour);
         info.colorAttachmentCount = 1;
         info.pColorAttachments = &colour;
+        count_attachment(*t.colour, area, !clear.colour, true);
     }
     if (t.depth != nullptr) {
         t.depth->touched = g->recording;
@@ -118,14 +120,36 @@ void begin_rendering(const Target& t, const Clear& clear) {
                 clear.stencil ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
             info.pStencilAttachment = &stencil;
         }
+        // One image holds both aspects: read in when either is kept.
+        const bool kept = !clear.depth || (has_stencil(t.depth->format) && !clear.stencil);
+        count_attachment(*t.depth, area, kept, true);
     }
     vkCmdBeginRendering(cmd, &info);
+    count_render_pass();
     g->rendering = true;
     g->rendering_target = t;
     g->bound_pipeline = VK_NULL_HANDLE;
 }
 
 }  // namespace
+
+// ---- The render counters ----
+
+void count_attachment(const Image& image, VkExtent2D area, bool load, bool store) {
+    const std::uint64_t bytes = std::uint64_t{area.width} * area.height
+                                * static_cast<std::uint64_t>(texel_bytes(image.format))
+                                * static_cast<std::uint64_t>(image.samples);
+
+    // Kept from before the pass: read from memory into the GPU's attachment storage.
+    if (load) {
+        g->submission.attachment_load_bytes += bytes;
+    }
+
+    // Kept after the pass: written back to memory.
+    if (store) {
+        g->submission.attachment_store_bytes += bytes;
+    }
+}
 
 void gpu_flush_draws() {
     auto& gpu = g->gpu;
@@ -135,6 +159,7 @@ void gpu_flush_draws() {
     vkCmdDrawIndexedIndirect(
         frame().main, gpu.pending_arguments, gpu.pending_offset, gpu.pending_count, 20
     );
+    count_command(Command::Draw);
     ++g->measures.native_draws;
     ++gpu.indirect_calls;
     gpu.pending_count = 0;
@@ -176,6 +201,7 @@ Slice ring(VkDeviceSize size) {
             if (at + size <= c.size) {
                 f.chunk_used = at + size;
                 g->measures.ring_bytes += size;
+                g->submission.ring_bytes += size;
                 return {c.buffer, at, c.mapped + at};
             }
             ++f.chunk_at;
@@ -207,6 +233,7 @@ void end_rendering() {
     gpu_flush_draws();
     if (g->rendering) {
         vkCmdEndRendering(frame().main);
+        count_command(Command::RenderPass);
         g->rendering = false;
         g->bound_pipeline = VK_NULL_HANDLE;
     }
@@ -245,6 +272,7 @@ void barrier(VkCommandBuffer cmd, Image& image, VkImageLayout to) {
         1,
         &b
     );
+    count_barrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
     image.layout = to;
 }
 
@@ -258,6 +286,7 @@ void begin_buffers() {
     vkBeginCommandBuffer(f.main, &begin);
     if (f.timestamps != VK_NULL_HANDLE && f.timestamp_used == 0) {
         vkCmdResetQueryPool(f.upload, f.timestamps, 0, 512);
+        count_command(Command::Query);
     }
     g->upload_used = false;
     ++g->recording;
@@ -284,6 +313,7 @@ bool timing_begin(std::uint64_t serial, int section) {
         label.color[2] = 0.9f;
         label.color[3] = 1;
         vkCmdBeginDebugUtilsLabelEXT(g->gpu.timing_upload ? f.upload : f.main, &label);
+        count_command(Command::Other);
     }
 #endif
     // Bound both ends at command completion. A TOP start followed by a
@@ -296,6 +326,7 @@ bool timing_begin(std::uint64_t serial, int section) {
         f.timestamps,
         f.timestamp_used
     );
+    count_command(Command::Query);
     f.timestamp_used += 2;
     return true;
 }
@@ -316,9 +347,11 @@ void timing_end() {
         f.timestamps,
         timing.first + 1
     );
+    count_command(Command::Query);
 #if defined(OPENRAC_GPU_MARKERS)
     if (env::flag(env::Var::GpuMarkers) && vkCmdEndDebugUtilsLabelEXT) {
         vkCmdEndDebugUtilsLabelEXT(g->gpu.timing_upload ? f.upload : f.main);
+        count_command(Command::Other);
     }
 #endif
     timing.complete = true;
@@ -374,6 +407,7 @@ void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait) {
         0,
         nullptr
     );
+    count_barrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
     vkEndCommandBuffer(f.upload);
     vkEndCommandBuffer(f.main);
     const VkCommandBuffer buffers[] = {f.upload, f.main};
@@ -392,6 +426,7 @@ void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait) {
     }
     vkResetFences(g->device, 1, &f.fence);
     check(vkQueueSubmit(g->queue, 1, &info, f.fence), "a submit");
+    ++g->submission.submits;
     f.submitted = true;
     if (wait) {
         vkWaitForFences(g->device, 1, &f.fence, VK_TRUE, UINT64_MAX);
@@ -485,6 +520,7 @@ void clear(GLbitfield mask) {
     }
     VkClearRect r{rect, 0, 1};
     vkCmdClearAttachments(frame().main, n, attachments, 1, &r);
+    count_command(Command::Other);
 }
 
 }  // namespace openrac::vkgl::detail

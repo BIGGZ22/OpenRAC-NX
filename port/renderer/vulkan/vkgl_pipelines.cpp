@@ -3,7 +3,8 @@
 //
 // Pipelines and descriptor sets (vkgl_internal.h): GL's vertex formats and fixed-function state as
 // Vulkan pipelines, made once for each key and kept in the pipeline cache; the descriptor sets that
-// bind a program's textures and blocks; and glDispatchCompute and glMemoryBarrier.
+// bind a program's textures and blocks; glDispatchCompute and glMemoryBarrier; and the warm-up
+// after which a pipeline made counts as a hitch (vkgl.h, begin_pipeline_warmup).
 
 #include <algorithm>
 #include <cstddef>
@@ -530,6 +531,7 @@ VkPipeline pipeline_for(
     info.layout = p.layout;
     VkPipeline pipeline = VK_NULL_HANDLE;
     ++g->measures.pipelines;
+    count_pipeline();
     if (!check(
             vkCreateGraphicsPipelines(g->device, g->pipeline_cache, 1, &info, nullptr, &pipeline),
             "a pipeline"
@@ -558,6 +560,7 @@ VkDescriptorSet allocate_set(VkDescriptorSetLayout layout) {
         info.pSetLayouts = &layout;
         VkDescriptorSet set = VK_NULL_HANDLE;
         if (vkAllocateDescriptorSets(g->device, &info, &set) == VK_SUCCESS) {
+            ++g->submission.descriptor_sets_allocated;
             return set;
         }
         ++f.pool_at;
@@ -715,6 +718,7 @@ VkDescriptorSet descriptors(Program& p, const std::vector<Sampled>& samplers) {
     vkUpdateDescriptorSets(
         g->device, static_cast<std::uint32_t>(writes.size()), writes.data(), 0, nullptr
     );
+    g->submission.descriptor_writes += writes.size();
     ++g->submission.descriptor_sets;
     if (reuse_uniforms() && p.descriptor_sets.size() < 256) {
         p.descriptor_sets.emplace(key, set);
@@ -748,6 +752,7 @@ void OPENRAC_GLAPI dispatch_compute(GLuint x, GLuint y, GLuint z) {
     }
     const auto set = descriptors(*p, samplers);
     vkCmdBindPipeline(frame().main, VK_PIPELINE_BIND_POINT_COMPUTE, p->compute_pipeline);
+    count_command(Command::BindPipeline);
     const auto dynamic_offset = static_cast<std::uint32_t>(p->uniforms_offset);
     vkCmdBindDescriptorSets(
         frame().main,
@@ -759,7 +764,9 @@ void OPENRAC_GLAPI dispatch_compute(GLuint x, GLuint y, GLuint z) {
         p->dynamic_uniforms ? 1u : 0u,
         p->dynamic_uniforms ? &dynamic_offset : nullptr
     );
+    count_command(Command::BindDescriptors);
     vkCmdDispatch(frame().main, x, y, z);
+    count_command(Command::Dispatch);
     g->bound_pipeline = VK_NULL_HANDLE;
 }
 
@@ -782,6 +789,20 @@ void OPENRAC_GLAPI memory_barrier(GLbitfield) {
         0,
         nullptr
     );
+    count_barrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 }
 
 }  // namespace openrac::vkgl::detail
+
+namespace openrac::vkgl {
+
+void begin_pipeline_warmup(std::uint32_t frames) {
+    // Nothing to warm up without a context.
+    if (detail::g == nullptr) {
+        return;
+    }
+
+    detail::g->warmup_end = detail::g->submission.frames_presented + frames;
+}
+
+}  // namespace openrac::vkgl

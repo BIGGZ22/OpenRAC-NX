@@ -13,6 +13,8 @@
 #
 #   render_opt              the table and OPENRAC_RENDER_OPT_OFF's parsing, everywhere
 #   render_opt_environment  the variable read and applied, as this file sets it
+#   render_opt_vulkan       the Vulkan backend's render counters follow the draws (skipped, 77,
+#                           where Vulkan cannot open)
 #
 # Included from port/CMakeLists.txt after cmake/Window.cmake, with or without the window.
 
@@ -29,7 +31,17 @@ foreach(renderer openrac_renderer openrac_renderer_vulkan)
   endif()
 endforeach()
 
-openrac_add_test(render_opt LIBS openrac_render_opt)
+if(TARGET openrac_renderer_vulkan)
+  # With the Vulkan renderer, the same program also draws to check the counters (--vulkan).
+  openrac_add_test(render_opt
+    DEFINITIONS OPENRAC_RENDER_OPT_TEST_VULKAN=1
+    LIBS openrac_renderer openrac_platform openrac_renderer_vulkan)
+  add_test(NAME render_opt_vulkan COMMAND render_opt_test --vulkan)
+  set_tests_properties(render_opt_vulkan PROPERTIES SKIP_RETURN_CODE 77 ENVIRONMENT
+    "OPENRAC_GL_API=vulkan;OPENRAC_VULKAN_VALIDATION=1")
+else()
+  openrac_add_test(render_opt LIBS openrac_render_opt)
+endif()
 
 # One entry and one name that is no entry's: the unknown one is warned of and ignored
 # (tests/render_opt_test.cpp, kUnknownInEnvironment).

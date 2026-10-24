@@ -119,6 +119,30 @@ bool has_stencil(VkFormat f) {
            || f == VK_FORMAT_D16_UNORM_S8_UINT;
 }
 
+int texel_bytes(VkFormat f) {
+    // The sizes are the formats' own (the Vulkan specification's format table); a depth and
+    // stencil format counts the bytes it is laid out in, its stencil byte included.
+    switch (f) {
+        case VK_FORMAT_R8_UNORM:
+            return 1;
+        case VK_FORMAT_D16_UNORM:
+            return 2;
+        case VK_FORMAT_D16_UNORM_S8_UINT:
+            return 3;
+        case VK_FORMAT_R16G16B16A16_SFLOAT:
+        case VK_FORMAT_R32G32_SFLOAT:
+        case VK_FORMAT_D32_SFLOAT_S8_UINT:
+            return 8;
+        case VK_FORMAT_R32G32B32A32_UINT:
+        case VK_FORMAT_R32G32B32A32_SFLOAT:
+            return 16;
+        default:
+            // Every other format the backend makes takes 4 (RGBA8, R32, B10G11R11, D24S8, D32,
+            // X8_D24), and so do the screen's.
+            return 4;
+    }
+}
+
 ImagePtr make_image(
     const Format& format, int width, int height, int levels, VkSampleCountFlagBits samples
 ) {
@@ -169,6 +193,7 @@ ImagePtr make_image(
     image->height = std::max(height, 1);
     image->levels = levels;
     image->samples = samples;
+    ++g->submission.texture_creations;
     return image;
 }
 
@@ -219,6 +244,7 @@ Slice stage_pixels(
     if (s.data == nullptr) {
         return s;
     }
+    g->submission.texture_upload_bytes += row * static_cast<std::size_t>(height);
     const auto* src = static_cast<const std::uint8_t*>(pixels);
     for (int y = 0; y < height; ++y) {
         const std::uint8_t* in = src + pitch * static_cast<std::size_t>(y);
@@ -282,6 +308,7 @@ void copy_to_image(
     vkCmdCopyBufferToImage(
         cmd, from.buffer, image.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy
     );
+    count_copy(copy.imageExtent.width, copy.imageExtent.height);
 }
 
 ImagePtr with_chain(const ImagePtr& old) {
@@ -312,6 +339,7 @@ ImagePtr with_chain(const ImagePtr& old) {
         1,
         &copy
     );
+    count_copy(copy.extent.width, copy.extent.height);
     retire(old);
     return image;
 }
@@ -344,6 +372,7 @@ void generate_mipmaps(Image& image) {
             1,
             &b
         );
+        count_barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
         const int nw = std::max(w / 2, 1);
         const int nh = std::max(h / 2, 1);
         VkImageBlit blit{};
@@ -361,6 +390,7 @@ void generate_mipmaps(Image& image) {
             &blit,
             VK_FILTER_LINEAR
         );
+        count_copy(static_cast<std::uint32_t>(nw), static_cast<std::uint32_t>(nh));
         w = nw;
         h = nh;
     }
@@ -386,6 +416,7 @@ void generate_mipmaps(Image& image) {
         1,
         &b
     );
+    count_barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
     image.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     barrier(cmd, image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
@@ -465,6 +496,14 @@ BufferRef resolve(Buffer& b, bool persistent) {
         if (vmaCreateBuffer(g->allocator, &info, &alloc, &buffer, &allocation, &got)
             == VK_SUCCESS) {
             std::memcpy(got.pMappedData, b.data.data(), b.data.size());
+            VkMemoryPropertyFlags memory = 0;
+            vmaGetAllocationMemoryProperties(g->allocator, allocation, &memory);
+
+            // In memory the host can see, which a discrete GPU without resizable BAR reads over
+            // the bus at each draw (docs/port/RENDER_PERF.md).
+            if ((memory & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0) {
+                g->submission.buffer_static_bytes_host_visible += size;
+            }
             if (b.own != VK_NULL_HANDLE) {
                 defer([buffer = b.own, allocation = b.own_allocation] {
                     vmaDestroyBuffer(g->allocator, buffer, allocation);

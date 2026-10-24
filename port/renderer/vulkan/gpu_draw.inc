@@ -212,6 +212,7 @@ bool gpu_make_engine() {
             vkCreateComputePipelines(g->device, g->pipeline_cache, 1, &pipeline, nullptr, result),
             "GPU instance pipeline"
         );
+        count_pipeline();
         vkDestroyShaderModule(g->device, module, nullptr);
         if (!ok) {
             return false;
@@ -345,6 +346,8 @@ renderer::GpuInstanceBatch gpu_make_batch(
     const auto group = static_cast<unsigned>(page.groups.size());
     page.groups.push_back({first, page.instances, count, view_at});
     page.instances += count;
+    // The view and the instances written into the page's payload, in its 32-bit words.
+    g->submission.gpu_payload_bytes += std::uint64_t{page.payload.size() - view_at} * 4;
     ++g->gpu.batches;
     g->gpu.candidates += count;
     return {g->recording, work.used - 1, group};
@@ -417,6 +420,9 @@ void gpu_record() {
             }
             std::memcpy(input + command_at, page.commands.data(), commands * 16);
             std::memcpy(input + payload_at, page.payload.data(), page.payload.size() * 4);
+            // The header, groups, commands and payload just written into the mapped page.
+            g->submission.gpu_payload_bytes +=
+                std::uint64_t{payload_at} * 4 + page.payload.size() * 4;
             page.descriptors = allocate_set(g->gpu.set_layout);
             if (!page.descriptors) {
                 throw std::runtime_error("cannot allocate GPU draw descriptors");
@@ -435,6 +441,7 @@ void gpu_record() {
                 writes[n].pBufferInfo = &buffers[n];
             }
             vkUpdateDescriptorSets(g->device, 3, writes, 0, nullptr);
+            g->submission.descriptor_writes += std::size(writes);
             vkCmdBindDescriptorSets(
                 cmd,
                 VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -445,8 +452,11 @@ void gpu_record() {
                 0,
                 nullptr
             );
+            count_command(Command::BindDescriptors);
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g->gpu.compact);
+            count_command(Command::BindPipeline);
             vkCmdDispatch(cmd, groups, 1, 1);
+            count_command(Command::Dispatch);
             VkMemoryBarrier barrier{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
             barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
@@ -462,8 +472,13 @@ void gpu_record() {
                 0,
                 nullptr
             );
+            count_barrier(
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+            );
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g->gpu.arguments);
+            count_command(Command::BindPipeline);
             vkCmdDispatch(cmd, (commands + 63) / 64, 1, 1);
+            count_command(Command::Dispatch);
             if (work.counters) {
                 if (!page.readback.buffer) {
                     page.readback = gpu_counter_readback();
@@ -480,8 +495,13 @@ void gpu_record() {
                     0,
                     nullptr
                 );
+                count_barrier(
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+                );
                 vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, g->gpu.summary);
+                count_command(Command::BindPipeline);
                 vkCmdDispatch(cmd, 1, 1, 1);
+                count_command(Command::Dispatch);
                 VkBufferMemoryBarrier copy{VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER};
                 copy.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
                 copy.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
@@ -501,8 +521,10 @@ void gpu_record() {
                     0,
                     nullptr
                 );
+                count_barrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
                 const VkBufferCopy region{kGpuSummaryAt * 4, 0, kGpuSummaryWords * 4};
                 vkCmdCopyBuffer(cmd, page.arguments.buffer, page.readback.buffer, 1, &region);
+                count_command(Command::Copy);
                 copy.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
                 copy.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
                 copy.buffer = page.readback.buffer;
@@ -519,6 +541,7 @@ void gpu_record() {
                     0,
                     nullptr
                 );
+                count_barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT);
                 ++g->submission.gpu_counter_dispatches;
                 ++g->submission.gpu_counter_copies;
             }
@@ -538,6 +561,10 @@ void gpu_record() {
             nullptr,
             0,
             nullptr
+        );
+        count_barrier(
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT
         );
     }
     g->gpu.timing_upload = false;

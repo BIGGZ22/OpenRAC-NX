@@ -260,6 +260,7 @@ MaterialPage& material_page(const std::array<Sampled, 2>& textures) {
                 )) {
                 throw std::runtime_error("cannot allocate material descriptors");
             }
+            ++g->submission.descriptor_sets_allocated;
             const VkDescriptorBufferInfo buffer{page.data.buffer, 0, page.data.size};
             VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
             write.dstSet = page.set;
@@ -268,6 +269,7 @@ MaterialPage& material_page(const std::array<Sampled, 2>& textures) {
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.pBufferInfo = &buffer;
             vkUpdateDescriptorSets(g->device, 1, &write, 0, nullptr);
+            ++g->submission.descriptor_writes;
         }
         ++f.material_pages_used;
     }
@@ -289,6 +291,7 @@ unsigned material_texture(MaterialPage& page, const Sampled& sample) {
         write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         write.pImageInfo = &image;
         vkUpdateDescriptorSets(g->device, 1, &write, 0, nullptr);
+        ++g->submission.descriptor_writes;
         ++g->material_textures;
     }
     return it->second;

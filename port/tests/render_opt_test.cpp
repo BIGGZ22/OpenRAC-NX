@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// Tests the optimisation registry (renderer/render_opt.h). One program, two ctest tests:
+// Tests the optimisation registry (renderer/render_opt.h) and the Vulkan backend's render counters
+// (renderer/vulkan/vkgl.h, SubmissionCounters). One program, three ctest tests:
 //
 //   render_opt              the table and the parsing of OPENRAC_RENDER_OPT_OFF, no GPU; it runs in
 //                           the headless preset too
 //   render_opt_environment  --environment: the variable as ctest sets it, read and applied
+//   render_opt_vulkan       --vulkan: draws on the Vulkan renderer and checks that the counters
+//                           follow; skipped (77) where Vulkan cannot open
 //
-// The expected values come from the table itself.
+// The expected values come from the table itself and from the arithmetic of what each check
+// records: a draw is at least one recorded command, and a frame without a read-back is one submit.
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -19,6 +24,13 @@
 #include "common/log.h"
 #include "renderer/render_opt.h"
 #include "tests/check.h"
+
+#if defined(OPENRAC_RENDER_OPT_TEST_VULKAN)
+#include "renderer/gl.h"
+#include "renderer/shader.h"
+#include "renderer/vulkan/vkgl.h"
+#include "tests/renderer_gl_context.h"
+#endif
 
 namespace {
 
@@ -141,6 +153,152 @@ int test_the_environment_is_applied() {
     return openrac::test::result();
 }
 
+#if defined(OPENRAC_RENDER_OPT_TEST_VULKAN)
+
+// ---- The Vulkan render counters ----
+
+// The draws each frame of the counter check records, and its frames.
+constexpr int kDraws = 6;
+constexpr int kFrames = 3;
+
+// Draws kDraws full-screen triangles a frame for kFrames frames on the default framebuffer.
+void draw_frames(openrac::test::GlContext& context, const openrac::renderer::Shader& shader) {
+    using namespace openrac::gl;
+    unsigned vao = 0;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, 64, 64);  // the context's size (renderer_gl_context.h)
+    glDisable(GL_DEPTH_TEST);
+    shader.use();
+
+    // Each frame cleared, drawn and shown, which ends it and submits it.
+    for (int frame = 0; frame < kFrames; ++frame) {
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        // The same triangle each time: what is counted is the draws, not what they show.
+        for (int draw = 0; draw < kDraws; ++draw) {
+            glDrawArrays(GL_TRIANGLES, 0, 3);
+        }
+
+        context.window().swap();
+    }
+
+    glDeleteVertexArrays(1, &vao);
+}
+
+// Prints what the fixture's frames added to the render counters, for a package's report.
+void print_counters(
+    const openrac::vkgl::SubmissionCounters& before, const openrac::vkgl::SubmissionCounters& after
+) {
+    // The kinds of command, in the order of vkgl::Command.
+    constexpr std::array<const char*, openrac::vkgl::kCommandKinds> kKinds = {
+        "bind_pipeline",
+        "bind_descriptors",
+        "bind_buffers",
+        "dynamic_state",
+        "draw",
+        "barrier",
+        "copy",
+        "dispatch",
+        "render_pass",
+        "query",
+        "other",
+    };
+    const auto added = [](std::uint64_t now, std::uint64_t then) {
+        return static_cast<unsigned long long>(now - then);
+    };
+    std::printf(
+        "vk_cmds_recorded %llu\n",
+        added(openrac::vkgl::commands_recorded(after), openrac::vkgl::commands_recorded(before))
+    );
+
+    // Each kind on a line of its own.
+    for (std::size_t kind = 0; kind < kKinds.size(); ++kind) {
+        std::printf(
+            "vk_cmds_%s %llu\n", kKinds[kind], added(after.commands[kind], before.commands[kind])
+        );
+    }
+
+    std::printf("vk_render_passes %llu\n", added(after.render_passes, before.render_passes));
+    std::printf(
+        "vk_attachment_load_bytes %llu\n",
+        added(after.attachment_load_bytes, before.attachment_load_bytes)
+    );
+    std::printf(
+        "vk_attachment_store_bytes %llu\n",
+        added(after.attachment_store_bytes, before.attachment_store_bytes)
+    );
+    std::printf("vk_barriers %llu\n", added(after.barriers, before.barriers));
+    std::printf(
+        "vk_barriers_all_commands %llu\n",
+        added(after.barriers_all_commands, before.barriers_all_commands)
+    );
+    std::printf("vk_submits %llu\n", added(after.submits, before.submits));
+    std::printf(
+        "vk_fullscreen_copies %llu\n", added(after.fullscreen_copies, before.fullscreen_copies)
+    );
+    std::printf("vk_ring_bytes %llu\n", added(after.ring_bytes, before.ring_bytes));
+    std::printf(
+        "vk_descriptor_sets_allocated %llu\n",
+        added(after.descriptor_sets_allocated, before.descriptor_sets_allocated)
+    );
+    std::printf(
+        "vk_descriptor_writes %llu\n", added(after.descriptor_writes, before.descriptor_writes)
+    );
+    std::printf("vk_pipelines_created (total) %llu\n", added(after.pipelines_created, 0));
+    std::printf("vk_texture_creations (total) %llu\n", added(after.texture_creations, 0));
+    std::printf("vk_shader_compiles (total) %llu\n", added(after.shader_compiles, 0));
+}
+
+// Tests that after N draws the commands recorded are at least N, and that each frame presented
+// without a read-back is one submit; skipped (77) without Vulkan.
+int test_the_vulkan_counters_follow_the_draws() {
+    namespace vkgl = openrac::vkgl;
+    openrac::test::GlContext context;
+    std::string error;
+
+    // No Vulkan here (or it fell back to OpenGL): nothing of the backend to count.
+    if (!context.open(error) || !vkgl::active()) {
+        std::printf("SKIP: Vulkan unavailable: %s\n", error.c_str());
+        return openrac::test::kSkip;
+    }
+
+    openrac::renderer::Shader shader;
+    CHECK(shader.build(
+        "render counter fixture",
+        "#version 410 core\n"
+        "void main() {\n"
+        "    vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);\n"
+        "    gl_Position = vec4(p * 2.0 - 1.0, 0, 1);\n"
+        "}\n",
+        "#version 410 core\n"
+        "layout(location = 0) out vec4 colour;\n"
+        "void main() { colour = vec4(0.25, 0.5, 0.75, 1.0); }\n",
+        error
+    ));
+    const vkgl::SubmissionCounters before = vkgl::submission_counters();
+    draw_frames(context, shader);
+    const vkgl::SubmissionCounters after = vkgl::submission_counters();
+
+    const auto draws = static_cast<std::uint64_t>(kDraws * kFrames);
+    const auto frames = static_cast<std::uint64_t>(kFrames);
+    const auto draw_kind = static_cast<std::size_t>(vkgl::Command::Draw);
+    CHECK(vkgl::commands_recorded(after) - vkgl::commands_recorded(before) >= draws);
+    CHECK(after.commands[draw_kind] - before.commands[draw_kind] == draws);
+    CHECK(after.frames_presented - before.frames_presented == frames);
+    CHECK(after.submits - before.submits == frames);
+    CHECK(after.render_passes - before.render_passes >= frames);
+    CHECK(after.attachment_store_bytes > before.attachment_store_bytes);
+    CHECK(after.pipelines_created >= 1);
+    CHECK(after.shader_compiles >= 1);
+    CHECK(after.validation_errors == 0);
+    print_counters(before, after);
+    return openrac::test::result();
+}
+
+#endif
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -150,6 +308,13 @@ int main(int argc, char** argv) {
     if (mode == "--environment") {
         return test_the_environment_is_applied();
     }
+
+#if defined(OPENRAC_RENDER_OPT_TEST_VULKAN)
+    // The counters, on a Vulkan context of its own.
+    if (mode == "--vulkan") {
+        return test_the_vulkan_counters_follow_the_draws();
+    }
+#endif
 
     test_each_entry_has_a_name_of_its_own();
     test_the_selftest_entry_reads_back();

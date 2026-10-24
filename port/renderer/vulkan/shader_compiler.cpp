@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
+// The shader compiler (shader_compiler.h): GLSL to SPIR-V with glslang, and the reflection that
+// lays out a program's uniforms, blocks and inputs. Each compile counts in the open context's
+// render counters (shader_compiles, shader_compile_s; docs/port/RENDER_PERF.md).
 
 #include "renderer/vulkan/shader_compiler.h"
 
 #include <memory>
 #include <mutex>
 #include <regex>
+
+#include "renderer/vulkan/vkgl_internal.h"
 
 #include <SPIRV/GlslangToSpv.h>
 #include <glslang/Public/ResourceLimits.h>
@@ -62,6 +68,29 @@ int element_bytes(int type) {
         default: return 4;
     }
 }
+
+// Counts one run of glslang and the time it takes, from its making to its end, in the open
+// context's render counters. Nothing is counted without a context.
+class CompileCount {
+public:
+    CompileCount() = default;
+    CompileCount(const CompileCount&) = delete;
+    CompileCount& operator=(const CompileCount&) = delete;
+
+    // Adds the compile and its seconds to the context's counters.
+    ~CompileCount() {
+        // The compiler runs without a context only where nothing reads the counters.
+        if (detail::g == nullptr) {
+            return;
+        }
+
+        ++detail::g->submission.shader_compiles;
+        detail::g->submission.shader_compile_s += detail::seconds_since(m_start);
+    }
+
+private:
+    detail::Clock::time_point m_start = detail::Clock::now();  // When the compile began.
+};
 
 void initialise() {
     static std::once_flag once;
@@ -133,6 +162,7 @@ bool parse(glslang::TShader& shader, std::string& log) {
 }  // namespace
 
 bool check_stage(bool vertex, std::string_view source, std::string& log) {
+    const CompileCount counted;
     initialise();
     const EShLanguage stage = vertex ? EShLangVertex : EShLangFragment;
     auto shader = make_shader(stage, vertex ? vertex_source(source) : std::string(source));
@@ -140,6 +170,7 @@ bool check_stage(bool vertex, std::string_view source, std::string& log) {
 }
 
 bool check_compute_stage(std::string_view source, std::string& log) {
+    const CompileCount counted;
     initialise();
     auto shader = make_shader(EShLangCompute, std::string(source));
     return parse(*shader, log);
@@ -147,6 +178,7 @@ bool check_compute_stage(std::string_view source, std::string& log) {
 
 bool compile_program(std::string_view vertex, std::string_view fragment, CompiledProgram& out, std::string& log,
                      std::string_view compute) {
+    const CompileCount counted;
     initialise();
     Stage vs, fs, cs;
     glslang::TProgram program;
