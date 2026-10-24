@@ -236,16 +236,20 @@ extern "C" __declspec(dllimport) unsigned int __stdcall timeBeginPeriod(unsigned
 #pragma comment(lib, "winmm.lib")
 #endif
 
+namespace {
+
 // The game's code as the EE's floating point unit runs it: every operation rounds toward zero
 // (the EE has no other mode). A counter the game steps by 0.1 lands on the other side of zero
 // when rounded to nearest (a moby of rac1's level 6 shrank to a negative scale). Nor has it
 // denormals: they are zero (docs/port/HARDWARE_SEMANTICS.md, item 1).
 // OPENRAC_ROUND_NEAREST=1 and OPENRAC_DENORMALS=1 keep the host's ways, to compare.
-static int run_game_as_the_ee() {
+int run_game_as_the_ee() {
     crash::prepare_thread();  // the game may run on a thread of its own (platform/pump.h)
     openrac_ee_float_mode(env::flag(env::Var::RoundNearest), env::flag(env::Var::Denormals));
     return openrac_game_run();
 }
+
+}  // namespace
 
 int main(int argc, char** argv) {
 #if defined(_WIN32)
