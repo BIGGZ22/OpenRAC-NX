@@ -58,6 +58,9 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::PresentSingleCopy, "present-single-copy",
      "the picture's copy into the window and the window's into the screen become one blit",
      true, Tolerance{}},
+    {Opt::VkTightSync, "vk-tight-sync",
+     "Vulkan barriers name the stages they order, and only the copy to the screen waits for it",
+     true, Tolerance{}},
 }};
 // clang-format on
 
