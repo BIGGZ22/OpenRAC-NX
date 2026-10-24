@@ -26,6 +26,7 @@
 #pragma once
 
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -49,6 +50,12 @@ struct Config {
     // the system's loader.
     void* get_instance_proc_addr = nullptr;
     bool validation = false;  // the Khronos validation layer, where it is installed
+    // For the tests: each presentation extension the backend asks of the device where it is
+    // offered (VK_KHR_present_id, VK_KHR_present_wait, the FIFO latest-ready present mode), so a
+    // test can open the device without it.
+    bool present_id = true;
+    bool present_wait = true;
+    bool fifo_latest_ready = true;
 };
 
 // Opens the device and the context. False, with why in `error`, when Vulkan cannot be used: the
@@ -208,6 +215,26 @@ bool test_present_paths(std::vector<std::uint8_t>& single, std::vector<std::uint
 // and returns how many it has made since the backend opened; 0 at once while it is closed. For
 // the tests, which then draw and count the pipelines the drawing thread had to make itself.
 std::uint64_t wait_for_pipeline_prewarm();
+
+// When the presents have been seen to reach the screen (VK_KHR_present_wait, under the registry's
+// present-timing). `visible` is the moment the backend saw present `id` finished, on the steady
+// clock: no later than a little after it was shown, so a display phase taken from it is late by at
+// most the time between the poll and the refresh.
+struct PresentTiming {
+    bool supported = false;  // The device and swapchain give present ids and their waits.
+    bool known = false;      // A present has been seen finished: `visible` and `id` hold.
+    std::chrono::steady_clock::time_point visible{};
+    std::uint64_t id = 0;  // The present it was, counted from 1 since the swapchain was made.
+};
+
+// Returns what is known of the presents now, after looking, without waiting, whether the most
+// recent one has finished. Never blocks.
+PresentTiming present_timing();
+
+// Waits at most `timeout` for the most recent present to reach the screen, for a caller that
+// sleeps anyway (the frame pacer); true when it did, with its moment kept for present_timing().
+// False at once when present-timing is off or the device has no VK_KHR_present_wait.
+bool wait_for_present(std::chrono::nanoseconds timeout);
 
 // Shows the default framebuffer and starts the next frame.
 void present();

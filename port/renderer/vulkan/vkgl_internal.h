@@ -903,6 +903,17 @@ struct Context {
     VkFormat depth_format = VK_FORMAT_UNDEFINED;
     VkPipelineCache pipeline_cache = VK_NULL_HANDLE;
     StaticMemory static_memory;  // Where a static buffer's own copy goes (vkgl_resources.cpp).
+    // The presentation extensions (R-09): what Config allowed, what the device was given, and
+    // the presents counted and seen finished since the swapchain was made.
+    bool allow_present_id = true;
+    bool allow_present_wait = true;
+    bool allow_latest_ready = true;
+    bool present_id_enabled = false;
+    bool present_wait_enabled = false;
+    bool latest_ready_enabled = false;
+    std::uint64_t present_serial = 0;  // The id of the last present given one; 0 for none yet.
+    PresentTiming present_seen;        // The last present seen finished, if any.
+    double acquire_wait_s = 0.0;       // This frame's wait in vkAcquireNextImageKHR.
 
     std::array<Frame, kFrames> frames;
     int frame = 0;

@@ -230,6 +230,9 @@ bool layer_available(const char* name) {
 }
 
 bool make_instance(const Config& config, bool validation, std::string& error) {
+    g->allow_present_id = config.present_id;
+    g->allow_present_wait = config.present_wait;
+    g->allow_latest_ready = config.fifo_latest_ready;
     std::vector<const char*> extensions;
 #if defined(__ANDROID__)
     // Asked of the driver itself (a player's own driver is not the one SDL would load).
@@ -377,6 +380,100 @@ bool pick_device(std::string& error) {
     return true;
 }
 
+namespace {
+
+// Asks for the presentation extensions (R-09) the device offers and Config allows, adding their
+// names to `extensions` and setting their features: VK_KHR_present_id, VK_KHR_present_wait (only
+// with present ids), and the FIFO latest-ready present mode (the KHR name or the older EXT one).
+// Only with a window, which they need. Returns the head of the feature chain: those asked for,
+// linked present_id to present_wait to latest_ready, then `next`; notes in `g` which.
+void* present_features(
+    std::vector<const char*>& extensions,
+    VkPhysicalDevicePresentIdFeaturesKHR& present_id,
+    VkPhysicalDevicePresentWaitFeaturesKHR& present_wait,
+    VkPhysicalDevicePresentModeFifoLatestReadyFeaturesKHR& latest_ready,
+    void* next
+) {
+    g->present_id_enabled = false;
+    g->present_wait_enabled = false;
+    g->latest_ready_enabled = false;
+
+    // Without a surface there is nothing presented.
+    if (g->surface == VK_NULL_HANDLE) {
+        return next;
+    }
+
+    std::uint32_t n = 0;
+    vkEnumerateDeviceExtensionProperties(g->physical, nullptr, &n, nullptr);
+    std::vector<VkExtensionProperties> offered(n);
+    vkEnumerateDeviceExtensionProperties(g->physical, nullptr, &n, offered.data());
+    const auto has = [&offered](const char* name) {
+        return std::ranges::any_of(offered, [name](const VkExtensionProperties& e) {
+            return std::strcmp(e.extensionName, name) == 0;
+        });
+    };
+    const char* latest_name = has(VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME)
+                                  ? VK_KHR_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME
+                                  : VK_EXT_PRESENT_MODE_FIFO_LATEST_READY_EXTENSION_NAME;
+
+    // What the device says of each feature.
+    present_id.pNext = &present_wait;
+    present_wait.pNext = &latest_ready;
+    VkPhysicalDeviceFeatures2 query{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+    query.pNext = &present_id;
+    vkGetPhysicalDeviceFeatures2(g->physical, &query);
+    const bool id = g->allow_present_id && has(VK_KHR_PRESENT_ID_EXTENSION_NAME)
+                    && present_id.presentId == VK_TRUE;
+    const bool wait = id && g->allow_present_wait && has(VK_KHR_PRESENT_WAIT_EXTENSION_NAME)
+                      && present_wait.presentWait == VK_TRUE;
+    const bool latest = g->allow_latest_ready && has(latest_name)
+                        && latest_ready.presentModeFifoLatestReady == VK_TRUE;
+    present_id = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR};
+    present_wait = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR};
+    latest_ready = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_MODE_FIFO_LATEST_READY_FEATURES_KHR};
+    void* head = nullptr;
+    void** tail = &head;
+
+    // Present ids: each present numbered, for the waits.
+    if (id) {
+        extensions.push_back(VK_KHR_PRESENT_ID_EXTENSION_NAME);
+        present_id.presentId = VK_TRUE;
+        *tail = &present_id;
+        tail = &present_id.pNext;
+        g->present_id_enabled = true;
+    }
+
+    // Waits on a present id, which say when that present reached the screen.
+    if (wait) {
+        extensions.push_back(VK_KHR_PRESENT_WAIT_EXTENSION_NAME);
+        present_wait.presentWait = VK_TRUE;
+        *tail = &present_wait;
+        tail = &present_wait.pNext;
+        g->present_wait_enabled = true;
+    }
+
+    // The present mode that shows the latest frame at each refresh without tearing.
+    if (latest) {
+        extensions.push_back(latest_name);
+        latest_ready.presentModeFifoLatestReady = VK_TRUE;
+        *tail = &latest_ready;
+        tail = &latest_ready.pNext;
+        g->latest_ready_enabled = true;
+    }
+
+    *tail = next;
+
+    log::info(
+        "vulkan: present ids {}, present waits {}, latest-ready mode {}",
+        id ? "yes" : "no",
+        wait ? "yes" : "no",
+        latest ? "yes" : "no"
+    );
+    return head;
+}
+
+}  // namespace
+
 bool make_device(std::string& error) {
     const float priority = 1.0f;
     VkDeviceQueueCreateInfo queue{VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};
@@ -450,8 +547,20 @@ bool make_device(std::string& error) {
             }
         }
     }
+
+    VkPhysicalDevicePresentIdFeaturesKHR present_id{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR
+    };
+    VkPhysicalDevicePresentWaitFeaturesKHR present_wait{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR
+    };
+    VkPhysicalDevicePresentModeFifoLatestReadyFeaturesKHR latest_ready{
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_MODE_FIFO_LATEST_READY_FEATURES_KHR
+    };
+    void* const features_chain =
+        present_features(extensions, present_id, present_wait, latest_ready, &f13);
     VkDeviceCreateInfo info{VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
-    info.pNext = &f13;
+    info.pNext = features_chain;
     info.queueCreateInfoCount = 1;
     info.pQueueCreateInfos = &queue;
     info.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
