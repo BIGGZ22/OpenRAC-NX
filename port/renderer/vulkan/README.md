@@ -64,6 +64,12 @@ bound. A draw records only what differs from it (the registry's `vk-state-skip`)
 so nothing is trusted across passes, and a change of pipeline layout forgets the sets. Code that
 records graphics state or binds into `main` outside `draw()` must forget it too.
 
+The draw finds its pipeline in `Context::pipelines`, a `PipelineTable` (each pipeline once, found
+by a hash of its key's bytes and a compare of the whole key, or by the key as a string on the
+reference path), and its descriptor set in `Program::set_cache`; its temporary arrays are
+`Context::scratch`'s, kept for their capacity, so a draw that finds both allocates nothing (the
+registry's `vk-draw-cache`). A deleted program's pipelines leave the table with it.
+
 ## Errors
 
 `open()` returns false with a message when Vulkan cannot start (the window then falls back to
@@ -102,7 +108,8 @@ CI). Where Vulkan cannot open, the window falls back to OpenGL and they repeat t
 - `renderer_direct_vulkan`, `renderer_shader_vulkan`, `touch_overlay_vulkan`, `imgui_gl_vulkan`,
   `world_gl_smoke_vulkan`, `viewer_vulkan`: every GL call the renderers make, carried out here.
 - `vulkan_uniform`, `vulkan_uniform_reference`: uniform uploads and descriptor reuse, with the
-  reuse on and off (`OPENRAC_VK_UNIFORM_REUSE_OFF`).
+  reuse on and off (`OPENRAC_VK_UNIFORM_REUSE_OFF`); a state bounce (A, B, A) draws A's pipeline
+  and set again, and deleting one program's pipelines leaves the others' usable.
 - `render_opt_vulkan`: the render counters of `SubmissionCounters` follow a fixed scene's draws
   (every draw a draw command, one submit a frame), printed for the reports of
   [RENDER_PERF.md](../../../docs/port/RENDER_PERF.md).

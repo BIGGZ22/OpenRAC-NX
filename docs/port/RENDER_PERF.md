@@ -47,6 +47,7 @@ before and after, and how its frames are shown to be the same.
 | `static-buffers-device-local` | on | none (exact) | A static GL buffer of 64 KiB or more gets device memory at its first draw and lets its CPU copy go ([R-05](#r-05-static-buffers-in-device-memory)). |
 | `static-buffers-force-staging` | off | none (exact) | With the entry above, fills that memory by a staging copy even where device memory is mappable, so the tests take that path on every machine ([R-05](#r-05-static-buffers-in-device-memory)). |
 | `texture-prepare` | on | none (exact) | A level's textures are created, uploaded and mipped at its load (`LevelScene::upload`), not by the first draw that uses them ([R-13](#r-13-a-levels-textures-made-at-its-load)). |
+| `vk-draw-cache` | on | none (exact) | The Vulkan draw finds its pipeline by a hashed fixed key and its descriptor set through arrays kept for their capacity, with no heap allocation ([R-04](#r-04-an-allocation-free-draw)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -446,6 +447,87 @@ OPENRAC_GL_API=vulkan OPENRAC_VULKAN_PIPELINE_CACHE=off OPENRAC_VULKAN_VALIDATIO
 
 On real levels the maintainers' command is
 `python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt vk-state-skip`.
+
+## R-04: an allocation-free draw
+
+**What changed** (`renderer/vulkan/vkgl_pipelines.cpp`, `vkgl_draw.cpp`, `vkgl_internal.h`,
+`vkgl_gl.cpp`), all behind `vk-draw-cache`:
+
+- **The pipeline lookup.** `pipeline_for` turned its `PipelineKey` (376 bytes) into a
+  `std::string` at every draw, one heap allocation, to look it up in an
+  `unordered_map<std::string>`. `PipelineTable` keeps each pipeline once with two indexes: a flat
+  table of slots found by a 64-bit hash of the key's bytes (FNV-1a over its 8-byte words, then
+  SplitMix64's finaliser), which compares the whole key on a hit, so a collision can never return
+  another key's pipeline; and the string index, which the reference path still uses. The key is
+  zeroed whole before it is filled, so its padding is part of what is compared. A deleted
+  program's pipelines leave both indexes (`erase_program`).
+- **The temporaries.** The draw's list of sampled textures and `descriptors()`'s blocks, key,
+  writes and infos were vectors made each time. They are now `Context::scratch`'s, cleared and
+  filled again so their capacity stays. A program's sets of the frame are `Program::set_cache`:
+  the keys' words in one array and a fixed table of 512 slots, compared word for word on a hash
+  hit, cleared with the frame (its capacity kept) and holding at most 256 sets, as the map it
+  stands beside did. The reference path is the code as it was, sharing the frame's reset and the
+  uniform upload (`begin_program_sets`), `descriptor_key` and `write_set` with the cached one.
+- The 8-bit index emulation, which no renderer reaches (REPORT C6), logs a warning the first
+  time a draw takes it.
+
+Not done as the brief planned, for the maintainers to note: there is **no state epoch**. A draw
+still fills its pipeline key and its set's key, and finds them in the tables. Skipping that work
+when no GL setter ran would also need a bump from every input the keys read that no setter
+touches: a buffer's ring slice, a uniform upload, the frame's ring, `glDeleteBuffers` turning an
+input into the default one, a texture specified again with another format, and the indexed
+viewports (set in `vkgl.cpp`, outside R-04's paths). A missed bump draws with a wrong pipeline or
+a stale set; the allocation the brief targets is gone without that risk. For the same reason the
+per-program sampler list and the vertex-input description are not cached: neither allocated.
+
+**The counters**, per measured frame of `render_bench.py --synthetic --compare-opt vk-draw-cache`
+(the entry off, then on), 1920x1080, five runs a setting:
+
+| Setting | `bench_heap_allocs`, Mac | per draw, Mac | `bench_heap_allocs`, box1 | per draw, box1 |
+|---|---|---|---|---|
+| base (walk, cold; also warm, static, between, half size) | 7,103 to 1,235 | 4.87 to 0.85 | 7,118 to 1,250 | 4.88 to 0.86 |
+| enhanced | 16,917 to 2,272 | 5.77 to 0.77 | 16,957 to 2,312 | 5.78 to 0.79 |
+| gpu-driven off | 7,102 to 1,235 | 4.87 to 0.85 | 7,117 to 1,250 | 4.88 to 0.86 |
+| materials off | 12,787 to 33 | 8.76 to 0.02 | 12,802 to 48 | 8.77 to 0.03 |
+
+On the individual path (materials off) the draw allocates nothing: what is left is about 30 a
+frame outside the draws. With the native material path about 1,200 a frame are left, less than one
+a draw; they are made outside R-04's files (`gpu_materials.inc`'s page of material records, filled
+again each frame, and the GPU-driven batches of `gpu_draw.inc`), and PROGRESS.md lists them.
+
+`vk_pipelines_created` (7 in the load and warm-up, 16 Enhanced, 0 in the measured frames),
+`vk_descriptor_sets_allocated` (5 a frame, 13 Enhanced, 939 materials off) and
+`vk_descriptor_writes` (615, 681, 3,755) are the same with the entry on and off on both machines:
+the same keys give the same pipelines and sets, and no two keys were merged. Every other counter
+is unchanged too.
+
+**Time, as information.** `vk_draw_us_each` (the backend's CPU time a draw, median of 3 runs of 60
+frames), off to on: Mac 0.344 to 0.258 microseconds (base), 0.490 to 0.324 (materials off); box1
+0.610 to 0.485, 0.673 to 0.544. The picture's CPU time, median of five runs, off to on: Mac 0.87 to
+0.76 ms (base), 2.03 to 1.79 (Enhanced), 1.15 to 0.93 (materials off); box1 1.29 to 1.18 ms
+(GPU-driven off) and 1.41 to 1.21 (materials off).
+
+**Equivalence.** `render_equivalence_vulkan` compares the entry on and off in every scenario,
+Enhanced off and on: identical on both machines, with no validation message, and again by hand
+with `OPENRAC_GPU_DRIVEN_OFF=1` and with `OPENRAC_GPU_MATERIALS_OFF=1`. `vulkan_uniform` gained the
+cache's own test, written before the change and passing on the code before it: for a blend factor,
+a depth function, a vertex attribute's format and a bound texture, states A and B draw different
+pixels and, after A, B, A with no draw between, the draw is A's again and makes no new pipeline;
+then a program whose pipeline was made before the others' is deleted and every state is drawn
+again (the validation layer reports a destroyed pipeline bound: a first version of
+`erase_program` built on `std::remove_if` destroyed the wrong pipelines, and this check is what
+fails on it). `vulkan_uniform`, `vulkan_uniform_reference` (`OPENRAC_VK_UNIFORM_REUSE_OFF`) and
+the rest of the Vulkan set pass with the entry on and with `OPENRAC_RENDER_OPT_OFF=all`.
+
+Measured with:
+
+```sh
+python3 port/tools/perf/render_bench.py --synthetic --compare-opt vk-draw-cache
+./port/build/release/openrac_render_bench --materials off --opt-off vk-draw-cache
+```
+
+On real levels the maintainers' command is
+`python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt vk-draw-cache`.
 
 ## R-05: static buffers in device memory
 
