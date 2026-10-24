@@ -422,7 +422,8 @@ openrac_add_test(renderer_gif LIBS openrac_renderer)
 openrac_add_test(renderer_direct LIBS openrac_renderer openrac_platform)
 set_tests_properties(renderer_direct PROPERTIES SKIP_RETURN_CODE 77)
 
-openrac_add_test(texture_filter INCLUDES "${CMAKE_CURRENT_BINARY_DIR}/generated"
+openrac_add_test(texture_filter SOURCES tests/texture_filter_test.cpp tests/texture_filter_reference.cpp
+                 INCLUDES "${CMAKE_CURRENT_BINARY_DIR}/generated"
                  LIBS openrac_viewer_lib openrac_platform)
 set_tests_properties(texture_filter PROPERTIES SKIP_RETURN_CODE 77)
 if(OPENRAC_VULKAN)

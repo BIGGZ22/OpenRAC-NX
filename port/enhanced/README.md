@@ -32,6 +32,8 @@ Shared integration and core Vulkan optimisations stay in `port/renderer/` and
 `port/scene/`. Editor bake inputs live in `editor/enhanced/`.
 
 Texture upscaling and its 64 MiB cache live in `renderer/texture_upscale.*`.
+Edge-aware mode combines 2x colour reconstruction with conservative directional
+debanding during cache creation.
 The normal texture pool accepts an optional `UpscaledTextureColours` provider; it
 keeps original alpha/mip sampling and notifies the provider when source textures
 are retired. Only the enhanced texture library depends on the Vulkan copy helper.
