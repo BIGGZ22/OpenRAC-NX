@@ -43,6 +43,22 @@ every entry is used, no address is left outside `RAC1_ADDR`, and each
 entry agrees with the map; `write` adds what a new piece of shared C uses
 from the map. ctest runs the check without the map (`rac1-*_host_table`).
 
+## The game's profile
+
+What the host program's C++ reads of the running game (the camera, the fog, the live mobys and the
+display list shown) is rac1's, and the host asks it through rac1's profile
+([host::GameProfile](../common/profile.h)), never by a game id of its own:
+
+| File | |
+|---|---|
+| `game_state.h`, `game_state.cpp` | the address tables, one per disc for the boot program and one per level program, and the reads (`read_game_state`, `read_live_moby`, `moby_beyond_draw_distance`, `shown_chain`), in `openrac::game::rac1` |
+| `profile.cpp` | the two discs' profiles over those tables, and `host::game_profile()`: `rac1-ntsc` is NTSC-U, any other id PAL |
+
+Both versions' programs link them as `openrac_game_rac1_profile`
+([cmake/Window.cmake](../../cmake/Window.cmake)), as do the viewer and its tests, which call the
+reads directly on a saved memory picture. A table of a new version goes beside the others in
+`game_state.cpp`, with its profile in `profile.cpp`; nothing outside this folder changes.
+
 ## What stays per version
 
 A version's own folder keeps what truly differs: its `hostgen.json`,

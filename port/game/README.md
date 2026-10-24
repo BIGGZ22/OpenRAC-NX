@@ -36,6 +36,13 @@ split adds no line to it. They are empty until their splits land:
 | `host/*.c` | only if the game needs C of its own: `wrap` functions, its overlay hook. A game's versions share theirs (`"host_shared"`: rac1's in [rac1/host](rac1/README.md)), each with a table of its names and addresses. A routine several games have alike keeps one body in `common/lib/` and, in each game's `host/`, a two-line function at the game's address with the game's own facts: the WAD decompressor ([wad_routine.h](common/lib/wad_routine.h)) and the VU0 sine and cosine ([vu0_sine.h](common/lib/vu0_sine.h)) of rac2 and rac4 |
 | `no_c.tsv` | every function hostgen has no C for, or wrote C for from its assembly, and whether the port needs C for it (below) |
 
+What the host program's C++ reads of a game's memory (the camera, the live mobys, the display list
+shown) comes from the game's profile, `host::GameProfile` ([common/profile.h](common/profile.h)):
+one per game, in `port/game/<game>/profile.cpp` beside its `script_binding.c`, with a profile for
+each of its versions ([rac1's](rac1/README.md#the-games-profile)). A game with none links
+[common/profile_none.cpp](common/profile_none.cpp), which reports no game state. The shared code
+never compares a game id to read a game's memory.
+
 `hostgen.json`:
 
 | Key | |
