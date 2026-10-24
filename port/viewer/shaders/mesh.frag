@@ -114,12 +114,10 @@ vec3 probe_surface(vec4 texel, vec3 original) {
     if (dot(n, n) < 0.5) {
         return original;
     }
-    // These surfaces render double-sided. Orient the shading normal toward
-    // the eye, independently of winding (some terrain normals point inward).
+    // Match the prepass's two-sided smooth normal, including its grazing-angle constraint.
     vec3 eye_position = (view * vec4(v_world_position, 1.0)).xyz;
-    if (dot(mat3(view) * n, -eye_position) < 0.0) {
-        n = -n;
-    }
+    vec3 eye_normal = orient_shading_normal(mat3(view) * n, mat3(view) * geometric, -eye_position);
+    n = transpose(mat3(view)) * eye_normal;
 #ifdef OPENRAC_EARLY_LIGHTING
     bool cached_coverage;
     vec4 cached_lighting;

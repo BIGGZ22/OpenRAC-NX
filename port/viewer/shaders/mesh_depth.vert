@@ -16,6 +16,7 @@ uniform sampler2D palette_texture;
 layout(location = 1) in vec3 normal;
 uniform mat4 view;
 out vec3 v_surface_normal;
+out vec3 v_surface_position;
 #endif
 #ifndef OPENRAC_DEPTH_SOLID
 layout(location = 2) in vec2 uv;
@@ -59,11 +60,12 @@ void main() {
         n = mat3(skin) * n;
 #endif
     }
+    vec4 world = model * p;
 #ifdef OPENRAC_DEPTH_NORMALS
     // Match mesh.vert's smooth normal, including skinning and nonuniform model scale.
     v_surface_normal = mat3(view) * transpose(inverse(mat3(model))) * n;
+    v_surface_position = (view * world).xyz;
 #endif
-    vec4 world = model * p;
     gl_Position = view_projection * world;
     bool in_picture = moby_light.w > 1.5 && picture_scale < 1.0;
     gl_ClipDistance[0] = in_picture ? picture_scale * gl_Position.w - gl_Position.x : 1.0;

@@ -14,6 +14,7 @@
 #include "renderer/gl.h"
 #include "renderer/render_opt.h"
 #include "renderer/world/gl_world.h"
+#include "renderer_shaders.h"
 #include "scene/hero_shadow.h"
 #include "scene/shadow_atlas.h"
 #include "scene_shaders.h"
@@ -262,6 +263,9 @@ bool LevelScene::upload(
         const std::string define = "#define OPENRAC_DEPTH_NORMALS 1\n";
         std::string vertex(shaders::mesh_depth_vert);
         std::string fragment(shaders::mesh_depth_frag);
+        fragment.insert(fragment.find('\n') + 1, renderer::shaders::shading_normal_glsl);
+        depth_fragment
+            .insert(depth_fragment.find('\n') + 1, renderer::shaders::shading_normal_glsl);
         vertex.insert(vertex.find('\n') + 1, define);
         fragment.insert(fragment.find('\n') + 1, define);
         depth_vertex.insert(depth_vertex.find('\n') + 1, define);

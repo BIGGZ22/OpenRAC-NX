@@ -19,6 +19,7 @@
 #include "enhanced/viewer/early_lighting.h"
 #include "enhanced_viewer_shaders.h"
 #include "renderer/gl.h"
+#include "renderer_shaders.h"
 
 namespace openrac::lighting {
 using namespace openrac::gl;
@@ -62,6 +63,7 @@ std::string probe_shader_source(std::string source) {
         return source;
     }
     source.insert(source.find('\n') + 1, shaders::probes_glsl);
+    source.insert(source.find('\n') + 1, renderer::shaders::shading_normal_glsl);
     static const bool& gather_off = stats::probe(
         "OPENRAC_SHADOW_GATHER_OFF", "Reference: 16 individual shadow texel fetches (reload level)"
     );

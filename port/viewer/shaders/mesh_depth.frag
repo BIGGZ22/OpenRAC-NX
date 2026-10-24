@@ -12,9 +12,14 @@ uniform int cutout;
 #endif
 #ifdef OPENRAC_DEPTH_NORMALS
 in vec3 v_surface_normal;
+in vec3 v_surface_position;
 layout(location = 0) out vec4 surface_normal;
 #endif
 void main() {
+#ifdef OPENRAC_DEPTH_NORMALS
+    // Raster derivatives orient the smooth normal without sampling or reconstructing depth normals.
+    vec3 geometric = cross(dFdx(v_surface_position), dFdy(v_surface_position));
+#endif
 #ifndef OPENRAC_DEPTH_SOLID
     if (v_glow != 0) {
         discard;
@@ -27,8 +32,10 @@ void main() {
     // Invalid authored normals retain the neutral fallback instead of propagating NaNs.
     float squared = dot(v_surface_normal, v_surface_normal);
     surface_normal = vec4(0);
-    if (!any(isnan(v_surface_normal)) && !isinf(squared) && squared > 1e-12) {
-        surface_normal = vec4(v_surface_normal * inversesqrt(squared) * 0.5 + 0.5, 1);
+    if (!any(isnan(v_surface_normal)) && !isinf(squared) && squared > 1e-12
+        && dot(geometric, geometric) > 1e-12) {
+        vec3 normal = orient_shading_normal(v_surface_normal, geometric, -v_surface_position);
+        surface_normal = vec4(normal * 0.5 + 0.5, 1);
     }
 #endif
 }

@@ -41,6 +41,10 @@ Early GI and GTAO read those normals directly; depth supplies receiver positions
 samples, not reconstructed normals. Mesh colour passes read the early GI/shadow cache and
 retain smooth normals for direct lighting. Skinning, nonuniform scaling and camera-facing
 orientation agree across the passes. Invalid normals use a neutral fallback.
+Smooth normals are oriented to the visible triangle and constrained at grazing angles.
+This prevents a camera-facing sign flip from pointing them beneath the surface and causing
+GTAO self-occlusion. Raster position derivatives determine orientation only; lighting still
+uses the smooth normal, with no extra normal texture or depth-derived normals.
 
 The prepass uses RGBA8 normals (four bytes per render pixel), with matching depth and MSAA
 coverage. It preserves the existing sky/background and reuses depth for world colour.
