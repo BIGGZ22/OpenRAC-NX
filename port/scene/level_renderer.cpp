@@ -752,6 +752,8 @@ void LevelScene::submit_instances(
 }
 
 void LevelScene::set_instances(Layer layer, const std::vector<Instance>& instances) {
+    // The CPU time of handing the scene a layer's instances (the moby layer's, every frame).
+    const stats::Scope pass(layer == Layer::Mobys ? "moby instances" : "layer instances");
     if (layer == Layer::Mobys) {
         m_hero_centre.reset();
         for (const auto& instance : instances) {
@@ -894,6 +896,8 @@ void LevelScene::draw_mobys(
 }
 
 void LevelScene::set_palette(const std::vector<JointColumns>& matrices) {
+    // The CPU time of the joint palette's upload, every frame the mobys move.
+    const stats::Scope pass("moby palette");
     if (matrices.empty()) {
         return;
     }
