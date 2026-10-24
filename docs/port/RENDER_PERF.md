@@ -48,6 +48,7 @@ before and after, and how its frames are shown to be the same.
 | `static-buffers-force-staging` | off | none (exact) | With the entry above, fills that memory by a staging copy even where device memory is mappable, so the tests take that path on every machine ([R-05](#r-05-static-buffers-in-device-memory)). |
 | `texture-prepare` | on | none (exact) | A level's textures are created, uploaded and mipped at its load (`LevelScene::upload`), not by the first draw that uses them ([R-13](#r-13-a-levels-textures-made-at-its-load)). |
 | `vk-draw-cache` | on | none (exact) | The Vulkan draw finds its pipeline by a hashed fixed key and its descriptor set through arrays kept for their capacity, with no heap allocation ([R-04](#r-04-an-allocation-free-draw)). |
+| `attachment-discard` | on | none (exact) | A Vulkan pass neither stores an attachment `glInvalidateFramebuffer` let go nor has the next pass load it ([R-06](#r-06-attachments-a-pass-does-not-keep)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -702,3 +703,107 @@ OPENRAC_LOG=verbose OPENRAC_GL_API=vulkan port/build/release/openrac_render_benc
 On real levels the maintainers' commands are
 `python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_01 --compare-opt texture-prepare`
 (the warm-up rows) and the same for level_12.
+
+## R-06: attachments a pass does not keep
+
+**What changed.** The Vulkan backend carries out `glInvalidateFramebuffer`, for a framebuffer
+object (colour 0, depth, stencil, depth-stencil) and for the default framebuffer (`GL_COLOR`,
+`GL_DEPTH`, `GL_STENCIL`); before, it was not in the backend's table and the optional function was
+null there. Dynamic rendering fixes a pass's store operations when the pass begins, before the
+renderer says what it no longer needs, so under `attachment-discard` a pass's draws are recorded
+into a secondary command buffer (`main` points at it while the pass is open) and the pass is begun
+in the frame's command buffer when it ends, with its operations chosen then
+(`vkgl_commands.cpp`, `begin_deferred` and `end_deferred`):
+
+- an aspect let go since the pass's last draw or clear is stored `DONT_CARE`;
+- an aspect let go outside its pass (after the pass that drew it ended) is loaded `DONT_CARE` by
+  the next pass on it;
+- a draw or a clear after the call makes the attachment live again in the same pass, and a copy,
+  blit, upload or depth resolve into an image makes it whole, so new data is never dropped.
+
+`renderer/gl.cpp` loads OpenGL ES's optional functions on the Vulkan backend too, so the
+renderer's call at the end of the frame (`renderer.cpp`, the frame's depth and stencil) reaches the
+backend. `renderer/gl.h` does not change. Each pass records one command more
+(`vkCmdExecuteCommands`, counted as other).
+
+**What each pass reads and keeps.** The passes the synthetic scene's frame runs, from the
+backend's own choice of operations (1920x1080, MSAA 1); the depth image is `D32_SFLOAT_S8_UINT` on
+the Mac and `D24_UNORM_S8_UINT` on box1, one image for depth and stencil:
+
+| Pass | Attachment | Loaded from | Stored for |
+|---|---|---|---|
+| Enhanced off: the frame (clear, sky, world, effects, HUD) | colour | cleared | the copy to the screen, and the next frame when it keeps its colour |
+| | depth, stencil | cleared | nobody: let go at the frame's end (renderer.cpp), now not stored |
+| Enhanced on, 1: the frame's clear, background and sky, until the shadow atlas begins | colour | cleared | pass 3 |
+| | depth, stencil | cleared | pass 3 loads them; the world's depth prepass clears them in that pass after the sky's draws |
+| Enhanced on, 2: the shadow atlas (3072 by 3072) | colour (RGBA8) | loaded | stored, though no pass samples it (follow-up for the scene's lane) |
+| | depth | cleared | the world's colour passes sample it |
+| | stencil | loaded (not cleared), so the whole depth image is read in | stored with depth |
+| Enhanced on, 3: the world's depth prepass, then its opaque colour | colour | pass 1 | pass 4 |
+| | depth, stencil | pass 1 | GTAO's depth copy and early lighting read the depth; pass 4 tests against it |
+| Enhanced on, 4: blended work, effects, HUD | colour | pass 3 | the copy to the screen |
+| | depth, stencil | pass 3 | nobody: let go at the frame's end, now not stored |
+| MSAA 4: the frame | colour (4 samples) | cleared | the resolve's copy after the pass (R-07 moves it into the pass) |
+| | depth, stencil (4 samples) | cleared | nobody: now not stored |
+
+GTAO's passes and early lighting are compute dispatches and copies, not render passes, so they
+have no attachments here. The present copy reads the frame's colour (R-07). The one call the
+renderer makes is the end of the frame's: the other dead attachments above are in the scene's
+files (the shadow atlas, `scene/level_renderer.cpp`), which another lane owns, and
+[PROGRESS.md](../restructure/PROGRESS.md) lists them as follow-ups with their bytes.
+
+**The counters.** `openrac_render_bench --warmup 3 --frames 10`, the registry entry off and on,
+per measured frame, the same in all five runs (the counts are the same on both machines; the bytes
+follow each machine's depth format):
+
+| Setting | Mac store bytes, off / on | box1 store bytes, off / on | load bytes (both, unchanged) | passes |
+|---|---|---|---|---|
+| Enhanced off | 24,883,200 / 8,294,400 | 16,588,800 / 8,294,400 | 0 | 1 |
+| Enhanced on | 187,895,808 / 171,307,008 | 125,263,872 / 116,969,472 | Mac 163,012,608, box1 108,675,072 | 4 |
+| MSAA 4 | 99,532,800 / 33,177,600 | 66,355,200 / 33,177,600 | 0 | 1 |
+| Enhanced on, MSAA 4 | 577,732,608 / 511,377,408 | 357,507,072 / 324,329,472 | Mac 445,022,208, box1 274,563,072 | 6 |
+
+The depth and stencil stores of the passes nothing reads later are gone: 66.7 percent of the
+frame's stores on the Mac and 50 percent on box1 without Enhanced, 8.8 and 6.6 percent with it,
+where the shadow atlas and the passes before the last keep theirs. The loads do not change on this
+scene: every pass that loads reads what an earlier pass of the frame stored for it.
+`vk_cmds_recorded` grows by one a pass (98 to 99 a frame; 194 to 198 with Enhanced). A desktop
+GPU gains nothing from this; a tiled one (Apple, Adreno) writes that much less to memory, which
+the maintainers confirm with a capture (below).
+
+Milliseconds, information only (median of five runs, lowest to highest), the picture's CPU time
+off / on: Mac 0.87 (0.82 to 0.89) / 0.84 (0.82 to 0.87), Enhanced 2.01 / 2.13; box1 1.13 (1.12 to
+1.27) / 1.12 (1.11 to 1.16), Enhanced 3.16 / 3.16. No change beyond the noise from recording each
+pass into a secondary buffer.
+
+**Equivalence, and the stronger proof.** `render_equivalence_vulkan` draws `attachment-discard`
+on and off in every scenario, Enhanced off and on, and then draws every scenario once more with
+`vkgl::test_poison_discards(true)`: each attachment let go is cleared to garbage (colour 1.0 in
+every channel, depth 0, stencil 0xA5) as soon as it is let go, and a pass that would load it clears
+it to the same. Those frames are compared with `attachment-discard` off: a pass that read discarded
+data would draw other pixels. All twenty comparisons are identical on the Mac and on box1, under
+the validation layer. The Vulkan image tests (`renderer_*_vulkan`, `gtao_vulkan`,
+`early_lighting_vulkan`, `enhanced_rendering_vulkan`, `sun_shadow_*`, `probe_gpu_vulkan`,
+`viewer_vulkan`) pass with the entry on and with `OPENRAC_RENDER_OPT_OFF=all`. On box1 the OpenGL
+tests ran too; R-06's one change in shared code (`renderer/gl.cpp`) loads nothing new on an OpenGL
+context.
+
+Commands:
+
+```sh
+cd port && cmake --preset release && cmake --build --preset release
+ctest --preset release -R "vulkan|viewer|renderer|gtao|early_lighting|enhanced_rendering|shadow|render_" --output-on-failure
+python3 tools/perf/render_bench.py --synthetic --compare-opt attachment-discard
+./build/release/openrac_render_bench --warmup 3 --frames 10 --enhanced on --msaa 4 --opt-off attachment-discard
+```
+
+**On a tiled GPU (the maintainers').** The gain is bandwidth on Apple GPUs and Adreno, which the
+counters model but cannot measure. With Xcode on the Mac: build the release preset, run
+`openrac_render_bench --enhanced on --frames 300` (or the game on level_12) under Instruments' Metal
+System Trace or an Xcode GPU frame capture (Product, Profile, Metal System Trace; or the Debug
+Navigator's Capture GPU Workload on the running program), once as is and once with
+`OPENRAC_RENDER_OPT_OFF=attachment-discard`, and compare the render encoders' store actions (the
+depth attachment's `Don't Care` against `Store`) and the memory-bandwidth counters (bytes written
+by the GPU per frame). On Android, AGI's frame profiler shows the same as each render pass's
+store operations and the GPU's external write bandwidth.
+
