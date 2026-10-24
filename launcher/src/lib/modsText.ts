@@ -121,7 +121,7 @@ export const PANEL = {
 /** The badge on a mod's row besides its state and kind (lib/plugins.ts, modBadge). */
 export const BADGE = {
   update: (version: string) => `Update ${version}`,
-  updateHint: "A newer version is out: open the mod to update it.",
+  updateHint: "A newer version is out: update it from the mod's menu (⋯) or its page.",
 } as const;
 
 /** The sections of a mod's page (lib/plugins.ts, settingGroups). */

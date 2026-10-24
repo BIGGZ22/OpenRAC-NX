@@ -373,6 +373,15 @@
             <Menu
               label={T.moreAria(mod.name)}
               items={[
+                ...(update && updating !== mod.id
+                  ? [
+                      {
+                        label: T.MOD_PAGE.update(update),
+                        icon: "refresh" as const,
+                        run: () => void runUpdate(mod.id),
+                      },
+                    ]
+                  : []),
                 ...(i > 0
                   ? [
                       {
