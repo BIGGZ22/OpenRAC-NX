@@ -40,9 +40,10 @@ struct openrac_mod {
     openrac_mod_unload_fn unload = nullptr;
 };
 
-// A hook point's permanent id from any of its names (openrac/script_binding.h): the binding's
-// aliases are sorted, so by halves.
-extern "C" const char* openrac_script_hook_id(const openrac_script_binding* binding, const char* name) {
+namespace {
+
+// openrac_script_hook_id's body: the binding's aliases are sorted, so by halves.
+const char* permanent_hook_id(const openrac_script_binding* binding, const char* name) {
     if (binding == nullptr || name == nullptr || binding->aliases == nullptr) {
         return name;
     }
@@ -61,6 +62,15 @@ extern "C" const char* openrac_script_hook_id(const openrac_script_binding* bind
         }
     }
     return name;
+}
+
+}  // namespace
+
+// A hook point's permanent id from any of its names (openrac/script_binding.h).
+extern "C" const char* openrac_script_hook_id(
+    const openrac_script_binding* binding, const char* name
+) {
+    return permanent_hook_id(binding, name);
 }
 
 namespace openrac::mods {
