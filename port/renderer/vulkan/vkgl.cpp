@@ -286,6 +286,7 @@ void present() {
     }
     g->measures.present_s += seconds_since(start);
     report_measures();
+    publish_counters();
     advance();
     // A window of another size: the default framebuffer follows, as a GL window's does.
     if (g->window != nullptr) {

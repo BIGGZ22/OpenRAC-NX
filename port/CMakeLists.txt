@@ -269,6 +269,7 @@ openrac_add_c_test(checkpoint_restore NO_STRICT_ALIASING NO_FP_CONTRACT MATH)
 if(OPENRAC_PORT_WINDOW)
   include(Window)
 endif()
+include(Render)
 
 # ---- the games, from their decompilations (port/game/*/hostgen.json) ----
 if(OPENRAC_PORT_GAMES)

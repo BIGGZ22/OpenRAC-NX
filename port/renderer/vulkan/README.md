@@ -92,6 +92,9 @@ CI). Where Vulkan cannot open, the window falls back to OpenGL and they repeat t
   `world_gl_smoke_vulkan`, `viewer_vulkan`: every GL call the renderers make, carried out here.
 - `vulkan_uniform`, `vulkan_uniform_reference`: uniform uploads and descriptor reuse, with the
   reuse on and off (`OPENRAC_VK_UNIFORM_REUSE_OFF`).
+- `render_opt_vulkan`: the render counters of `SubmissionCounters` follow a fixed scene's draws
+  (every draw a draw command, one submit a frame), printed for the reports of
+  [RENDER_PERF.md](../../../docs/port/RENDER_PERF.md).
 - `pipeline_cache_file`: the cache's file read back whole, a damaged one dropped, and writer threads
   and writer processes saving one file at once leaving one whole save. It needs no GPU.
 - `early_lighting_vulkan`, `probe_gpu_vulkan`, `hero_shadow_vulkan`, `sun_shadow_vulkan`,
@@ -108,3 +111,5 @@ CI). Where Vulkan cannot open, the window falls back to OpenGL and they repeat t
   and the native material path.
 - [docs/port/DEBUGGING.md](../../../docs/port/DEBUGGING.md): the variables above, and the
   counters (`vkgl::submission_counters()`).
+- [docs/port/RENDER_PERF.md](../../../docs/port/RENDER_PERF.md): every render counter and gauge,
+  where it is counted, the timed sections, and the optimisation registry.

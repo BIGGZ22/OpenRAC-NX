@@ -301,6 +301,7 @@ read_pixels(GLint x, GLint y, GLsizei w, GLsizei h, GLenum format, GLenum type, 
     vkCmdCopyImageToBuffer(
         cmd, image->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer, 1, &copy
     );
+    count_copy(copy.imageExtent.width, copy.imageExtent.height);
     flush_and_wait();
     vmaInvalidateAllocation(g->allocator, allocation, 0, VK_WHOLE_SIZE);
     // Rows come as GL gives them, from the bottom: the same rows (vkgl.h, "Rows").
@@ -372,6 +373,7 @@ void VKGL copy_tex_sub_image(
             1,
             &copy
         );
+        count_copy(copy.extent.width, copy.extent.height);
     } else {
         VkImageBlit blit{};
         blit.srcSubresource = copy.srcSubresource;
@@ -390,6 +392,7 @@ void VKGL copy_tex_sub_image(
             &blit,
             VK_FILTER_NEAREST
         );
+        count_copy(copy.extent.width, copy.extent.height);
     }
 }
 
@@ -598,6 +601,7 @@ void VKGL delete_buffers(GLsizei n, const GLuint* names) {
     for (GLsizei i = 0; i < n; ++i) {
         auto it = g->buffers.objects.find(names[i]);
         if (it != g->buffers.objects.end()) {
+            g->submission.cpu_mirror_bytes -= it->second.data.size();
             destroy_buffer(it->second);
             g->buffers.objects.erase(it);
         }
@@ -644,7 +648,9 @@ void VKGL buffer_data(GLenum target, GLsizeiptr size, const void* data, GLenum) 
     if (b == nullptr || size < 0) {
         return;
     }
+    g->submission.cpu_mirror_bytes -= b->data.size();
     b->data.assign(static_cast<std::size_t>(size), 0);
+    g->submission.cpu_mirror_bytes += b->data.size();
     if (data != nullptr && size > 0) {
         std::memcpy(b->data.data(), data, static_cast<std::size_t>(size));
     }
@@ -932,6 +938,7 @@ void VKGL link_program(GLuint name) {
             ),
             "a compute pipeline"
         );
+        count_pipeline();
     }
     p->linked = p->layout && ((p->vertex && p->fragment) || p->compute_pipeline);
 }
@@ -1385,6 +1392,10 @@ void VKGL blit_framebuffer(
             }
             vkCmdBeginRendering(cmd, &info);
             vkCmdEndRendering(cmd);
+            count_render_pass();
+            count_command(Command::RenderPass);
+            count_attachment(*src, info.renderArea.extent, true, true);
+            count_attachment(*dst, info.renderArea.extent, false, true);
             return;
         }
         barrier(cmd, *src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -1417,6 +1428,7 @@ void VKGL blit_framebuffer(
                 count,
                 copies
             );
+            count_copy(copies[0].extent.width, copies[0].extent.height);
             return;
         }
         if (src->samples != VK_SAMPLE_COUNT_1_BIT) {
@@ -1445,6 +1457,7 @@ void VKGL blit_framebuffer(
                 1,
                 &r
             );
+            count_copy(r.extent.width, r.extent.height);
             return;
         }
         VkImageBlit b{};
@@ -1467,6 +1480,10 @@ void VKGL blit_framebuffer(
             1,
             &b,
             f
+        );
+        count_copy(
+            static_cast<std::uint32_t>(std::abs(b.dstOffsets[1].x - b.dstOffsets[0].x)),
+            static_cast<std::uint32_t>(std::abs(b.dstOffsets[1].y - b.dstOffsets[0].y))
         );
     };
     if ((mask & GL_COLOR_BUFFER_BIT) != 0) {

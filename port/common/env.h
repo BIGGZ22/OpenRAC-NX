@@ -120,6 +120,7 @@ enum class Var : std::uint16_t {
     ProbeZeroWeightReference,
     PvsOff,
     Reach,
+    RenderOptOff,
     RoundNearest,
     ScriptBudgetMs,
     ShaderDir,

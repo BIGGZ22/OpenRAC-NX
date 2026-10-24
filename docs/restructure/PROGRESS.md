@@ -9,7 +9,8 @@ the decompilation projects and stays byte-identical.
 The work is cut into packages: each one small enough to review, with its paths, its checks and
 what it waits for. This page is where anyone, people or agents, sees what is done, what is being
 worked on and by whom, and what is free to pick up. Each package updates its own row in the same
-commit series as its work.
+commit series as its work. Phase R (render cost) runs beside phases 2 and 3: it lowers what drawing
+the same picture costs, and changes no pixel.
 
 The rules every package follows are [port/docs/CODING_CONVENTIONS.md](../../port/docs/CODING_CONVENTIONS.md)
 (decided), [AGENTS.md](../../AGENTS.md) and [CONTRIBUTING.md](../../CONTRIBUTING.md).
@@ -99,6 +100,19 @@ the lanes, one at a time.
 | P2-37 | `game/common` includes `scene/` directly; `openrac::scene`; forwarders removed | P2-02, P2-05, P2-18, P2-27 | todo | | |
 | P2-38 | rac1 host C reads through the C entry point | P2-19, the level loader, the rac1 sync | todo | | |
 | P2-39 | `scene` stops including `enhanced/`: lighting and shadow hooks | P2-07 | todo | | |
+
+## Phase R: what drawing costs
+
+Lowers the cost of drawing the same picture (full detail, native resolution, every current feature): no package
+changes a pixel except where its row says so. Planned in `RENDER.md`; proofs are the equivalence test and the
+deterministic counters of [docs/port/RENDER_PERF.md](../port/RENDER_PERF.md). Three lanes after R-02 (RA vkgl draw
+and pipelines, RB vkgl frame and present, RC scene and enhanced); gated rows need the maintainers' numbers first.
+Each package is measured on the Mac (M5 Max, MoltenVK) and on box1 (GTX 1070, NVIDIA's Vulkan).
+
+| Id | Package | Depends on | Status | Owner | Commits |
+|---|---|---|---|---|---|
+| R-01 | Counters (vk_*), per-pass timers, and the optimisation registry (OPENRAC_RENDER_OPT_OFF). Landed: `renderer/render_opt` with `registry-selftest`; the counters of `vkgl::SubmissionCounters` published once a frame as `vk_*` gauges; CPU sections for the frame clear, the texture retirement and the Vulkan present; the `gpu timestamps` log line and gauge; tests `render_opt`, `render_opt_environment`, `render_opt_vulkan`. No counter existed before. On `render_opt_vulkan`'s scene (Mac / box1): `vk_cmds_recorded` 165 / 165, `vk_cmds_draw` 18 / 18, `vk_cmds_dynamic_state` 108 / 108, `vk_submits` 3 / 3, `vk_render_passes` 3 / 3, `vk_barriers` 9 / 9 (all `ALL_COMMANDS`), `vk_attachment_load_bytes` 98,304 / 49,152, `vk_attachment_store_bytes` 147,456 / 98,304 (each device's depth format), `vk_pipelines_created` 1 / 1. Five Vulkan image tests, median of 5 (information): Mac 0.93 s before and after, box1 1.46 s before, 1.44 s after. Image tests unchanged on both machines ([RENDER_PERF.md](../port/RENDER_PERF.md), "R-01"). |  | done | maintainer | [30c9ec95](https://github.com/OpenRAC/OpenRAC/commit/30c9ec95), [11178fb1](https://github.com/OpenRAC/OpenRAC/commit/11178fb1), [8cbbf458](https://github.com/OpenRAC/OpenRAC/commit/8cbbf458), and this page |
+| R-02 | Headless benchmark (openrac_render_bench), the A/B equivalence test, and the baseline table. | R-01 | todo | | |
 
 ## Phase 3: conversion and deeper abstractions
 
@@ -389,6 +403,12 @@ Found while doing a package, for another package or the maintainers.
 | P2-26 | `docs/port/speedrun/PRACTICE.md`, `REFERENCE.md` and `SAVESTATES.md` cite `debug_overlay.cpp` by line number (`:55-57`, `:290-292`, `:1138-1149`, `:2076-2097`, ...); they were stale before P2-26 and now point further off, and `:55-57` (the section names) is in `debug/overlay.h`. A citation by function name would survive the next split. Outside P2-26's paths. | P2-27 (the last split), or the docs' owner |
 | P2-26 | clang-tidy was not run on the moved panels (unchanged by the move); the longest panel functions are `renderer_section` (about 120 lines before the layout), `inspector_window` (about 85) and `mobys_section` (about 65). | the overlay's state package |
 | P2-26 | `mod_scripts` failed once in a full `ctest --preset release` run after the rebase, then passed alone three times and in a second full run: `tests/mod_scripts_test.cpp:404` names its temporary folder from an unseeded `std::rand()`, as P2-09 found in `mod_loader_test.cpp`, so ctest runs at once (the parallel lanes) share it. | the maintainers |
+| R-01 | `scene/level_renderer.cpp` has no `stats::Scope` for `LevelScene::upload` (a level's upload), `set_palette` and `set_instances` with its `build_groups` (handed the scene by the frontend's `draw_kept` before its `render` section opens): their CPU time is in no section ([RENDER_PERF.md](../port/RENDER_PERF.md), "Time per pass"). Outside R-01's paths. | lane RC (R-13, R-15, R-16) |
+| R-01 | The brief's path list left out three files whose calls the counters must see; R-01 added counter lines only to them: `renderer/vulkan/vkgl_gl.cpp` (its copies, blits, resolves, the depth-resolve pass, its compute pipeline, the buffers' CPU mirrors), `gpu_materials.inc` (its descriptor sets and writes) and `vkgl.cpp` (the one call to `publish_counters` in `present`). Also `renderer/README.md`, `renderer/vulkan/README.md` and `docs/port/README.md` (a row or line each). | the maintainers (noted) |
+| R-01 | `render_opt`'s switches live in one function-local static: the brief's free-function API (`enabled(Opt)`, read by draw code that is handed no context) bends section 11.4, as `stats` and the backend's `g` do; `render_opt.cpp` says so. When P3-03 gives the backend a context object, the registry can be handed to it instead. | P3-03 |
+| R-01 | The older members of `vkgl::SubmissionCounters` are still declared several to a line (section 10.1, 7.5); R-01's are one to a line. The vkgl files R-01 touched keep their old layout outside the changed lines (the blank lines of 5.4 and the comments of 6.2 that `tools/cpp_style.py` asks for): reformatting whole files would collide with lanes RA and RB. | P3-03, or each lane's package on its own files |
+| R-01 | `mod_loader` failed once (Subprocess killed) in a full `ctest --preset headless -j 8` run on origin/master before any R-01 change, then passed alone and in the next full runs; like P2-26's `mod_scripts`, a test that shares a temporary file or library name across parallel runs is the likely cause. | a later tests package |
+| R-01 | The attachment counters depend on the device's depth format (8 bytes a texel on MoltenVK, 4 on NVIDIA), so they are compared on one machine, before against after; `render_opt_vulkan` checks only that they grow. | R-06 (the counter it lowers) |
 | PR #43 | Edge-aware texture upscaling builds each texture's 2x colours inside a frame, at its first draw (a compute dispatch and a copy per texture and wrap mode), and rebuilds what its 64 MiB cache evicts. R-13 wants a level's textures made at level load: the upscaled colours should follow them there, or be built under a per-frame budget. | lane RC (R-13) |
 | PR #43 | The PR changed `renderer/texture_pool.*` (an optional `UpscaledTextureColours` provider, `bind_upscaled_texture_colours`) and every world-texture bind in `scene/level_renderer.cpp`, the sky's and `renderer/effects.cpp`'s, plus `use_level` in `game/common/frontend/world.cpp` (installing the provider, with its include) and `draw_kept` in `frontend.cpp` (the anisotropy and texture filter of the frame). Lane RC's R-13, R-15 and R-18, and lane 1's further `frontend.cpp` splits, rebase onto them. | lane RC, lane 1 |
 | PR #43 | The upscaled colours replace a texture's colours whatever the material's magnification filter (the GS's TEX1 MMAG): a texture the game draws with nearest sampling is reconstructed as well. Whether those should keep Normal is a picture decision. | the maintainers |

@@ -252,6 +252,7 @@ void draw(
     gpu_flush_draws();
     if (pipeline != g->bound_pipeline) {
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+        count_command(Command::BindPipeline);
         g->bound_pipeline = pipeline;
     }
     if (set != VK_NULL_HANDLE) {
@@ -266,15 +267,18 @@ void draw(
             p->dynamic_uniforms ? 1u : 0u,
             p->dynamic_uniforms ? &dynamic_offset : nullptr
         );
+        count_command(Command::BindDescriptors);
     }
     if (material.set) {
         vkCmdBindDescriptorSets(
             cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, p->layout, 1, 1, &material.set, 0, nullptr
         );
         vkCmdPushConstants(cmd, p->layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 4, &material.draw);
+        count_command(Command::BindDescriptors, 2);  // the material set and its push constant
     }
     if (n > 0) {
         vkCmdBindVertexBuffers(cmd, 0, n, buffers, offsets);
+        count_command(Command::BindBuffers);
     }
     VkViewport viewport{
         static_cast<float>(s.viewport[0]),
@@ -298,14 +302,17 @@ void draw(
         vkCmdSetViewport(cmd, 0, static_cast<std::uint32_t>(viewports.size()), viewports.data());
         vkCmdSetScissor(cmd, 0, static_cast<std::uint32_t>(scissors.size()), scissors.data());
     }
+    count_command(Command::DynamicState, 2);  // the viewports and the scissors
     vkCmdSetBlendConstants(cmd, s.blend_colour);
     vkCmdSetStencilReference(
         cmd, VK_STENCIL_FACE_FRONT_AND_BACK, static_cast<std::uint32_t>(s.stencil_ref)
     );
     vkCmdSetStencilCompareMask(cmd, VK_STENCIL_FACE_FRONT_AND_BACK, s.stencil_value_mask);
     vkCmdSetStencilWriteMask(cmd, VK_STENCIL_FACE_FRONT_AND_BACK, s.stencil_write_mask);
+    count_command(Command::DynamicState, 4);  // the blend constant and the three stencil states
     if (indexed) {
         vkCmdBindIndexBuffer(cmd, index.buffer, index.offset, vk_index);
+        count_command(Command::BindBuffers);
         if (gpu_page) {
             g->gpu.pending_bindings = gpu_bindings;
             g->gpu.pending_arguments = gpu_page->arguments.buffer;
@@ -321,6 +328,7 @@ void draw(
                 0,
                 0
             );
+            count_command(Command::Draw);
             ++g->measures.native_draws;
         }
     } else {
@@ -331,6 +339,7 @@ void draw(
             static_cast<std::uint32_t>(first),
             0
         );
+        count_command(Command::Draw);
         ++g->measures.native_draws;
     }
 }

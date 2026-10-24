@@ -512,6 +512,9 @@ struct Context {
     bool open = false;
     Measures measures;
     SubmissionCounters submission, reported_submission;
+    SubmissionCounters published;  // The render counters as the last frame's gauges left them.
+    // The frames_presented at which begin_pipeline_warmup's warm-up ends; never, until it is called.
+    std::uint64_t warmup_end = UINT64_MAX;
     SDL_Window* window = nullptr;
     VkInstance instance = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT messenger = VK_NULL_HANDLE;
@@ -601,6 +604,64 @@ inline bool check(VkResult result, const char* what) {
 inline Frame& frame() {
     return g->frames[static_cast<std::size_t>(g->frame)];
 }
+
+// ---- The render counters (SubmissionCounters, docs/port/RENDER_PERF.md) ----
+//
+// Hot path: each is an add or two on `g->submission`, with no clock, no allocation and no test of
+// stats::enabled(), so a draw may call them as often as it records. present() publishes the totals
+// once per frame (publish_counters, vkgl_present.cpp), the one place that tests stats::enabled().
+
+// Counts `count` recorded commands of `kind`.
+inline void count_command(Command kind, std::uint64_t count = 1) {
+    g->submission.commands[static_cast<std::size_t>(kind)] += count;
+}
+
+// Counts one vkCmdPipelineBarrier that waits on `source` stages for `destination` stages.
+inline void count_barrier(VkPipelineStageFlags source, VkPipelineStageFlags destination) {
+    count_command(Command::Barrier);
+    ++g->submission.barriers;
+
+    // A barrier on every stage, which waits for more than the work it orders needs.
+    if (((source | destination) & VK_PIPELINE_STAGE_ALL_COMMANDS_BIT) != 0) {
+        ++g->submission.barriers_all_commands;
+    }
+}
+
+// Counts one copy, blit or resolve into a region `width` by `height` texels: a full-screen copy
+// as well when that is the default framebuffer's size or the screen's.
+inline void count_copy(std::uint32_t width, std::uint32_t height) {
+    count_command(Command::Copy);
+    const bool frame_sized = static_cast<int>(width) == g->default_width
+                             && static_cast<int>(height) == g->default_height;
+    const bool screen_sized =
+        width == g->swapchain_extent.width && height == g->swapchain_extent.height;
+
+    // The whole picture read and written again, the costliest copy on a tiled GPU.
+    if (frame_sized || screen_sized) {
+        ++g->submission.fullscreen_copies;
+    }
+}
+
+// Counts the beginning of one render pass (vkCmdBeginRendering); its end is a count_command.
+inline void count_render_pass() {
+    count_command(Command::RenderPass);
+    ++g->submission.render_passes;
+}
+
+// Counts a graphics or compute pipeline just made, after the warm-up as well when it has passed.
+inline void count_pipeline() {
+    ++g->submission.pipelines_created;
+
+    // Made once the warm-up begin_pipeline_warmup started was over: a hitch a warm cache avoids.
+    if (g->submission.frames_presented >= g->warmup_end) {
+        ++g->submission.pipelines_created_after_warmup;
+    }
+}
+
+// Counts what one attachment of a pass moves between memory and the GPU: `image`'s texel bytes
+// over `area` and its samples, read in when `load` and written back when `store`. Defined in
+// vkgl_commands.cpp, beside the passes it counts.
+void count_attachment(const Image& image, VkExtent2D area, bool load, bool store);
 
 // ---- Types the files hand each other ----
 
@@ -725,6 +786,10 @@ Format format_of(GLenum internal);
 
 // True for the depth formats that have a stencil part.
 bool has_stencil(VkFormat f);
+
+// The bytes one texel of `f` takes, for the attachment counters (count_attachment); 4 for a
+// format the backend does not make, which is only the screen's.
+int texel_bytes(VkFormat f);
 
 // Makes a 2D image of `levels` levels and `samples` samples that can be copied to and from,
 // sampled when single-sampled, and drawn into when the format allows. Null when Vulkan fails
@@ -914,6 +979,11 @@ VkPresentModeKHR present_mode();
 // Makes the swapchain anew for the surface at its current size, once the device is idle. True
 // with no surface (no window).
 bool make_swapchain();
+
+// Publishes the render counters as the frame's vk_* gauges, the frame's own work for counts and
+// bytes, the totals for the pipelines and compiles, while the debug tools measure; counts the
+// frame as presented in any case. Called by present(), once per frame, before advance().
+void publish_counters();
 
 // The next frame: its slot's last use waited for, its leftovers freed, its buffers begun.
 void advance();

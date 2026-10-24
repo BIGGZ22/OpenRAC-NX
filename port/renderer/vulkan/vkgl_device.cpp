@@ -355,6 +355,18 @@ bool pick_device(std::string& error) {
     std::vector<VkQueueFamilyProperties> queues(families);
     vkGetPhysicalDeviceQueueFamilyProperties(g->physical, &families, queues.data());
     g->timestamp_bits = queues.at(g->family).timestampValidBits;
+
+    // Whether the debug tools' GPU timers can work on this queue (the vk_gpu_timestamps gauge).
+    if (g->timestamp_bits != 0) {
+        log::info(
+            "vulkan: gpu timestamps: yes ({} valid bits, {} ns a tick)",
+            g->timestamp_bits,
+            g->properties.limits.timestampPeriod
+        );
+    } else {
+        log::info("vulkan: gpu timestamps: no (the queue keeps no timestamp bits)");
+    }
+
     vkGetPhysicalDeviceFeatures(g->physical, &g->features);
     return true;
 }
