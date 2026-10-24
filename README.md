@@ -89,4 +89,4 @@ OpenRAC brings several decompilation projects together.
 
 **See:** [Credits](CREDITS.md) · [Sources](docs/SOURCES.md) · [Licenses](LICENSE.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 
-OpenRAC is an unofficial fan project, not affiliated with or endorsed by the owners of Ratchet & Clank ([trademarks](LICENSE.md#trademarks)).
+OpenRAC is an unofficial fan project, not affiliated with or endorsed by the owners of Ratchet & Clank. All trademarks belong to their owners, as the [trademark notice](LICENSE.md#trademarks) says in full.
