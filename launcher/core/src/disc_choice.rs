@@ -29,7 +29,7 @@ use crate::install;
 const SET_UP: [&str; 3] = ["iso_data", "decompiler_out", "out"];
 
 /// A game with more than one of its discs in the games folder, for a developer to pick from.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscChoice {
     pub game: String,

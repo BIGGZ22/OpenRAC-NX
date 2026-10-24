@@ -217,7 +217,7 @@ impl Release {
 }
 
 /// One mod the repository holds, as the Mods tab shows it before it is installed.
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct RemoteMod {
     pub id: String,
@@ -230,6 +230,7 @@ pub struct RemoteMod {
     pub path: String,
     /// "native" (a library the game loads: code), "script" (Luau the game runs sandboxed) or "pack"
     /// (textures, models, levels).
+    #[ts(type = "\"native\" | \"script\" | \"pack\"")]
     pub kind: String,
     pub games: BTreeMap<String, Vec<String>>,
     pub api: Option<String>,
@@ -244,7 +245,8 @@ pub struct RemoteMod {
 }
 
 /// What an address holds.
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, ts_rs::TS)]
+#[ts(rename = "RemotePreview")]
 #[serde(rename_all = "camelCase")]
 pub struct Preview {
     /// The repository's address, without a version.
@@ -252,6 +254,7 @@ pub struct Preview {
     /// "owner/repo", or the address.
     pub label: String,
     /// "github" or "git".
+    #[ts(type = "\"github\" | \"git\"")]
     pub host: String,
     /// The owner, who publishes it (GitHub).
     pub owner: String,
@@ -719,7 +722,7 @@ fn read_git(url: &str, ctx: (&str, &str, Option<&str>, &Path)) -> Result<(Previe
 // ---- sources.json ---------------------------------------------------------------------------
 
 /// Where one installed mod came from.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ModSource {
     pub url: String,
@@ -739,7 +742,8 @@ pub struct ModSource {
     pub pin: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ts_rs::TS)]
+#[ts(rename = "ModSources")]
 pub struct Sources {
     pub format: u32,
     #[serde(default)]
@@ -818,7 +822,7 @@ pub fn preview(ctx: &Context, url: &str) -> Result<Preview, String> {
 }
 
 /// What installing from an address came to.
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, ts_rs::TS)]
 #[serde(rename_all = "camelCase", tag = "kind")]
 pub enum RemoteInstalled {
     /// A native or script mod, now in the store.
@@ -965,7 +969,8 @@ pub fn install(ctx: &Context, url: &str, id: &str) -> Result<RemoteInstalled, St
 }
 
 /// A newer version of an installed mod.
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, ts_rs::TS)]
+#[ts(rename = "ModUpdate")]
 #[serde(rename_all = "camelCase")]
 pub struct Update {
     pub id: String,

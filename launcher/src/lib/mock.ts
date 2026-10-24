@@ -10,38 +10,36 @@ import summaryFile from "../../../progress/summary.json";
 import packageFile from "../../package.json";
 import { onAndroid } from "./api";
 import { mockEnhanced } from "./mockEnhanced";
-import type {
-  ActionView,
-  BuildInfo,
-  GpuDriver,
-  GpuDrivers,
-  InstallState,
-  AppInfo,
-  Check,
-  Config,
-  Detected,
-  DifferenceView,
-  Differences,
-  GameView,
-  JobEvent,
-  Library,
-  PackView,
-  Platform,
-  ModSources,
-  PluginStatus,
-  RemotePreview,
-  PluginView,
-  ReportEntry,
-  Progress,
-  SaveChange,
-  SaveFields,
-  SaveView,
-  Scope,
-  Started,
-  VersionStatus,
-  VersionView,
-  WriteResult,
-} from "./api";
+import type { ActionView } from "./generated/ActionView";
+import type { BuildInfo } from "./generated/BuildInfo";
+import type { Check } from "./generated/Check";
+import type { Config } from "./generated/Config";
+import type { Detected } from "./generated/Detected";
+import type { DifferenceView } from "./generated/DifferenceView";
+import type { Differences } from "./generated/Differences";
+import type { GameView } from "./generated/GameView";
+import type { InstallState } from "./generated/InstallState";
+import type { JobEvent } from "./generated/JobEvent";
+import type { Library } from "./generated/Library";
+import type { ModSources } from "./generated/ModSources";
+import type { PackView } from "./generated/PackView";
+import type { Platform } from "./generated/Platform";
+import type { PluginStatus } from "./generated/PluginStatus";
+import type { PluginInstalled } from "./generated/PluginInstalled";
+import type { RemoteInstalled } from "./generated/RemoteInstalled";
+import type { PluginView } from "./generated/PluginView";
+import type { Progress } from "./generated/Progress";
+import type { RemotePreview } from "./generated/RemotePreview";
+import type { ReportEntry } from "./generated/ReportEntry";
+import type { SaveChange } from "./generated/SaveChange";
+import type { SaveFields } from "./generated/SaveFields";
+import type { SaveView } from "./generated/SaveView";
+import type { Scope } from "./generated/Scope";
+import type { Started } from "./generated/Started";
+import type { VersionStatus } from "./generated/VersionStatus";
+import type { VersionView } from "./generated/VersionView";
+import type { WriteResult } from "./generated/WriteResult";
+import type { AppInfo, DiscScan, GpuDriver, GpuDrivers } from "./api";
 import type { UpdateInfo, UpdateProgressCallback } from "./updates";
 
 // ---- the files, as the Rust side parses them --------------------------------------
@@ -410,6 +408,7 @@ function progress(key: string): Progress | null {
     percent: p.percent,
     date: p.date,
     note: row.note ?? null,
+    functional: null,
   };
 }
 
@@ -1894,12 +1893,12 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
         updateChannels: { stable: STABLE, dev: DEV },
       });
     case "get_config":
-      return delay({ ...config });
+      return delay<Config>({ ...config });
     case "save_config":
       config = { ...(args.config as Config) };
-      return delay({ ...config });
+      return delay<Config>({ ...config });
     case "adopt_godot":
-      return delay({ ...config });
+      return delay<Config>({ ...config });
     case "detect":
       return delay<Detected>({
         roots: query.has("setup") ? [] : [{ path: "/home/you/OpenRAC", source: "next to the launcher" }],
@@ -1926,9 +1925,9 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     case "library":
       // ?nolib: the OpenRAC folder cannot be read, as when none is set.
       if (query.has("nolib")) throw new Error("No OpenRAC folder is set: choose it in Settings.");
-      return delay(library());
+      return delay<Library>(library());
     case "install_game":
-      return delay(install(args.game as string, args.image as string));
+      return delay<Started>(install(args.game as string, args.image as string));
     case "prepare_disc":
       return delay((args.image as string).replace(/\.chd$/i, ".iso"));
     case "scan_discs": {
@@ -1956,24 +1955,30 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       const remembered = config.discChoice.rac1 ?? "";
       const choices =
         config.developer && versions.length > 1
-          ? [{ game: "rac1", versions, chosen: versions.includes(remembered) ? remembered : versions[0] }]
+          ? [
+              {
+                game: "rac1",
+                versions,
+                chosen: versions.includes(remembered) ? remembered : (versions[0] ?? remembered),
+              },
+            ]
           : [];
-      return delay({ found, choices });
+      return delay<DiscScan>({ found, choices });
     }
     case "choose_disc": {
       const version = args.version as string;
       const game = version.split("/")[0] ?? version;
       config = { ...config, discChoice: { ...config.discChoice, [game]: version } };
-      return delay(config);
+      return delay<Config>(config);
     }
     case "uninstall_game":
       installs[args.game as string] = undefined;
       return delay(null);
     case "sync_progress_from_web":
     case "apply_progress_json":
-      return delay(library());
+      return delay<Library>(library());
     case "run_action":
-      return delay(start(args.scope as Scope, args.id as string, args));
+      return delay<Started>(start(args.scope as Scope, args.id as string, args));
     case "cancel_job": {
       const id = args.id as number;
       clearInterval(timers.get(id));
@@ -1988,7 +1993,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     case "set_discord_status":
       return delay(null);
     case "overrides_list":
-      return delay([...mockPacks]);
+      return delay<PackView[]>([...mockPacks]);
     case "overrides_set_enabled":
     case "overrides_move":
     case "overrides_remove": {
@@ -2000,7 +2005,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       if (command === "overrides_move") {
         mockPacks.splice(Math.max(0, Math.min(mockPacks.length, at + (args.up ? -1 : 1))), 0, pack);
       }
-      return delay([...mockPacks]);
+      return delay<PackView[]>([...mockPacks]);
     }
     case "enhanced_view":
     case "enhanced_set_enabled":
@@ -2019,9 +2024,9 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       });
     }
     case "plugins_list":
-      return delay(mockPlugins.map((p) => ({ ...p })));
+      return delay<PluginView[]>(mockPlugins.map((p) => ({ ...p })));
     case "plugins_status":
-      return delay(mockPluginStatus());
+      return delay<PluginStatus | null>(mockPluginStatus());
     case "plugins_set_enabled":
     case "plugins_move":
     case "plugins_set_setting":
@@ -2043,14 +2048,14 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       } else {
         mockPlugins = mockPlugins.filter((p) => p.id !== mod.id);
       }
-      return delay(mockPlugins.map((p) => ({ ...p })));
+      return delay<PluginView[]>(mockPlugins.map((p) => ({ ...p })));
     }
     case "plugins_preview": {
       const url = typeof args.url === "string" ? args.url : "";
       if (!/github\.com\/[^/]+\/[^/]+/.test(url)) {
         throw new Error(`${url} is not a repository's address: paste one that starts with https://`);
       }
-      return delay(mockPreview(url));
+      return delay<RemotePreview>(mockPreview(url));
     }
     case "plugins_install_remote": {
       const m = mockPreview(String(args.url)).mods.find((x) => x.id === args.id);
@@ -2065,7 +2070,14 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
         kind: m.kind,
         pin: mockSources.mods[m.id]?.pin ?? false,
       };
-      return delay({ kind: "plugin", id: m.id, name: m.name, version: m.version, replaced: true, enabled: true });
+      return delay<RemoteInstalled>({
+        kind: "plugin",
+        id: m.id,
+        name: m.name,
+        version: m.version,
+        replaced: true,
+        enabled: true,
+      });
     }
     case "plugins_check_updates":
       return delay({
@@ -2078,7 +2090,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       const s = mockSources.mods[String(args.id)];
       if (!s) throw new Error(`${String(args.id)} was not installed from a repository`);
       s.version = "1.1.0";
-      return delay({
+      return delay<RemoteInstalled>({
         kind: "plugin",
         id: String(args.id),
         name: "Lock-strafe",
@@ -2088,17 +2100,17 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       });
     }
     case "plugins_sources":
-      return delay(structuredClone(mockSources));
+      return delay<ModSources>(structuredClone(mockSources));
     case "plugins_set_pin": {
       const s = mockSources.mods[String(args.id)];
       if (!s) throw new Error(`${String(args.id)} was not installed from a repository`);
       s.pin = !!args.pin;
-      return delay(structuredClone(mockSources));
+      return delay<ModSources>(structuredClone(mockSources));
     }
     case "plugins_install": {
       const path = typeof args.path === "string" ? args.path : "";
       // A name with "pack" in it stands for a data pack, which goes to the overrides.
-      if (/pack/i.test(path)) return delay({ kind: "pack" });
+      if (/pack/i.test(path)) return delay<PluginInstalled>({ kind: "pack" });
       const name =
         path
           .split(/[\\/]/)
@@ -2116,7 +2128,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
           ...{ id, name, settings: [], hooks: [], sharedHooks: [], path: `/home/you/plugins/${id}` },
         } as PluginView);
       }
-      return delay({ kind: "plugin", id, name, version: "1.0.0", replaced, enabled: true });
+      return delay<PluginInstalled>({ kind: "plugin", id, name, version: "1.0.0", replaced, enabled: true });
     }
     case "open_output":
     case "open_level_in_godot":
@@ -2230,7 +2242,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     case "open_saves_folder":
       return delay(null);
     case "reports_list":
-      return delay(args.game === "rac1" ? mockReports : []);
+      return delay<ReportEntry[]>(args.game === "rac1" ? mockReports : []);
     case "report_delete":
       mockReports = mockReports.filter((e) => e.file !== args.file);
       return delay(null);
@@ -2260,7 +2272,7 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       console.info(`[preview] ${command}`, args);
       return delay(null);
     case "differences":
-      return delay(mockDifferences(String(args.game), String(args.version)));
+      return delay<Differences>(mockDifferences(String(args.game), String(args.version)));
     case "set_game_fix": {
       const now = mockDifferences(String(args.game), String(args.version));
       const fix = now.entries.find((e) => e.id === args.id && e.kind === "fix" && e.setting);
@@ -2269,10 +2281,12 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
       const values = fixValues.get(key) ?? new Map<string, boolean>();
       values.set(fix.setting.key, Boolean(args.on));
       fixValues.set(key, values);
-      return delay(mockDifferences(now.game, now.version));
+      return delay<Differences>(mockDifferences(now.game, now.version));
     }
     case "read_save":
-      return delay(mockSave(typeof args.serial === "string" ? args.serial : "SCES_509.16", Number(args.slot ?? 0)));
+      return delay<SaveView>(
+        mockSave(typeof args.serial === "string" ? args.serial : "SCES_509.16", Number(args.slot ?? 0)),
+      );
     case "write_save": {
       const key = `${String(args.serial)}/${String(args.slot)}`;
       const change = args.change as SaveChange;

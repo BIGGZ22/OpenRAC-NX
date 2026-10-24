@@ -34,7 +34,8 @@ pub struct Game {
     pub versions: Vec<Version>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
+#[ts(rename = "CatalogVersion")]
 #[serde(rename_all = "camelCase")]
 pub struct Version {
     /// `rac1/pal`: the key used everywhere (progress, actions, commit scopes).
@@ -65,7 +66,7 @@ pub struct Version {
 }
 
 /// A file game.json describes by name and checksums (the disc image, the boot executable).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct FileSpec {
     pub file: String,
@@ -77,7 +78,8 @@ pub struct FileSpec {
 
 /// One input `openrac.py setup` places: `from` is `disc`, `boot`,
 /// `toolchains` or `link` (then `target` names what it links to).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(rename = "VersionInput")]
 #[serde(rename_all = "camelCase")]
 pub struct Input {
     pub from: String,
@@ -86,7 +88,8 @@ pub struct Input {
     pub target: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(rename = "VersionSource")]
 #[serde(rename_all = "camelCase")]
 pub struct Source {
     pub name: String,
@@ -100,7 +103,8 @@ pub struct Source {
 }
 
 /// One row of progress/summary.json (snake_case on disk, camelCase to the UI).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(rename_all = "camelCase")]
 #[serde(rename_all(serialize = "camelCase", deserialize = "snake_case"))]
 pub struct Progress {
     pub matched_code: u64,
@@ -120,7 +124,8 @@ pub struct Progress {
 }
 
 /// How much of the code has functional C (not matched; ByteMatch shows it under the Code bar).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(rename_all = "camelCase")]
 #[serde(rename_all(serialize = "camelCase", deserialize = "snake_case"))]
 pub struct FunctionalProgress {
     pub functions: u64,

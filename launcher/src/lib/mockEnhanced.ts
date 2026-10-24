@@ -1,4 +1,4 @@
-import type { EnhancedView } from "./api";
+import type { EnhancedView } from "./generated/EnhancedView";
 
 /** Enhanced graphics, as core/src/enhanced.rs gives it: seven of nineteen levels baked. */
 export const mockEnhanced: EnhancedView = {

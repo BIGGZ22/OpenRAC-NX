@@ -96,40 +96,51 @@ const PLATFORMS: [&str; 6] =
 // ---- The manifest -------------------------------------------------------------------------------
 
 /// One of a choice setting's values.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ts_rs::TS)]
+#[ts(rename = "SettingChoice")]
 pub struct Choice {
     pub value: String,
     pub name: String,
 }
 
 /// A setting a mod declares (MODS.md, section 3).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct SettingSpec {
     pub key: String,
     pub name: String,
     #[serde(rename = "type")]
+    #[ts(type = "\"bool\" | \"int\" | \"float\" | \"choice\" | \"string\" | \"keybind\"")]
     pub kind: String,
     #[serde(default)]
+    #[ts(type = "unknown")]
     pub default: Value,
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[ts(as = "Option<String>", optional)]
     pub description: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
     pub min: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
     pub max: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
     pub step: Option<f64>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[ts(as = "Option<Vec<Choice>>", optional)]
     pub choices: Vec<Choice>,
     #[serde(default, alias = "max_length", skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
     pub max_length: Option<usize>,
     /// A keybind's most binds: 1 or 2 (2 when absent).
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
     pub binds: Option<u32>,
     /// A keybind's group: two keybinds of one group on the same input conflict; of two groups
     /// ("play", "menu") they may share it.
     #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[ts(as = "Option<String>", optional)]
     pub group: String,
 }
 
@@ -143,11 +154,13 @@ impl SettingSpec {
 /// A set of setting values offered as one button (the manifest's `presets`), of any type: sliders,
 /// choices, switches, text and keybinds. The settings it does not name, among the mod's keybinds
 /// and those another of its presets names, go back to their defaults.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ts_rs::TS)]
+#[ts(rename = "PluginPreset")]
 pub struct Preset {
     pub id: String,
     pub name: String,
     #[serde(default)]
+    #[ts(type = "Record<string, unknown>")]
     pub values: Map<String, Value>,
 }
 
@@ -518,7 +531,8 @@ fn write_list(dir: &Path, mods: &[Entry]) -> Result<(), String> {
 }
 
 /// One mod in the port's `status.json`.
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Default, ts_rs::TS)]
+#[ts(rename = "PluginStatusEntry")]
 #[serde(rename_all = "camelCase")]
 pub struct StatusEntry {
     pub id: String,
@@ -532,7 +546,8 @@ pub struct StatusEntry {
 }
 
 /// The port's `status.json`: what it did with each mod at its last start.
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Default, ts_rs::TS)]
+#[ts(rename = "PluginStatus")]
 #[serde(rename_all = "camelCase")]
 pub struct Status {
     #[serde(default)]
@@ -555,14 +570,17 @@ pub fn read_status(dir: &Path) -> Option<Status> {
 // ---- What the Mods tab shows --------------------------------------------------------------------
 
 /// A setting with its value now.
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, ts_rs::TS)]
+#[ts(rename = "PluginSetting")]
 #[serde(rename_all = "camelCase")]
 pub struct SettingView {
     #[serde(flatten)]
     pub spec: SettingSpec,
+    #[ts(type = "unknown")]
     pub value: Value,
     /// A keybind's: the names of the mod's other keybinds of its group bound to one of its inputs.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[ts(as = "Option<Vec<String>>", optional)]
     pub conflicts: Vec<String>,
 }
 
@@ -589,7 +607,7 @@ pub fn mark_conflicts(settings: &mut [SettingView]) {
 }
 
 /// A hook point this mod shares with other mods that are on.
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct SharedHook {
     pub hook: String,
@@ -597,7 +615,7 @@ pub struct SharedHook {
 }
 
 /// A mod as the Mods tab shows it.
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct PluginView {
     pub id: String,
@@ -610,6 +628,7 @@ pub struct PluginView {
     pub enabled: bool,
     /// `ready` (on, and nothing against it), `off`, `refused` (it cannot load: `reason`), or
     /// `failed` (the port did not load it at its last start: `reason`).
+    #[ts(type = "\"ready\" | \"off\" | \"refused\" | \"failed\"")]
     pub state: String,
     pub reason: String,
     /// Off, and could not be switched on as things are: why (also for a mod that is off).
@@ -617,12 +636,14 @@ pub struct PluginView {
     pub settings: Vec<SettingView>,
     /// Presets of its settings the mod offers (its manifest's).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[ts(as = "Option<Vec<Preset>>", optional)]
     pub presets: Vec<Preset>,
     pub hooks: Vec<String>,
     pub shared_hooks: Vec<SharedHook>,
     /// Whether it carries code (a library) or only data.
     pub native: bool,
     /// `native` (runs code on this computer), `script` (runs scripts, sandboxed) or `data`.
+    #[ts(type = "\"native\" | \"script\" | \"data\" | \"built-in\"")]
     pub kind: String,
     /// The installed folder (developer tools show it).
     pub path: String,
@@ -883,7 +904,8 @@ pub fn remove(dir: &Path, game: &str, version: &str, id: &str) -> Result<Vec<Plu
 // ---- Installing ---------------------------------------------------------------------------
 
 /// What adding a file or folder came to.
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, ts_rs::TS)]
+#[ts(rename = "PluginInstalled")]
 #[serde(rename_all = "camelCase", tag = "kind")]
 pub enum Installed {
     /// A native mod, now in the store (`replaced`: an older install of it was there).

@@ -832,7 +832,8 @@ def inputs_digest(source: Path, config: Path, cfg: dict, options: list[str]) -> 
     return h.hexdigest()
 
 
-def main(argv: list[str] | None = None) -> int:
+def parse_arguments(argv: list[str] | None) -> argparse.Namespace:
+    """The command line (see the module docstring and README.md)."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--game", type=Path, required=True, help="the game's hostgen.json")
     ap.add_argument("--source", type=Path, required=True, help="the decompilation's directory")
@@ -861,9 +862,11 @@ def main(argv: list[str] | None = None) -> int:
                          "form, a candidate file each in DIR (for rac1-decomp's tools/fcheck.py)")
     ap.add_argument("--asm-console-names", type=Path, metavar="FILE",
                     help="with --asm-console: the functions to write (one a line), whether or not they have C")
-    args = ap.parse_args(argv)
+    return ap.parse_args(argv)
 
-    cfg = load_config(args.game)
+
+def apply_assembly_options(cfg: dict, args: argparse.Namespace) -> None:
+    """The command line's say over hostgen.json's "asm" (on or off, where the assembly and the retail data are)."""
     if args.asm is not None and cfg.get("asm"):
         cfg["asm"] = {**cfg["asm"], "enabled": args.asm == "on"}
     if args.asm_source and cfg.get("asm"):
@@ -872,50 +875,54 @@ def main(argv: list[str] | None = None) -> int:
         cfg["asm"] = {**cfg["asm"], "retail": {
             k: str(v.resolve()) for k, v in (("image", args.retail_image), ("exe", args.retail_exe),
                                              ("dump", args.retail_dump)) if v}}
-    source = args.source.resolve()
-    out = args.out.resolve()
-    # The names the decompilation's build derives (hostgen.json "derived"): its build's table, or
-    # the port's copy; read as aliases and as symbols. Neither there stops here, at configure, not
-    # in a program whose functions that use them are stubs.
-    try:
-        derived_table = derived.resolve(source, args.game.resolve().parent, cfg)
-    except derived.Missing as e:
-        print(f"hostgen: error: {e}", file=sys.stderr)
-        return 1
+
+
+def add_derived_names(cfg: dict, args: argparse.Namespace, source: Path) -> Path | None:
+    """The names the decompilation's build derives (hostgen.json "derived"), added to the
+    config's aliases and symbols: its build's table, or the port's copy. Neither there raises
+    derived.Missing, at configure, not in a program whose functions that use them are stubs."""
+    derived_table = derived.resolve(source, args.game.resolve().parent, cfg)
     if derived_table is not None:
         cfg["aliases"] = cfg.get("aliases", []) + [str(derived_table)]
         cfg["symbols"] = cfg["symbols"] + [str(derived_table)]
-    if args.list:
-        for u in units_of(source, cfg):
-            print(generated_name(u))
-        for name in asmc.file_names(cfg):
-            print(name)
-        for name in PROGRAM_FILES:
-            print(name)
-        return 0
-    # The translation is skipped when what it reads is what it last wrote from.
+    return derived_table
+
+
+def print_outputs(source: Path, cfg: dict) -> None:
+    """--list: the files a run writes, for the build to depend on."""
+    for u in units_of(source, cfg):
+        print(generated_name(u))
+    for name in asmc.file_names(cfg):
+        print(name)
+    for name in PROGRAM_FILES:
+        print(name)
+
+
+def is_up_to_date(out: Path, digest: str, source: Path, cfg: dict) -> bool:
+    """Whether what a run reads is what the last one wrote from, and its files are all there."""
     stamp = out / "inputs.sha256"
-    digest = inputs_digest(source, args.game.resolve(), cfg, args.only + ["--allow-unreadable"] * args.allow_unreadable)
     expected = [generated_name(u) for u in units_of(source, cfg)] + PROGRAM_FILES + ["report.json"]
-    if stamp.is_file() and stamp.read_text().strip() == digest and all((out / f).is_file() for f in expected):
-        if not args.quiet:
-            print(f"hostgen: {out} is up to date")
-        return 0
-    stamp.unlink(missing_ok=True)
-    if derived_table is not None and not derived_table.is_relative_to(source):
-        # The port's copy was written from a build of an earlier commit of the decompilation: the
-        # names the C has started to use since have no value, and their functions become stubs.
-        missing = derived.uncovered(source, cfg, json.loads(derived_table.read_text()))
-        if missing:
-            print(f"hostgen: warning: {derived_table} has no value for {len(missing)} names the C uses "
-                  f"({', '.join(missing[:8])}{', ...' if len(missing) > 8 else ''}); the functions that use "
-                  f"them are stubs. Build the decompilation, then run port/tools/hostgen/derived.py "
-                  f"--game {args.game} --source <it>.", file=sys.stderr)
-    root = out / "prep"
-    # The lock the units take to rewrite a prepared header (clangast.drop_superseded_declarations),
-    # left behind by a translation that was stopped.
-    shutil.rmtree(root / ".openrac-header.lock", ignore_errors=True)
-    started = time.time()
+    return stamp.is_file() and stamp.read_text().strip() == digest and all((out / f).is_file() for f in expected)
+
+
+def warn_of_uncovered_names(derived_table: Path | None, source: Path, cfg: dict, args: argparse.Namespace) -> None:
+    """The port's copy of the derived names was written from a build of an earlier commit of the
+    decompilation: the names the C has started to use since have no value, and their functions
+    become stubs. Said, with the way to refresh the copy."""
+    if derived_table is None or derived_table.is_relative_to(source):
+        return
+    missing = derived.uncovered(source, cfg, json.loads(derived_table.read_text()))
+    if missing:
+        print(f"hostgen: warning: {derived_table} has no value for {len(missing)} names the C uses "
+              f"({', '.join(missing[:8])}{', ...' if len(missing) > 8 else ''}); the functions that use "
+              f"them are stubs. Build the decompilation, then run port/tools/hostgen/derived.py "
+              f"--game {args.game} --source <it>.", file=sys.stderr)
+
+
+def read_replacements(args: argparse.Namespace, cfg: dict, source: Path) -> dict:
+    """The port's own C that stands in for the decompilation's: what is read, as a dict of
+    candidates (functions the decompilation has no C for), overrides (functions it matches),
+    aliases, the "long long 128" names, and the overrides that define no function of their name."""
     # The port's own C for hand-written assembly first; a decompilation's
     # candidate for the same function stands aside.
     candidates = {**read_candidates(source, cfg), **read_hand(args.game.parent, cfg)}
@@ -944,47 +951,63 @@ def main(argv: list[str] | None = None) -> int:
     # the function to the assembly stage, silently: it stands aside, and the index says so.
     undefined = sorted(name for name, c in overrides.items() if not prep.defines(c, name))
     overrides = {name: c for name, c in overrides.items() if name not in undefined}
+    return {"candidates": candidates, "overrides": overrides, "aliases": aliases,
+            "long_long_128": long_long_128, "undefined": undefined}
+
+
+def prepare_sources(args: argparse.Namespace, cfg: dict, source: Path, root: Path,
+                    replacements: dict) -> tuple[set[str], set[str]]:
+    """The prepared copy of the decompilation under root (prep.py), with the port's C put in.
+    Returns the candidates used and the overrides used."""
     used: set[str] = set()
     overridden: set[str] = set()
     drafts = read_drafts(args.game.parent, cfg)
     for d in sorted(set(cfg["sources"] + cfg["includes"])):
         if (source / d).is_dir():
-            prep.copy_tree(source / d, root / d, candidates=candidates, used=used, drafts=drafts, prefix=d,
-                           aliases=aliases, long_long_128=long_long_128, overrides=overrides,
-                           overridden=overridden)
-    units = units_of(root, cfg)
-    if args.only:
-        units = [u for u in units if u in args.only]
-    flags = clangast.base_flags([Path(i) for i in cfg["includes"]] + [HERE / "include"], cfg["defines"])
-    state = {"clang": clangast.clang_binary(), "root": root, "flags": flags, "out": out,
-             "names": cfg["names"], "groups": cfg["groups"]}
+            prep.copy_tree(source / d, root / d, candidates=replacements["candidates"], used=used, drafts=drafts,
+                           prefix=d, aliases=replacements["aliases"], long_long_128=replacements["long_long_128"],
+                           overrides=replacements["overrides"], overridden=overridden)
+    return used, overridden
 
+
+def override_problems(root: Path, replacements: dict, overridden: set[str]) -> list[str]:
+    """What the overrides did not do, as index problems: no matched definition to replace, or C
+    that defines no function of its name."""
+    undefined = replacements["undefined"]
+    # Of those that stood aside, the ones with a matched definition (still in the prepared copy).
+    prepared = [p.read_text(errors="replace") for p in root.rglob("*.c")] if undefined else []
+    matched = {name for name in undefined if any(prep.has_definition(text, name) for text in prepared)}
+    problems: list[str] = [f"overrides: {name} has no matched definition to replace"
+                           for name in sorted((set(replacements["overrides"]) - overridden)
+                                              | (set(undefined) - matched))]
+    problems += [f"overrides: the C for {name} defines no {name} (a readable name names.h no longer has?); "
+                 "the matched C stays" for name in sorted(matched)]
+    return problems
+
+
+def new_program(cfg: dict, source: Path) -> Program:
+    """The program's names, groups and symbol tables, read before any unit."""
     program = Program()
     program.set_names(cfg["names"].get("code"), cfg["names"].get("data"))
     program.groups = cfg["groups"]
     for table in cfg["symbols"]:
         read_symbols(source / table, program)
-    # Of those that stood aside, the ones with a matched definition (still in the prepared copy).
-    prepared = [p.read_text(errors="replace") for p in root.rglob("*.c")] if undefined else []
-    matched = {name for name in undefined if any(prep.has_definition(text, name) for text in prepared)}
-    problems: list[str] = [f"overrides: {name} has no matched definition to replace"
-                           for name in sorted((set(overrides) - overridden) | (set(undefined) - matched))]
-    problems += [f"overrides: the C for {name} defines no {name} (a readable name names.h no longer has?); "
-                 "the matched C stays" for name in sorted(matched)]
+    return program
+
+
+def configure_program(program: Program, args: argparse.Namespace, cfg: dict, source: Path) -> dict:
+    """The places, the host's functions and the hostgen.json lists the lowering reads, set on the
+    program. Returns the signatures the port's own versions give (symbol -> text).
+    Raises ValueError for a hook point libraries.tsv spells wrongly."""
     if cfg.get("places"):
         read_places(source / cfg["places"], program)
     if cfg.get("split_places"):
         read_split_places(args.game.parent / cfg["split_places"], program)
     host_rows = host_table(args.game.parent, cfg)
-    host_sigs = {sym: sig for sym, (_name, sig) in host_rows.items()}
     program.host = set(cfg.get("host_functions", [])) | set(host_rows)
     program.wrap = wrapped(args.game.parent, cfg)
     program.wrap_host = wrapped_by_host(args.game.parent, cfg)
-    try:
-        program.hook = hooked(args.game.parent, cfg)
-    except ValueError as e:
-        print(f"hostgen: error: {e}", file=sys.stderr)
-        return 1
+    program.hook = hooked(args.game.parent, cfg)
     # The executable's data that level programs carry at other addresses (guest.h, per-level
     # relocation): [low, high), or none.
     program.relocate = cfg.get("relocate")
@@ -999,7 +1022,13 @@ def main(argv: list[str] | None = None) -> int:
     # Functions whose float arithmetic is the EE's, computed in software (hostgen.json "ps2_float";
     # openrac/ps2float.h): lower.py.
     program.ps2_float = set(cfg.get("ps2_float", []))
-    with ProcessPoolExecutor(args.jobs, initializer=_init, initargs=(state,)) as ex:
+    return host_rows
+
+
+def index_units(program: Program, state: dict, units: list[str], jobs: int) -> list[str]:
+    """Every unit's definitions merged into the program (in worker processes); the problems found."""
+    problems: list[str] = []
+    with ProcessPoolExecutor(jobs, initializer=_init, initargs=(state,)) as ex:
         indexed = list(ex.map(_index_one, units))
     # A unit read while another rewrote a header they share can fail to read, and its definitions
     # would be missing from the program (the prototypes then said what a caller's declaration
@@ -1012,6 +1041,13 @@ def main(argv: list[str] | None = None) -> int:
         problems += [f"{rel}: {p}" for p in probs]
         if part is not None:
             problems += merge(program, part)
+    return problems
+
+
+def settle_signatures(program: Program, cfg: dict, source: Path, host_sigs: dict[str, str]) -> list[str]:
+    """What the program knows beyond its units' definitions: functions whose C is left to the
+    assembly, the catalogues, the roots, the port's own signatures, the widened parameters and
+    results. The problems found."""
     # C a game translates from the function's instructions instead (hostgen.json "from_assembly"):
     # matching C whose declaration leaves out what its callers pass in registers it forwards (a
     # wrapper that hands its second and third arguments on without naming them). Its definition
@@ -1023,8 +1059,8 @@ def main(argv: list[str] | None = None) -> int:
         if f is not None and f.unit is not None and not f.static:
             program.functions[sym] = Function(sym, f.sig, None, asm=True, declared=f.declared)
     # A "ps2_float" name with no C hostgen translates (none, or the port's host C) changes nothing.
-    problems += [f"ps2_float: {sym} has no C here to translate" for sym in sorted(program.ps2_float)
-                 if getattr(program.functions.get(sym), "unit", None) is None or sym in program.host]
+    problems = [f"ps2_float: {sym} has no C here to translate" for sym in sorted(program.ps2_float)
+                if getattr(program.functions.get(sym), "unit", None) is None or sym in program.host]
     for table in cfg.get("catalogues", []):
         read_catalogue(source / table, program)
     # A verified indirect entry can be absent even from the catalogue.
@@ -1047,9 +1083,14 @@ def main(argv: list[str] | None = None) -> int:
     program.results_widened = widen_returns(program)
     problems += [f"spilled_locals: {sym} is not a function of the program"
                  for sym in sorted(program.spilled_locals) if sym not in program.functions]
-    # Functions with no C whose assembly the game's setup wrote (hostgen.json "asm"): C from their
-    # instructions, so the port runs them instead of stubs (asmc.py). Before the units, so calls to
-    # them are matched to the signatures they are written with.
+    return problems
+
+
+def translate_from_assembly(program: Program, args: argparse.Namespace, cfg: dict, source: Path) -> tuple[dict, dict, list[str]]:
+    """Functions with no C whose assembly the game's setup wrote (hostgen.json "asm"): C from
+    their instructions, so the port runs them instead of stubs (asmc.py). Before the units, so
+    calls to them are matched to the signatures they are written with. Returns the stage's
+    report, its results and the functions whose results were inherited from tail calls."""
     # The port's own C for the game (its host/, and its game's shared one, rac1's ../rac1/host):
     # what it calls keeps the signature it calls it by.
     host_dirs = [args.game.parent / "host", args.game.parent.parent / str(cfg.get("game", "")) / "host"]
@@ -1069,10 +1110,15 @@ def main(argv: list[str] | None = None) -> int:
         for name, why in sorted(asmc.write_console(asm_stage, args.asm_console.resolve(), names).items()):
             print(f"hostgen: {name}: no console form: {why}", file=sys.stderr)
     inherited = inherited_early + inherit_results(program)
-    state["program"] = program
-    with ProcessPoolExecutor(args.jobs, initializer=_init, initargs=(state,)) as ex:
-        reports = list(ex.map(_lower_one, units))
+    return asm_stage, asm_results, inherited
 
+
+def write_outputs(out: Path, args: argparse.Namespace, cfg: dict, program: Program, units: list[str],
+                  reports: list[UnitReport], problems: list[str], host_rows: dict, used: set[str],
+                  overridden: set[str], inherited: list[str], asm_stage: dict, asm_results: dict) -> dict | None:
+    """Every file after the units': the program's files, the libraries, the hooks, the assembly's,
+    units.txt and the report. Returns the report's summary, or None when a hook point has no
+    signature a hook can take (said)."""
     extra = write_program_files(program, out, cfg.get("title", cfg.get("name", args.game.parent.name)))
     extra["roots"] = cfg.get("roots", [])
     extra["candidates_used"] = sorted(used)
@@ -1088,7 +1134,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"hostgen: error: hook point {sym} has no signature a hook can take "
               "(no prototype, a record by value, a double or varargs)", file=sys.stderr)
     if extra["hooks_skipped"]:
-        return 1
+        return None
     extra["index_problems"] = problems
     # An override that is not used leaves the port running C its table says it replaces: said.
     for p in problems:
@@ -1098,21 +1144,86 @@ def main(argv: list[str] | None = None) -> int:
     extra["asm"] = asm_stage
     (out / "units.txt").write_text("".join(generated_name(u) + "\n" for u in units)
                                    + "".join(f + "\n" for f in asm_files))
-    summary = write_report(out, reports, program, extra, cfg.get("title", cfg.get("name", "")))
-    if not args.quiet:
-        print(f"hostgen: {summary['units']} units, {summary['functions_translated']} functions translated, "
-              f"{summary['functions_from_assembly']} from assembly, "
-              f"{summary['functions_stubbed']} stubbed, {summary['functions_without_c']} without C, "
-              f"in {time.time() - started:.0f} s; report in {out / 'report.md'}")
-    # A unit Clang cannot read is left out whole: every function in it goes missing and the game
-    # fails somewhere else, much later. So it stops the build here, with Clang's own words.
+    return write_report(out, reports, program, extra, cfg.get("title", cfg.get("name", "")))
+
+
+def stop_for_unreadable_units(reports: list[UnitReport], allow_unreadable: bool) -> bool:
+    """A unit Clang cannot read is left out whole: every function in it goes missing and the game
+    fails somewhere else, much later. So it stops the build here, with Clang's own words. Returns
+    whether it stops."""
     unreadable = [(r.unit, p) for r in reports for p in r.problems if p.startswith("Clang could not")]
-    if unreadable and not args.allow_unreadable:
+    if unreadable and not allow_unreadable:
         for unit, problem in unreadable:
             print(f"hostgen: {unit}: {problem[:600]}", file=sys.stderr)
         print(f"hostgen: {len(unreadable)} source file(s) Clang cannot read; each would be left out of the game "
               "with all its functions. Fix the declarations named above (--allow-unreadable builds without them).",
               file=sys.stderr)
+        return True
+    return False
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_arguments(argv)
+    cfg = load_config(args.game)
+    apply_assembly_options(cfg, args)
+    source = args.source.resolve()
+    out = args.out.resolve()
+    try:
+        derived_table = add_derived_names(cfg, args, source)
+    except derived.Missing as e:
+        print(f"hostgen: error: {e}", file=sys.stderr)
+        return 1
+    if args.list:
+        print_outputs(source, cfg)
+        return 0
+    # The translation is skipped when what it reads is what it last wrote from.
+    digest = inputs_digest(source, args.game.resolve(), cfg, args.only + ["--allow-unreadable"] * args.allow_unreadable)
+    if is_up_to_date(out, digest, source, cfg):
+        if not args.quiet:
+            print(f"hostgen: {out} is up to date")
+        return 0
+    stamp = out / "inputs.sha256"
+    stamp.unlink(missing_ok=True)
+    warn_of_uncovered_names(derived_table, source, cfg, args)
+    root = out / "prep"
+    # The lock the units take to rewrite a prepared header (clangast.drop_superseded_declarations),
+    # left behind by a translation that was stopped.
+    shutil.rmtree(root / ".openrac-header.lock", ignore_errors=True)
+    started = time.time()
+    replacements = read_replacements(args, cfg, source)
+    used, overridden = prepare_sources(args, cfg, source, root, replacements)
+    units = units_of(root, cfg)
+    if args.only:
+        units = [u for u in units if u in args.only]
+    flags = clangast.base_flags([Path(i) for i in cfg["includes"]] + [HERE / "include"], cfg["defines"])
+    state = {"clang": clangast.clang_binary(), "root": root, "flags": flags, "out": out,
+             "names": cfg["names"], "groups": cfg["groups"]}
+
+    program = new_program(cfg, source)
+    problems = override_problems(root, replacements, overridden)
+    try:
+        host_rows = configure_program(program, args, cfg, source)
+    except ValueError as e:
+        print(f"hostgen: error: {e}", file=sys.stderr)
+        return 1
+    problems += index_units(program, state, units, args.jobs)
+    host_sigs = {sym: sig for sym, (_name, sig) in host_rows.items()}
+    problems += settle_signatures(program, cfg, source, host_sigs)
+    asm_stage, asm_results, inherited = translate_from_assembly(program, args, cfg, source)
+    state["program"] = program
+    with ProcessPoolExecutor(args.jobs, initializer=_init, initargs=(state,)) as ex:
+        reports = list(ex.map(_lower_one, units))
+
+    summary = write_outputs(out, args, cfg, program, units, reports, problems, host_rows, used, overridden,
+                            inherited, asm_stage, asm_results)
+    if summary is None:
+        return 1
+    if not args.quiet:
+        print(f"hostgen: {summary['units']} units, {summary['functions_translated']} functions translated, "
+              f"{summary['functions_from_assembly']} from assembly, "
+              f"{summary['functions_stubbed']} stubbed, {summary['functions_without_c']} without C, "
+              f"in {time.time() - started:.0f} s; report in {out / 'report.md'}")
+    if stop_for_unreadable_units(reports, args.allow_unreadable):
         return 1
     stamp.write_text(digest + "\n")
     return 0

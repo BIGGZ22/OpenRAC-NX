@@ -334,7 +334,7 @@ pub const GOLD_BOLTS_PER_PLANET: [usize; 19] = [0, 3, 4, 3, 1, 2, 2, 2, 2, 2, 2,
 pub const SHIP_PLANETS: std::ops::RangeInclusive<usize> = 1..=16;
 
 /// What kind of thing an item is, for the page.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub enum ItemKind {
     Weapon,
@@ -406,7 +406,7 @@ const VENDOR_EMPTY: u8 = 0xff;
 
 /// Health upgrades: Premium Nanotech (max 5) and Ultra Nanotech (max 8), as challenge mode
 /// restores them (PAL `func_00227DB0`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub enum Nanotech {
     Standard,
@@ -424,7 +424,7 @@ impl Nanotech {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemState {
     pub id: usize,
@@ -435,7 +435,7 @@ pub struct ItemState {
     pub gold: Option<bool>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct PlanetState {
     pub id: usize,
@@ -445,7 +445,7 @@ pub struct PlanetState {
 }
 
 /// The fields the page edits, sent back unchanged or changed.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveFields {
     /// The planet the save loads on (a level number, 0..=18).
@@ -460,7 +460,7 @@ pub struct SaveFields {
 }
 
 /// Names and limits for the page: what it shows next to the fields.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemInfo {
     pub id: usize,
@@ -470,7 +470,7 @@ pub struct ItemInfo {
     pub has_gold: bool,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct PlanetInfo {
     pub id: usize,
@@ -483,7 +483,7 @@ pub struct PlanetInfo {
 }
 
 /// A slot as the page shows it.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct SaveView {
     pub serial: String,
@@ -512,7 +512,7 @@ pub struct SaveView {
 
 /// One chunk as the advanced editor shows it: where it is, its id and size, what it is (in a
 /// player's words where it is known), and its bytes as hex.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ChunkView {
     /// `None` for the global section, else the planet's level number.
@@ -526,7 +526,7 @@ pub struct ChunkView {
 }
 
 /// A raw replacement of one chunk's bytes (the advanced editor). The size cannot change.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct RawPatch {
     pub section: Option<usize>,
@@ -535,7 +535,7 @@ pub struct RawPatch {
 }
 
 /// What a write changes: the checked fields of the default mode, or raw chunks (advanced mode).
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum SaveChange {
     Fields { fields: SaveFields },
@@ -1089,7 +1089,7 @@ fn same_data(a: &SaveFile, b: &SaveFile) -> bool {
 }
 
 /// What a write did: the backup taken before it, and the save as it now is.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct WriteResult {
     pub backup: SaveBackupInfo,

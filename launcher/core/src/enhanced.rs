@@ -149,7 +149,7 @@ fn written(value: &Value) -> String {
 
 /// How far the version's probe bakes are: its exported levels, the ones whose bake is current,
 /// and the ones whose last bake failed.
-#[derive(Debug, Clone, Default, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct BakeStatus {
     /// The bake can run: the levels are there and so is the baker; else `why` says what is missing.
@@ -247,7 +247,7 @@ pub fn version_bake_status(config: &crate::config::Config, key: &str) -> BakeSta
 }
 
 /// The entry as the Mods tab shows it: a mod's row and page, with the bake's status beside it.
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct EnhancedView {
     #[serde(rename = "mod")]

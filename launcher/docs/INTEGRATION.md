@@ -384,5 +384,5 @@ These are not the launcher's to settle alone ([AGENTS.md](../../AGENTS.md), rule
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | A game.json gains a version             | an entry in `actions.json` (the tests insist) and, for a new game, a theme in `src/lib/themes.ts` (the tests insist) |
 | A game's build commands or output paths | its actions' `args`, `artifact` and `docs`                                                                           |
-| A Rust command or type                  | `src/lib/api.ts` and `src/lib/mock.ts`                                                                               |
+| A Rust command or type                  | `src/lib/api.ts` and `src/lib/mock.ts`; a type: also `src/lib/generated/` (regenerated, ARCHITECTURE.md)             |
 | The website's colours or cards          | `src/app.css`, `src/lib/themes.ts` ([STYLE.md](STYLE.md))                                                            |
