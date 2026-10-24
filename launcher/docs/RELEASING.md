@@ -122,15 +122,13 @@ git push origin launcher-vX.Y.Z
    (`github.repository`), so a fork's builds update from the fork's releases with no setting.
    The player can switch channels in Settings: Stable (the latest release) or Development
    (`launcher-dev-<branch>` of the branch the launcher was built from; `launcher-dev-master` for a
-   release's build). A fork's launcher also has a Branch field there: with Development, it
-   follows `launcher-dev-<branch>` of any branch of the fork its CI built (Settings offers the
-   ones published), the branch it was built from when the field is empty. OpenRAC's own launcher
-   has no such field. A switch takes effect with the first build on that channel newer than the
+   release's build). A fork's launcher can pick another branch of the fork for Development
+   (Settings, Branch). A switch takes effect with the first build on that channel newer than the
    one installed, since neither version numbers nor Android go back: from Development to Stable,
    the next release. So that Development stays ahead of the latest release, raise the version in
-   `tauri.conf.json` on master once a release is tagged; until then the builds of a branch count
-   from the next patch by themselves (`scripts/dev_version.sh`: a version whose `launcher-v` tag is
-   in the repository or in OpenRAC's own is skipped), so they never fall behind a release. The APK carries `X.Y.Z-dev.<run>` as its version; the
+   `tauri.conf.json` on master once a release is tagged. Until then a branch's builds take the
+   next patch by themselves (`scripts/dev_version.sh` skips a version that has a `launcher-v`
+   tag). The APK carries `X.Y.Z-dev.<run>` as its version; the
    desktop packages keep `X.Y.Z` (an MSI takes no `-dev`, an RPM no `-`) and carry the run in the
    program (`OPENRAC_LAUNCHER_BUILD`, which their updater compares with).
    A fork needs its own `TAURI_SIGNING_PRIVATE_KEY` (and, when its key is not the project's,

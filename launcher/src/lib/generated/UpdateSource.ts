@@ -3,8 +3,8 @@
 /**
  * Where a launcher looks for its updates, read from its manifest's address (tauri.conf.json's
  * `plugins.updater.endpoints`, set by the build to the repository that built it: a fork's
- * launcher reads the fork's releases). Shown on the Settings page, which cannot change it (a
- * fork's chooses the branch of its development builds there: UpdateSource::chosen).
+ * launcher reads the fork's releases). Shown on the Settings page; a fork's launcher can pick
+ * another branch for its development builds there ([`UpdateSource::chosen`]).
  */
 export type UpdateSource = { 
 /**
@@ -12,8 +12,7 @@ export type UpdateSource = {
  */
 repository: string, 
 /**
- * A GitHub repository other than OpenRAC's own (UPSTREAM): a fork, whose player may follow
- * any of its branches.
+ * A GitHub repository other than [`UPSTREAM`].
  */
 fork: boolean, 
 /**

@@ -63,15 +63,14 @@ pub fn is_newer(current: &str, latest: &str) -> bool {
 
 /// Where a launcher looks for its updates, read from its manifest's address (tauri.conf.json's
 /// `plugins.updater.endpoints`, set by the build to the repository that built it: a fork's
-/// launcher reads the fork's releases). Shown on the Settings page, which cannot change it (a
-/// fork's chooses the branch of its development builds there: UpdateSource::chosen).
+/// launcher reads the fork's releases). Shown on the Settings page; a fork's launcher can pick
+/// another branch for its development builds there ([`UpdateSource::chosen`]).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateSource {
     /// `owner/name` of the GitHub repository; the address itself when it is not one.
     pub repository: String,
-    /// A GitHub repository other than OpenRAC's own (UPSTREAM): a fork, whose player may follow
-    /// any of its branches.
+    /// A GitHub repository other than [`UPSTREAM`].
     pub fork: bool,
     /// The release it reads: None for the repository's latest, else that release's tag (a
     /// branch's rolling `launcher-dev-<branch>`).
@@ -82,7 +81,7 @@ pub struct UpdateSource {
     pub page: String,
 }
 
-/// The repository OpenRAC's own launchers are built from; a launcher built anywhere else is a fork's.
+/// OpenRAC's own repository; a launcher built anywhere else is a fork's.
 pub const UPSTREAM: &str = "OpenRAC/OpenRAC";
 
 /// The tag of BRANCH's rolling development release, as CI names it (launcher.yml: every character
@@ -168,8 +167,8 @@ impl UpdateSource {
         source(&format!("https://github.com/{}/releases/download/{tag}/latest.json", self.repository))
     }
 
-    /// Where the player's choice points: `channel`, and on a fork's development channel the builds
-    /// of BRANCH when one is named (Settings). OpenRAC's own launcher follows only its own branch.
+    /// The source for the player's `channel`; on a fork's development channel, `branch` replaces
+    /// the built branch when given. OpenRAC's own launcher ignores `branch`.
     pub fn chosen(&self, channel: Channel, branch: Option<&str>) -> UpdateSource {
         match branch.map(str::trim).filter(|b| !b.is_empty()) {
             Some(branch) if channel == Channel::Dev && self.fork => self.on_branch(branch),

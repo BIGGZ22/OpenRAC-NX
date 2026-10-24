@@ -29,7 +29,7 @@ python3 port/tools/regress/regress.py run --game rac1-ntsc --build ../other/port
   (US); in a worktree, the main checkout's.
 - `--jobs N` runs N levels at once (default 6).
 - A run without `--out` becomes `latest:<game>`, the default of `baseline
-save` and `check`; one with `--out` (another build's) is kept apart.
+  save` and `check`; one with `--out` (another build's) is kept apart.
 
 Each level runs with `OPENRAC_HIDDEN=1` (a window never shown),
 `SDL_AUDIODRIVER=dummy`, `OPENRAC_UNCAPPED=1`, `OPENRAC_AUDIO_TICKED=1`,
@@ -37,13 +37,13 @@ Each level runs with `OPENRAC_HIDDEN=1` (a window never shown),
 whatever the player chose). The run prints one line per level and writes
 `RUN/run.json` with each level's outcome:
 
-| Outcome      |                                                                                                                                       |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `ok`         | the route played to its end                                                                                                           |
-| `no-control` | the run ended (`max_frames`) before the player had control                                                                            |
-| `crash`      | the process stopped on a fault or an error code; `notes` has the crash report's reason and the game functions on top of its backtrace |
-| `hang`       | no end before the route's `timeout` (seconds); the process is stopped                                                                 |
-| `exit`       | it ended on its own between control and the route's end                                                                               |
+| Outcome | |
+|---|---|
+| `ok` | the route played to its end |
+| `no-control` | the run ended (`max_frames`) before the player had control |
+| `crash` | the process stopped on a fault or an error code; `notes` has the crash report's reason and the game functions on top of its backtrace |
+| `hang` | no end before the route's `timeout` (seconds); the process is stopped |
+| `exit` | it ended on its own between control and the route's end |
 
 `RUN/LL/` keeps level LL's `trace.jsonl`, `reach.json`, `run.log` and
 settings. A crash report also goes to the data folder's `crashes/`, as for
@@ -76,12 +76,12 @@ each field over the whole route, which tells a drift from a broken routine:
 level 14 Oltanis         diverges at c=47 (frames 510/570): cam [252.593, 149.646, 48.156] vs [252.561, 149.590, 48.156]; largest gap cam 14.451, fw 1.094
 ```
 
-| Field            |                                                                                                    | Tolerance                                            |
-| ---------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `lv`, `m`        | the level (-1 the boot program), the game mode (0 play, 2 scene, 3 pause, 6 loading or the flight) | exact                                                |
-| `cam`, `fw`      | the camera the world was drawn from: position, forward row                                         | `position` 0.05, `direction` 0.01                    |
-| `hp`, `hr`, `hs` | the hero: position, rotation (z the yaw), state id                                                 | `position`, `angle` 0.01 (wrapping at a turn), exact |
-| `mb`, `dr`       | the live mobys, the layers drawn (1 sky, 2 terrain, 4 ties, 8 shrubs, 16 mobys)                    | exact                                                |
+| Field | | Tolerance |
+|---|---|---|
+| `lv`, `m` | the level (-1 the boot program), the game mode (0 play, 2 scene, 3 pause, 6 loading or the flight) | exact |
+| `cam`, `fw` | the camera the world was drawn from: position, forward row | `position` 0.05, `direction` 0.01 |
+| `hp`, `hr`, `hs` | the hero: position, rotation (z the yaw), state id | `position`, `angle` 0.01 (wrapping at a turn), exact |
+| `mb`, `dr` | the live mobys, the layers drawn (1 sky, 2 terrain, 4 ties, 8 shrubs, 16 mobys) | exact |
 
 `--fields` picks fields, `--tol position=0.2` changes a tolerance. A level
 without control on one side is "not compared". The exit code is 1 when
@@ -118,13 +118,13 @@ writes the sites a run called. `reach` merges a run's levels into one list
 per version, ranked by how many levels reached a function, then by its
 calls:
 
-| Kind           |                                                                                                                                                               |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `asm`          | still assembly in the decompilation: its stub did nothing                                                                                                     |
-| `no-c`         | declared, defined nowhere                                                                                                                                     |
-| `untranslated` | C that hostgen cannot write yet (its report says why)                                                                                                         |
-| `missing`      | hand C's own report of a function without C                                                                                                                   |
-| `zero-args`    | the function made a call with an argument filled with 0 (the callee and argument follow the arrow): on the console that register held whatever was last there |
+| Kind | |
+|---|---|
+| `asm` | still assembly in the decompilation: its stub did nothing |
+| `no-c` | declared, defined nowhere |
+| `untranslated` | C that hostgen cannot write yet (its report says why) |
+| `missing` | hand C's own report of a function without C |
+| `zero-args` | the function made a call with an argument filled with 0 (the callee and argument follow the arrow): on the console that register held whatever was last there |
 
 It is the order to backfill or fix in for gameplay
 ([BACKFILL.md](../workflow/BACKFILL.md)), next to hostgen's static frontier.
@@ -192,27 +192,27 @@ own, and its routes' keys are the level routes' (`level`, `name`, `sequence`
 or `steps`, `length`, `max_frames`, `timeout`, `versions`, a version's own
 keys under its id) and:
 
-| Key               |                                                                                                                                                                      |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `start`           | `direct` (the default: `OPENRAC_DIRECT` with `--level`) or `title`: from the boot screens, with the route's `boot` presses (window frames) through the title's menus |
-| `until`           | `control` (the default) or `frames`: a route that never gets control (the title's menus) plays to `max_frames` and is `ok` when it got there                         |
-| `card`            | `prepared`: the run plays on a fresh copy of the prepared card instead of `--no-card`                                                                                |
-| `points`, `lists` | named places (`[x, y, z]` or `[x, y, z, yaw]`) and lists for the steps                                                                                               |
-| `then`            | steps added to the sequence's (a death route's teleport)                                                                                                             |
+| Key | |
+|---|---|
+| `start` | `direct` (the default: `OPENRAC_DIRECT` with `--level`) or `title`: from the boot screens, with the route's `boot` presses (window frames) through the title's menus |
+| `until` | `control` (the default) or `frames`: a route that never gets control (the title's menus) plays to `max_frames` and is `ok` when it got there |
+| `card` | `prepared`: the run plays on a fresh copy of the prepared card instead of `--no-card` |
+| `points`, `lists` | named places (`[x, y, z]` or `[x, y, z, yaw]`) and lists for the steps |
+| `then` | steps added to the sequence's (a death route's teleport) |
 
 and the steps can do more than press. Each becomes `OPENRAC_WRITE` entries
 counted from control, at the version's own addresses (`routes.json`
 `addresses`, paired by the version map):
 
-| Step key   |                                                                                                                                             |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Step key | |
+|---|---|
 | `teleport` | the hero to `[x, y, z]` (10 frames, `hold_place` to change it), and to the yaw when a fourth number is there (50 frames); or a point's name |
-| `yaw`      | the hero's yaw                                                                                                                              |
-| `give`     | a list of `items` (`all`): owned and acquired, the ammo full                                                                                |
-| `equip`    | an item id into the hero's pending item (include/hero.h `pending_item[0]`): the game's own switch puts it in his hand                       |
-| `health`   | the hero's hit points (0 kills him)                                                                                                         |
-| `write`    | `{"address": "hero+0x22A8" or "0x...", "value": ..., "frames": N}`                                                                          |
-| `each`     | `{"at", "each": LIST, "every": N, "do": [steps]}`: the block once for every entry, `$` the entry                                            |
+| `yaw` | the hero's yaw |
+| `give` | a list of `items` (`all`): owned and acquired, the ammo full |
+| `equip` | an item id into the hero's pending item (include/hero.h `pending_item[0]`): the game's own switch puts it in his hand |
+| `health` | the hero's hit points (0 kills him) |
+| `write` | `{"address": "hero+0x22A8" or "0x...", "value": ..., "frames": N}` |
+| `each` | `{"at", "each": LIST, "every": N, "do": [steps]}`: the block once for every entry, `$` the entry |
 
 A skip with `"from": "scene"` presses Start from the frame what plays became
 skippable (`s` below), so a scene's skip falls on the same tick of it in
@@ -223,13 +223,13 @@ a route starts after control (`S`).
 
 `wide` widens what a run reaches, for both versions alike:
 
-| Routes                                                                                                                                                                                                                                    | What they play                                                                                                                                                                                                                                                                                                                                                         |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LL-long`, one a level                                                                                                                                                                                                                    | every item given; the level's path (up to ten places from its own data, `points.py` below), at each a teleport, a walk, a jump, the wrench, Triangle and a thrown wrench; the first vendor (open, move, buy, leave); the pause menu and the map opened and closed; the quick select; then each weapon and gadget equipped and fired three times (the Suck Cannon last) |
-| `01-pause-0` to `-6`                                                                                                                                                                                                                      | Novalis: the pause menu, then its page N opened, moved in and left; one route a page, so a page that stops the game leaves the others to run                                                                                                                                                                                                                           |
-| `03-fall`, `09-fall`, `05-health`, `12-enemies`, `03-dogs`, `11-swim`                                                                                                                                                                     | deaths and respawns through to control: a teleport below the level, the hit points to 0, one hit point among Hoven's troopers and Kerwan's robot dogs; Pokitaru's water                                                                                                                                                                                                |
-| `00-clank`, `05-hoverboard-girl`, `05-bouncer`, `16-hoverboard`, `11-jet-fighter`, `13-qwark`, `07-snagglebeast`, `15-giant-clank`, `18-giant-clank`, `18-drek`, `06-clank`, `10-clank`, `12-turret`, `09-turret`, `17-turret`, `03-ship` | set pieces a direct start reaches: next to the moby that starts one, Triangle, then play on (Start skips the scenes they start). Orxon's Clank runs without items (the O2 mask would let Ratchet go)                                                                                                                                                                   |
-| `title-new`, `title-load-0` to `-4`, `title-options`, `title-idle`                                                                                                                                                                        | the title: a new game (no card) into Veldin's routes, each prepared save loaded (Load Game, slot N) and played, the options pages, the title left alone                                                                                                                                                                                                                |
+| Routes | What they play |
+|---|---|
+| `LL-long`, one a level | every item given; the level's path (up to ten places from its own data, `points.py` below), at each a teleport, a walk, a jump, the wrench, Triangle and a thrown wrench; the first vendor (open, move, buy, leave); the pause menu and the map opened and closed; the quick select; then each weapon and gadget equipped and fired three times (the Suck Cannon last) |
+| `01-pause-0` to `-6` | Novalis: the pause menu, then its page N opened, moved in and left; one route a page, so a page that stops the game leaves the others to run |
+| `03-fall`, `09-fall`, `05-health`, `12-enemies`, `03-dogs`, `11-swim` | deaths and respawns through to control: a teleport below the level, the hit points to 0, one hit point among Hoven's troopers and Kerwan's robot dogs; Pokitaru's water |
+| `00-clank`, `05-hoverboard-girl`, `05-bouncer`, `16-hoverboard`, `11-jet-fighter`, `13-qwark`, `07-snagglebeast`, `15-giant-clank`, `18-giant-clank`, `18-drek`, `06-clank`, `10-clank`, `12-turret`, `09-turret`, `17-turret`, `03-ship` | set pieces a direct start reaches: next to the moby that starts one, Triangle, then play on (Start skips the scenes they start). Orxon's Clank runs without items (the O2 mask would let Ratchet go) |
+| `title-new`, `title-load-0` to `-4`, `title-options`, `title-idle` | the title: a new game (no card) into Veldin's routes, each prepared save loaded (Load Game, slot N) and played, the options pages, the title left alone |
 
 `points.py LEVEL` prints a level's places from the extracted
 `placements.json`: the hero's start, the respawn points (class 805, the
@@ -241,7 +241,7 @@ things.
 ### The prepared card
 
 `regress.py card --game G` copies a memory card (the player's,
-`$OPENRAC_DATA_HOME/memcard/<serial>`, or without it
+`$OPENRAC_DATA_HOME/memcard/<serial>`, else
 `~/Library/Application Support/OpenRAC/memcard/<serial>` on macOS, only
 read; `--from DIR` another) to `build/regress/cards/G/card` and rewrites the
 copy's five slots from the first saved game on it: every weapon and gadget
@@ -259,14 +259,14 @@ fresh copy of it in its run folder: the player's card is never touched.
 
 ## The port's switches
 
-| Switch                                                 |                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `OPENRAC_TRACE=FILE`                                   | one JSON line a tick: `f` window frame, `c` frames since control (null before), `lv`, `m`, `cam`, `fw`, `hp`, `hr`, `hs`, `mb`, `dr` (the table above). The addresses are each version's: the camera and mobys from `viewer::rac1_addresses`, the game mode the loaded level's copy (`openrac_game_mode`) or the boot program's (`openrac_front_end`), the hero from `RAC1_ADDR(0x0013F450)` in rac1's `boot.c` (US position 0x13F3D0) |
-| `OPENRAC_REACH=FILE`                                   | the reached sites as JSON, at exit and every 600 frames                                                                                                                                                                                                                                                                                                                                                                                |
-| `OPENRAC_PRESS` `cF:...`, `kP:...`, `sP:...`, `SP:...` | a press F frames from control; a press held the first frames of every P while Start can skip what plays, until control: `k` on window frames, `s` from the frame what plays became skippable (the same tick of a scene in PAL and US, where window frames fall at other ticks of it); `S` as `s`, after control too                                                                                                                    |
-| `OPENRAC_WRITE` `cF:ADDR:VALUE:N`                      | a word written F frames from control, for N frames                                                                                                                                                                                                                                                                                                                                                                                     |
-| `OPENRAC_CONTROL_FRAMES=N`                             | ends the run N frames after control                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `OPENRAC_AUDIO_TICKED=1`                               | no sound device; sounds advance with the ticks                                                                                                                                                                                                                                                                                                                                                                                         |
+| Switch | |
+|---|---|
+| `OPENRAC_TRACE=FILE` | one JSON line a tick: `f` window frame, `c` frames since control (null before), `lv`, `m`, `cam`, `fw`, `hp`, `hr`, `hs`, `mb`, `dr` (the table above). The addresses are each version's: the camera and mobys from `viewer::rac1_addresses`, the game mode the loaded level's copy (`openrac_game_mode`) or the boot program's (`openrac_front_end`), the hero from `RAC1_ADDR(0x0013F450)` in rac1's `boot.c` (US position 0x13F3D0) |
+| `OPENRAC_REACH=FILE` | the reached sites as JSON, at exit and every 600 frames |
+| `OPENRAC_PRESS` `cF:...`, `kP:...`, `sP:...`, `SP:...` | a press F frames from control; a press held the first frames of every P while Start can skip what plays, until control: `k` on window frames, `s` from the frame what plays became skippable (the same tick of a scene in PAL and US, where window frames fall at other ticks of it); `S` as `s`, after control too |
+| `OPENRAC_WRITE` `cF:ADDR:VALUE:N` | a word written F frames from control, for N frames |
+| `OPENRAC_CONTROL_FRAMES=N` | ends the run N frames after control |
+| `OPENRAC_AUDIO_TICKED=1` | no sound device; sounds advance with the ticks |
 
 ## Tests
 

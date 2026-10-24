@@ -1,7 +1,7 @@
 # The launcher's look
 
 The launcher looks like [openrac.dev](https://openrac.dev): the same dark ink
-background, orange header bar, type and per-game cards, with the OpenRAC logo. Everything
+background, orange header bar, type and per-game cards. Everything
 here comes from [OpenRAC/openrac-site](https://github.com/OpenRAC/openrac-site)
 at commit `2964d72`; when the site changes, change the files in the last
 section to match.
@@ -48,20 +48,16 @@ the two equal.
 
 ## Logo
 
-`src/assets/openrac-logo.svg` is the logo; `src/components/Logo.svelte` draws
-its paths unchanged, in the current colour, cut to one of two views: the whole
-logo, or its mark alone (the first letter: the lombax's head and the bowl of
-the "O") where the name has no room. Nothing else is drawn for it. Its box is
-centred on the capitals of "RAC", with the ears rising above, so it sits level beside text.
+`src/assets/openrac-logo.svg` is the logo. `src/components/Logo.svelte` draws
+its paths as they are, in the current colour, either whole or as the mark
+alone (the "O" with the lombax's head) where the name does not fit. Its box is
+centred on the capitals of "RAC", so it lines up with text beside it; the
+ears stick out above.
 
-| Where                            | What                                                                                                                                                       |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The header bar                   | the whole logo in the bar's ink (`--bar-name`), the head tilting under the pointer; beside it the version, as tall as "RAC"'s capitals and level with them |
-| The bar of a window under 560 px | the mark                                                                                                                                                   |
-| Android's navigation rail        | the mark in `--amber`, the picked game's accent, 53 px wide; under it the destinations' icons in circles, their strokes and names heavier to match it      |
-| The first run's welcome          | the mark in `--amber`, the accent                                                                                                                          |
-
-A place can give the mark its own colour with `--logo-mark`.
+- Header bar: the whole logo in `--bar-name`, the version beside it.
+- Header bar under 560 px: the mark.
+- Android's rail and the first run's welcome: the mark in `--amber`, so it
+  follows the picked game's accent.
 
 ## Type
 
@@ -78,12 +74,12 @@ The fonts are bundled from npm (`@fontsource/audiowide`,
 
 ## Pieces taken from the site
 
-| Site                                                                                                                                                                                                                                                                                              | Launcher                                                                                                                                           |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Header.tsx`: the sticky orange bar, the logo in the bar's ink (the launcher's own, below), round tabs (selected: dark brown with amber text); the version beside the logo, the update button and one capsule holding the site's and Discord's marks wear the selected tab's dark brown with gold | `src/components/Header.svelte`                                                                                                                     |
-| `Progress.tsx`: a game's card, a gradient from its `from` to its `to` colour, boxes with a thick border in its `border` colour, the "Progress / 59,32 %" pair, the bar with a light sweeping across it, the "… of … code bytes matched" line                                                      | `src/components/GameTile.svelte` (smaller), the band in `src/pages/GamePlayer.svelte`, `src/components/ProgressBar.svelte` and `.bar` in `app.css` |
-| `globals.css`: section numbers that count up (`01`, `02`, …), the `rise` and `sweep` animations, reduced motion                                                                                                                                                                                   | `.sec-num`, `.sections`, `.rise`, `.bar` in `app.css`                                                                                              |
-| Numbers: two decimals with a decimal comma (`59,32 %`), bytes grouped with narrow spaces                                                                                                                                                                                                          | `src/lib/format.ts`                                                                                                                                |
+| Site                                                                                                                                                                                                                                         | Launcher                                                                                                                                           |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Header.tsx`: the sticky orange bar, the logo, round tabs (selected: dark brown with amber text), the site and Discord links                                                                                                                 | `src/components/Header.svelte`                                                                                                                     |
+| `Progress.tsx`: a game's card, a gradient from its `from` to its `to` colour, boxes with a thick border in its `border` colour, the "Progress / 59,32 %" pair, the bar with a light sweeping across it, the "… of … code bytes matched" line | `src/components/GameTile.svelte` (smaller), the band in `src/pages/GamePlayer.svelte`, `src/components/ProgressBar.svelte` and `.bar` in `app.css` |
+| `globals.css`: section numbers that count up (`01`, `02`, …), the `rise` and `sweep` animations, reduced motion                                                                                                                              | `.sec-num`, `.sections`, `.rise`, `.bar` in `app.css`                                                                                              |
+| Numbers: two decimals with a decimal comma (`59,32 %`), bytes grouped with narrow spaces                                                                                                                                                     | `src/lib/format.ts`                                                                                                                                |
 
 The launcher's own additions keep to the same palette: pills (a dot and a
 word, coloured by state), rounded buttons (primary ones in the bar's orange),
