@@ -35,10 +35,12 @@ void draw_touch_pad(int window_width, int window_height) {
     SDL_Rect safe{};
     int w = 0;
     int h = 0;
-    if (SDL_GetWindowSafeArea(g->window->sdl(), &safe) && SDL_GetWindowSize(g->window->sdl(), &w, &h) && h > 0) {
+    if (SDL_GetWindowSafeArea(g->window->sdl(), &safe)
+        && SDL_GetWindowSize(g->window->sdl(), &w, &h) && h > 0) {
         const float height = static_cast<float>(h);
-        touch.set_safe_area(static_cast<float>(safe.x) / height,
-                            static_cast<float>(w - safe.x - safe.w) / height);
+        touch.set_safe_area(
+            static_cast<float>(safe.x) / height, static_cast<float>(w - safe.x - safe.w) / height
+        );
     }
     // Android's options are in a drawer (debug_overlay.h), opened with the pad's own button.
     touch.set_menu_button(debug_overlay::drawer_available());
@@ -56,7 +58,8 @@ void apply_mouse_capture() {
     }
     SDL_Window* w = g->window->sdl();
     const bool focused = (SDL_GetWindowFlags(w) & SDL_WINDOW_INPUT_FOCUS) != 0;
-    const bool capture = g->capture_wanted && focused && !debug_overlay::visible() && !debug_menu::is_open();
+    const bool capture =
+        g->capture_wanted && focused && !debug_overlay::visible() && !debug_menu::is_open();
     if (SDL_GetWindowRelativeMouseMode(w) != capture) {
         SDL_SetWindowRelativeMouseMode(w, capture);
     }
@@ -67,7 +70,9 @@ KeyboardMouseView keyboard_mouse() {
     if (!g) {
         return {};
     }
-    KeyboardMouseView view{&g->input.keyboard_mouse(), debug_overlay::visible() || debug_menu::is_open()};
+    KeyboardMouseView view{
+        &g->input.keyboard_mouse(), debug_overlay::visible() || debug_menu::is_open()
+    };
     SDL_Window* w = g->window ? g->window->sdl() : nullptr;
     if (w == nullptr) {
         return view;
@@ -89,16 +94,20 @@ KeyboardMouseView keyboard_mouse() {
     }
     const float px = mx * static_cast<float>(window_width) / static_cast<float>(points_w);
     const float py = my * static_cast<float>(window_height) / static_cast<float>(points_h);
-    const Box box = frame_box(window_width, window_height, picture_aspect(window_width, window_height));
+    const Box box =
+        frame_box(window_width, window_height, picture_aspect(window_width, window_height));
     if (box.width <= 0 || box.height <= 0) {
         return view;
     }
-    const float tv_width = std::min(static_cast<float>(box.width), static_cast<float>(box.height) * kTvAspect);
-    const float tv_x = static_cast<float>(box.x) + (static_cast<float>(box.width) - tv_width) / 2.0f;
+    const float tv_width =
+        std::min(static_cast<float>(box.width), static_cast<float>(box.height) * kTvAspect);
+    const float tv_x =
+        static_cast<float>(box.x) + (static_cast<float>(box.width) - tv_width) / 2.0f;
     view.pointer_x = (px - tv_x) / tv_width;
     view.pointer_y = (py - static_cast<float>(box.y)) / static_cast<float>(box.height);
-    view.pointer_inside = SDL_GetMouseFocus() == w && view.pointer_x >= 0.0f && view.pointer_x <= 1.0f
-                          && view.pointer_y >= 0.0f && view.pointer_y <= 1.0f;
+    view.pointer_inside = SDL_GetMouseFocus() == w && view.pointer_x >= 0.0f
+                          && view.pointer_x <= 1.0f && view.pointer_y >= 0.0f
+                          && view.pointer_y <= 1.0f;
     return view;
 }
 
@@ -151,18 +160,30 @@ bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
             unsigned long frame = 0, mask = 0, length = 5;
             unsigned int lx = 128, ly = 128, rx = 128, ry = 128;
             const char kind = *at == 'c' || *at == 'k' || *at == 's' || *at == 'S' ? *at : 0;
-            const int read = std::sscanf(at + (kind != 0 ? 1 : 0), "%lu:%lx:%lu:%u:%u:%u:%u", &frame, &mask, &length,
-                                         &lx, &ly, &rx, &ry);
+            const int read = std::sscanf(
+                at + (kind != 0 ? 1 : 0),
+                "%lu:%lx:%lu:%u:%u:%u:%u",
+                &frame,
+                &mask,
+                &length,
+                &lx,
+                &ly,
+                &rx,
+                &ry
+            );
             bool active = false;
             if (kind == 'c') {
                 const std::int64_t since = static_cast<std::int64_t>(g->index) - g_route.control;
                 active = g_route.control >= 0 && since >= static_cast<std::int64_t>(frame)
                          && since < static_cast<std::int64_t>(frame + length);
             } else if (kind == 'k') {
-                active = g_route.control < 0 && frame > 0 && skippable() && g->index % frame < length;
+                active =
+                    g_route.control < 0 && frame > 0 && skippable() && g->index % frame < length;
             } else if (kind == 's' || kind == 'S') {
-                active = (kind == 'S' || g_route.control < 0) && frame > 0 && skippable() && g_route.skippable_from >= 0
-                         && (static_cast<std::int64_t>(g->index) - g_route.skippable_from) % static_cast<std::int64_t>(frame)
+                active = (kind == 'S' || g_route.control < 0) && frame > 0 && skippable()
+                         && g_route.skippable_from >= 0
+                         && (static_cast<std::int64_t>(g->index) - g_route.skippable_from)
+                                    % static_cast<std::int64_t>(frame)
                                 < static_cast<std::int64_t>(length);
             } else {
                 active = g->index >= frame && g->index < frame + length;
@@ -200,8 +221,16 @@ bool pad(int port, std::uint16_t* buttons, std::uint8_t analog[4]) {
         static std::uint64_t last_frame[platform::kPadPorts]{};
         if (g->index >= last_frame[port] + 25) {
             last_frame[port] = g->index;
-            log::info("input frame {} port {}: buttons {:#x}, right {} {}, left {} {}",
-                      g->index, port, *buttons, analog[0], analog[1], analog[2], analog[3]);
+            log::info(
+                "input frame {} port {}: buttons {:#x}, right {} {}, left {} {}",
+                g->index,
+                port,
+                *buttons,
+                analog[0],
+                analog[1],
+                analog[2],
+                analog[3]
+            );
         }
     }
     return true;

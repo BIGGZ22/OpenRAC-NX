@@ -204,6 +204,7 @@ extern Pacing pacing;
 // held for kControlHold ticks in a row: a level's program can show mode 0 for a few ticks between
 // loading and its arrival scene, and those are no control.
 constexpr int kControlHold = 30;
+
 struct Route {
     int level = -1;
     int mode = -1;
