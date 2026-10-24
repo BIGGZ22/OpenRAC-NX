@@ -50,6 +50,7 @@ before and after, and how its frames are shown to be the same.
 | `vk-draw-cache` | on | none (exact) | The Vulkan draw finds its pipeline by a hashed fixed key and its descriptor set through arrays kept for their capacity, with no heap allocation ([R-04](#r-04-an-allocation-free-draw)). |
 | `attachment-discard` | on | none (exact) | A Vulkan pass neither stores an attachment `glInvalidateFramebuffer` let go nor has the next pass load it ([R-06](#r-06-attachments-a-pass-does-not-keep)). |
 | `gpu-resident-instances` | on | none (exact) | Static instances are registered in device memory at the level's upload; a view's GPU-driven batch of them sends only its planes, PVS and a group record ([R-15](#r-15-static-instances-resident-on-the-gpu)). |
+| `shadow-static-cache` | off | none (exact) | A sun cascade's static casters are kept in a cache target and copied into the shadow atlas while the cascade's key is unchanged; only the mobys are drawn over them. Off: the copy costs more GPU time than it saves on both measured machines ([R-18](#r-18-a-static-shadow-cache-shipped-off)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -885,3 +886,76 @@ OPENRAC_GL_API=vulkan OPENRAC_VULKAN_PIPELINE_CACHE=off OPENRAC_VULKAN_VALIDATIO
 On real levels the maintainers' command is
 `python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_12 --compare-opt gpu-resident-instances`
 (level_12's 7,468 instances: the research's 1.1 MB a view).
+
+## R-18: a static shadow cache, shipped off
+
+**What changed** (`scene/level_renderer.*`, `enhanced/viewer/shadow_atlas.h`,
+`tests/render_fixture.h`, `enhanced/tests/sun_shadow_test.cpp`):
+
+- `shadow-static-cache`. With Enhanced graphics the shadow atlas (3072 by 3072) is cleared and every
+  caster is drawn into the four sun cascades and the hero map each frame. With the entry on,
+  `LevelScene` keeps a second depth target in the atlas's layout. For each cascade a
+  `StaticShadowKey` holds what its static casters (terrain, ties, shrubs) depend on: the snapped
+  view-projection, the caster volume (the receiver footprint, which culls the casters), whether the
+  hero's casters are the hero map's, and a generation bumped by an upload and by `set_instances` of
+  a static layer. A cascade whose key changed has its rectangle of the cache cleared and its static
+  casters drawn again, with the atlas's own shaders, matrices and indexed viewports; then the atlas
+  starts as an unscaled depth copy of the cache (`glBlitFramebuffer`, which the Vulkan backend
+  carries out as `vkCmdCopyImage` of the depth aspect: the GL table gains nothing) and only the
+  mobys and the hero map are drawn over it. The reversed depth test keeps the nearest of the cached
+  and the new fragments, the same as drawing all of them in one pass, cutouts included (the same
+  discards).
+- Not done: staggering cascade updates over frames and reusing a cascade whose key changed (both
+  show stale shadows), and caster culling against the camera's visible region (the cache's content
+  must not depend on the camera).
+- Found while doing it: the static caster set does not depend on the snapped matrix alone. The
+  receiver culling (`sun_cascades`'s caster volume, `OPENRAC_SUN_RECEIVER_CULL_OFF` turns it off)
+  follows the unsnapped camera, so any camera movement changes every cascade's key:
+  `sun_shadow_test` shows a camera moved 0.0001 units keeping two of four snapped matrices and none
+  of the four keys.
+- New gauges, published by the atlas each frame with the entry on or off: `vk_shadow_draws` and
+  `vk_shadow_triangles` (the atlas's draws and triangles) and `shadow_static_rerenders` (cascades
+  whose static casters were drawn: 4 without the cache).
+
+**The counters and the GPU time**, Enhanced on, 1920x1080, 60 measured frames after 10, five runs a
+setting, the entry switched on in a measurement build (`openrac_render_bench` can only switch an
+entry off, so `render_bench.py --compare-opt` cannot show a default-off entry on):
+
+| Scenario | `vk_shadow_draws` | `vk_shadow_triangles` | `shadow_static_rerenders` | shadow atlas GPU ms, Mac | box1 |
+|---|---|---|---|---|---|
+| static camera, mobys moving (`static-mobys`), off | 755 | 3,976,950 | 4 | 0.131 (0.130 to 0.132) | 0.236 (0.235 to 0.236) |
+| the same, on (every cascade a hit) | 184 | 432,000 | 0 | 0.237 (0.236 to 0.237) | 2.259 (2.259 to 2.259) |
+| walk, off | 844 | 4,440,140 | 4 | 0.159 (0.158 to 0.159) | 0.316 (0.315 to 0.318) |
+| walk, on (every cascade a miss) | 844 | 4,440,140 | 4 | 0.399 (0.398 to 0.401) | 2.433 (2.424 to 2.552) |
+| `creep` (a hundredth of a unit a tick), on | 755 to 756 | | 4 | | |
+
+The draws and triangles fall by 76 and 89 percent on a hit, the same on both machines, but the
+copy of the whole depth image (3072 by 3072: 75.5 MB each way at the Mac's 8-byte depth, 37.7 MB at
+box1's 4-byte depth and stencil) costs more than the draws: the atlas's GPU time grows 1.8 times on
+the Mac and 9.6 times on box1, where copying the NVIDIA depth-stencil image is slow. With a moving
+camera every cascade misses and the copy is added to the full redraw. The picture's CPU time
+(information) on the static camera falls from 1.50 to 1.35 ms on the Mac and grows from 3.44 to
+5.03 ms on box1 (its frame waits for the GPU). So the entry ships off, as the brief requires when
+the GPU time is not lower. What could make a cache pay is a cheaper composition (copying only the
+four cascade rectangles, or a depth pass that samples the cache) and a cache key without the
+camera-dependent caster volume (drawing the cached static layer against the snapped square map,
+which changes the atlas's content outside the receiver footprint and so needs the maintainers'
+acceptance): follow-ups in PROGRESS.md.
+
+**Equivalence.** `render_equivalence_vulkan` compares the entry on against off in every scenario,
+the new `creep` one included (cascades that stay or move by a texel), static camera with moving
+mobys, the reupload, Enhanced off and on, byte for byte under the validation layer: identical, no
+validation message, on the Mac and box1. The frames compared are the final pictures, which sample
+every cascade; reading the atlas back in the test is not done (the test program is outside R-18's
+paths). `sun_shadow_vulkan`, `sun_shadow_filter_reference_vulkan`, `hero_shadow_vulkan` and the
+whole release preset pass on both machines (on box1 one GLES test, `renderer_shader_es`, failed once
+in a full run and passed alone twice, beside NVIDIA Xid faults; see R-05's note), the headless preset
+on the Mac.
+
+Measured with (the entry's default switched to on in `render_opt.cpp` for the "on" rows):
+
+```sh
+OPENRAC_GL_API=vulkan port/build/release/openrac_render_bench --enhanced on --scenario static-mobys --frames 60 --warmup 10
+OPENRAC_GL_API=vulkan port/build/release/openrac_render_bench --enhanced on --scenario walk --frames 60 --warmup 10
+# the "off" rows: the same with --opt-off shadow-static-cache
+```

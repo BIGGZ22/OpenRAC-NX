@@ -133,6 +133,7 @@ need startup or scene reload.
 | `OPENRAC_SUN_RECEIVER_CULL_OFF=1` | Square cascade culling |
 | `OPENRAC_EARLY_LIGHTING_OFF=1` | Full-resolution fragment lighting |
 | `OPENRAC_RENDER_OPT_OFF=gpu-resident-instances` | Static instances copied into each view's page every frame |
+| `shadow-static-cache` (registry, off by default) | With it on: a sun cascade's static casters copied from a cache while its key is unchanged |
 
 `OPENRAC_SUN_TIMING_DETAIL=1` enables per-layer shadow timings; normally the
 four complete-map timers include clears.
