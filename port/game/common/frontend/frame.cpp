@@ -500,7 +500,7 @@ void use_world(std::span<const std::uint8_t> ram, int level) {
 }
 
 // Puts the camera the game's world renderers drew with this tick into `state`, if they ran.
-void take_world_camera(viewer::GameState& state) {
+void take_world_camera(host::GameState& state) {
     if (g->world_camera) {
         state.camera_position = g->world_camera->camera_position;
         state.forward = g->world_camera->forward;
@@ -519,7 +519,7 @@ void take_world_camera(viewer::GameState& state) {
 
 // Logs the camera this tick is drawn from (OPENRAC_CAM_LOG). `world_ran`: the game's world
 // renderers ran this tick.
-void log_camera(const viewer::GameState& state, bool world_ran) {
+void log_camera(const host::GameState& state, bool world_ran) {
     // OPENRAC_CAM_LOG: the camera each frame is drawn from (position, forward, up), in the log.
     static const bool& cam_log =
         stats::probe("OPENRAC_CAM_LOG", "the camera each tick is drawn from, in the log");
@@ -567,7 +567,7 @@ void follow_route(std::span<const std::uint8_t> ram, int level) {
 }
 
 // Writes this tick's line of OPENRAC_TRACE. `draws`: the layers the game drew (frame()).
-void trace_tick(const viewer::GameState& state, std::uint32_t draws) {
+void trace_tick(const host::GameState& state, std::uint32_t draws) {
     // OPENRAC_TRACE=FILE: one JSON line a tick, for port/tools/regress (docs/port/REGRESSION.md):
     // f the window frame, c frames since control (null before), lv the level (-1 the boot
     // program), m the game mode, cam/fw the camera's position and forward row, hp/hr/hs the hero's
@@ -638,10 +638,7 @@ void dump_ram(std::span<const std::uint8_t> ram) {
 // Logs the game's state for bring-up (OPENRAC_DEBUG, each 100 ticks): the level, the camera, the
 // front end's words and the pad, the fog, the effects, the sky and the particles drawn.
 void log_tick_state(
-    std::span<const std::uint8_t> ram,
-    const viewer::GameState& state,
-    int level,
-    std::uint32_t draws
+    std::span<const std::uint8_t> ram, const host::GameState& state, int level, std::uint32_t draws
 ) {
     log::info(
         "frame {}: level {}, camera {:.1f} {:.1f} {:.1f}, forward {:.2f} {:.2f} {:.2f}, "
@@ -781,7 +778,7 @@ void log_tick_state(
 }
 
 // Logs the mobys near the hero (OPENRAC_MOBY_LOG).
-void log_mobys_near_hero(std::span<const std::uint8_t> ram, const viewer::GameState& state) {
+void log_mobys_near_hero(std::span<const std::uint8_t> ram, const host::GameState& state) {
     // OPENRAC_MOBY_LOG=N[:RADIUS]: every N ticks, the mobys within RADIUS game units of the hero
     // (default 20) in the log: class, address, state, mode bits, animation, position, the distance,
     // the collision radius and the update function, for seeing what an object is doing.
@@ -795,14 +792,14 @@ void log_mobys_near_hero(std::span<const std::uint8_t> ram, const viewer::GameSt
             colon != std::string_view::npos
                 ? static_cast<float>(env::read_number(moby_log->substr(colon + 1), 0.0))
                 : 20.0f;
-        const viewer::LiveMoby* hero = nullptr;
-        for (const viewer::LiveMoby& m : state.mobys) {
+        const host::LiveMoby* hero = nullptr;
+        for (const host::LiveMoby& m : state.mobys) {
             if (m.class_id == 0) {
                 hero = &m;
                 break;
             }
         }
-        for (const viewer::LiveMoby& m : state.mobys) {
+        for (const host::LiveMoby& m : state.mobys) {
             if (hero == nullptr || m.address + 0x100 > ram.size()) {
                 continue;
             }
@@ -864,7 +861,7 @@ struct TickMobys {
 // only mobys with a camera of their own were drawn without them; `debug`: OPENRAC_DEBUG.
 TickMobys pose_mobys(
     std::span<const std::uint8_t> ram,
-    viewer::GameState& state,
+    host::GameState& state,
     bool world_ran,
     bool only_own_camera,
     bool debug
@@ -892,12 +889,12 @@ TickMobys pose_mobys(
     // vendor's own) is read from its address; with the frame's camera (the item's hologram over the
     // vendor) it is drawn in the world.
     const std::size_t listed = state.mobys.size();
-    std::unordered_map<std::uint32_t, const viewer::GameState*> into_texture;
+    std::unordered_map<std::uint32_t, const host::GameState*> into_texture;
     std::array<float, 2> frame_focal{};
     {
         const auto drawn = [&](std::uint32_t address) {
             return std::any_of(
-                state.mobys.begin(), state.mobys.end(), [&](const viewer::LiveMoby& m) {
+                state.mobys.begin(), state.mobys.end(), [&](const host::LiveMoby& m) {
                     return m.address == address;
                 }
             );
@@ -916,14 +913,14 @@ TickMobys pose_mobys(
                 into_texture.emplace(address, &camera);
             }
             if (!drawn(address)) {
-                if (const auto extra = viewer::read_live_moby(ram, address)) {
+                if (const auto extra = g->profile->read_moby(ram, address)) {
                     state.mobys.push_back(*extra);
                 }
             }
         }
     }
     for (std::size_t index = 0; index < state.mobys.size(); ++index) {
-        const viewer::LiveMoby& m = state.mobys[index];
+        const host::LiveMoby& m = state.mobys[index];
         const bool extra = index >= listed;
         // Hidden (mode bit 0): MobyProc does not draw it (the parked ship while the landing one comes
         // down, Clank's spare parts).
@@ -938,18 +935,18 @@ TickMobys pose_mobys(
             continue;
         }
         // Beyond its draw distance, or wholly behind the eye: MobyProc does not draw it
-        // (viewer::moby_beyond_draw_distance). Pokitaru places two mobys of class 1161 with a turn of -5 pi,
-        // past the reach of the game's sine; their rows come out thousands long and their spheres
-        // thousands of units away, so the game never draws them, while drawn here they covered the
-        // sky in cyan. A moby the game draws with a camera of its own (the menus', the vendor's) is
-        // not the world camera's to cull.
+        // (GameProfile::beyond_draw_distance). Pokitaru places two mobys of class 1161 with a turn
+        // of -5 pi, past the reach of the game's sine; their rows come out thousands long and their
+        // spheres thousands of units away, so the game never draws them, while drawn here they
+        // covered the sky in cyan. A moby the game draws with a camera of its own (the menus', the
+        // vendor's) is not the world camera's to cull.
         if (!extra && world_ran && m.address + 0x34 <= ram.size()
             && std::none_of(
                 g->moby_cameras.begin(),
                 g->moby_cameras.end(),
                 [&](const auto& c) { return c.first == m.address; }
             )
-            && viewer::moby_beyond_draw_distance(
+            && g->profile->beyond_draw_distance(
                 ram.data() + m.address, state.camera_position, state.forward
             )) {
             continue;
@@ -1158,7 +1155,7 @@ TickMobys pose_mobys(
 }
 
 // Gives the scene this tick's fog and the lights as the game holds them.
-void light_scene(std::span<const std::uint8_t> ram, const viewer::GameState& state) {
+void light_scene(std::span<const std::uint8_t> ram, const host::GameState& state) {
     g->scene.set_fog(
         state.fog_colour, state.fog_near, state.fog_far, state.fog_near_f, state.fog_far_f
     );
@@ -1184,7 +1181,7 @@ void light_scene(std::span<const std::uint8_t> ram, const viewer::GameState& sta
 // where they move from, and counts the tick.
 void keep_tick(
     std::span<const std::uint8_t> ram,
-    const viewer::GameState& state,
+    const host::GameState& state,
     std::uint32_t draws,
     TickMobys&& mobys
 ) {
@@ -1237,14 +1234,10 @@ void keep_tick(
 }
 
 // Keeps this tick's 2D path (the display list's direct GIF data, from `chain` where the game
-// sends it so, else the list `a` names) and where its world goes in it. Returns the native quads
-// its markers name, if they are still kept.
+// sends it so, else the list the game's profile says is shown in the program `level`) and where its
+// world goes in it. Returns the native quads its markers name, if they are still kept.
 const std::vector<renderer::UiQuad>* keep_2d_path(
-    std::span<const std::uint8_t> ram,
-    std::uint32_t chain,
-    const viewer::GameAddresses& a,
-    int level,
-    bool debug
+    std::span<const std::uint8_t> ram, std::uint32_t chain, int level, bool debug
 ) {
     Kept& k = g->kept;
     // OPENRAC_DUMP_DRAWS=N or N-M: the frames whose 2D draws are logged.
@@ -1260,7 +1253,7 @@ const std::vector<renderer::UiQuad>* keep_2d_path(
     // submits the title's list through VIF1 DMA without that RAC1 buffer-index convention, and
     // so does Going Commando.
     const bool sent_chain = g->game == "rac4-ntsc" || g->game == "rac2-ntsc";
-    const std::uint32_t shown = sent_chain ? chain : viewer::shown_chain(ram, a);
+    const std::uint32_t shown = sent_chain ? chain : g->profile->shown_chain(ram, level);
     std::vector<renderer::EffectVertex> strip_vertices;
     std::vector<renderer::EffectStrip> strips;
     std::size_t before_world = SIZE_MAX;
@@ -1369,7 +1362,7 @@ void choose_repeat_frame(bool debug) {
 // quads its 2D list names (`named_quads`, keep_2d_path), and clears what was gathered.
 void keep_effects(
     std::span<const std::uint8_t> ram,
-    const viewer::GameState& state,
+    const host::GameState& state,
     const std::vector<renderer::UiQuad>* named_quads
 ) {
     Kept& k = g->kept;
@@ -1494,9 +1487,8 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
 
     // The level program loaded now (-1: the boot program, title and menus), as the port knows it.
     const int level = openrac_game_loaded_overlay();
-    const viewer::GameAddresses& a = viewer::rac1_addresses(g->game, level);
     use_world(ram, level);
-    viewer::GameState state = viewer::read_game_state(ram, a);
+    host::GameState state = g->profile->read_state(ram, level);
     // The world is drawn from the camera the game's world renderers used, not from whatever the
     // camera globals hold at the end of the frame (the page menu sets its own camera, at
     // (256, 256, 64) facing +x, to draw its frame objects, as ReRAC notes).
@@ -1525,7 +1517,7 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
     TickMobys mobys = pose_mobys(ram, state, world_ran, only_own_camera, debug);
     light_scene(ram, state);
     keep_tick(ram, state, draws, std::move(mobys));
-    const std::vector<renderer::UiQuad>* named_quads = keep_2d_path(ram, chain, a, level, debug);
+    const std::vector<renderer::UiQuad>* named_quads = keep_2d_path(ram, chain, level, debug);
     choose_repeat_frame(debug);
     keep_effects(ram, state, named_quads);
     report_tick(ram, level);

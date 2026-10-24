@@ -23,7 +23,7 @@
 
 #include <SDL3/SDL.h>
 
-#include "game/rac1/game_state.h"
+#include "game/common/profile.h"
 #include "renderer/math.h"
 #include "renderer/renderer.h"
 
@@ -43,7 +43,7 @@ struct Tick {
     const char* game = "";
     std::span<const std::uint8_t> ram;
     int level = -1;                              // the level program loaded; -1 the boot program
-    const viewer::GameState* state = nullptr;    // the camera the tick is drawn from, the mobys
+    const host::GameState* state = nullptr;      // the camera the tick is drawn from, the mobys
     std::uint32_t draws = 0;                     // the layers the game drew (bit n: renderer::Bucket n)
     std::uint64_t tick = 0;                      // the window's frame counter
     std::size_t packet_bytes = 0, ui_quads = 0, effect_quads = 0, strips = 0, mobys_drawn = 0;

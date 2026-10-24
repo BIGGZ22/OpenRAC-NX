@@ -1,30 +1,29 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
-
-/**
- * What the renderers need of a running Ratchet & Clank, read from its memory: the camera and the
- * live mobys.
- *
- * The memory is the game's 32 MB of main memory as the native port holds it (or a picture of it
- * saved to a file, for working on the renderers without running the game). The addresses are the
- * game's own, documented beside each field in game_state.cpp; they differ by version, so each
- * version has a table. Nothing here draws.
- */
+//
+// What the renderers need of a running Ratchet & Clank, read from its memory: the camera and the
+// live mobys, as host::GameState (game/common/profile.h). rac1's profile (profile.cpp) answers the
+// host program with these reads; the viewer and its tests call them directly.
+//
+// The memory is the game's 32 MB of main memory as the native port holds it (or a picture of it
+// saved to a file, for working on the renderers without running the game). The addresses are the
+// game's own, documented beside each field in game_state.cpp; they differ by version, so each
+// version has a table. Nothing here draws.
 
 #pragma once
 
-#include <array>
 #include <cstdint>
 #include <filesystem>
 #include <optional>
 #include <span>
-#include <string_view>
 #include <string>
+#include <string_view>
 #include <vector>
 
+#include "game/common/profile.h"
 #include "renderer/math.h"
 
-namespace openrac::viewer {
+namespace openrac::game::rac1 {
 
 /** Where one version keeps what the renderers read. */
 struct GameAddresses {
@@ -55,48 +54,6 @@ const GameAddresses& rac1_addresses(std::string_view game, int level);
  */
 const GameAddresses& rac1_pal_addresses(std::span<const std::uint8_t> ram);
 
-// Conservative world bound for linearly blended joint poses and model matrices.
-// Either missing endpoint bound, or a singular transform, returns an unknown sphere.
-std::array<float, 4> moby_sphere_envelope(
-    const std::array<float, 4>& from_sphere,
-    const renderer::Mat4& from,
-    const std::array<float, 4>& to_sphere,
-    const renderer::Mat4& to,
-    const renderer::Mat4& drawn
-);
-
-/** A moby as the renderers place it. */
-struct LiveMoby {
-    std::uint32_t address = 0;  // the moby in game memory (its animation fields, its class)
-    int class_id = 0;
-    std::uint16_t occlusion = 0x7f80;
-    // World centre and radius, in game units; zero radius means unavailable.
-    std::array<float, 4> world_sphere{};
-    renderer::Mat4 matrix = renderer::identity();  // game axes, the moby's scale included
-};
-
-/** The game's state at one frame. */
-struct GameState {
-    renderer::Vec3 camera_position{};
-    renderer::Vec3 forward{1, 0, 0}, left{0, 1, 0}, up{0, 0, 1};
-    float tan_half_fov_x = 0.63f, tan_half_fov_y = 0.48f;
-    /** The focal lengths in the view context, in the chip's pixels (+0xC0 and +0xD4, a 32nd of
-     *  them): 256 / 0.63 and 208 / 0.488 for the frame. 0 when unreadable. */
-    float focal_x = 0.0f, focal_y = 0.0f;
-    std::vector<LiveMoby> mobys;
-    /** The fog UpdateFog left in the view context (+0x218): FOGCOL (display bytes, 0..1), the
-     *  depths it starts and ends at (raw units, game units x 1024) and the GS fog value F at those
-     *  depths (255 = none). F is linear in camera depth, clamped between the two. */
-    std::array<float, 3> fog_colour{0, 0, 0};
-    float fog_near = 0.0f, fog_far = 1.0f, fog_near_f = 255.0f, fog_far_f = 255.0f;
-
-    /** The camera's view matrix, in the renderer's convention (looking down -Z, Y up). */
-    renderer::Mat4 view() const;
-
-    /** A reversed-depth projection with the game's field of view, for a target's aspect. */
-    renderer::Mat4 projection(float aspect, float near_z, float far_z) const;
-};
-
 /**
  * Reads the state from main memory.
  *
@@ -104,10 +61,10 @@ struct GameState {
  * @param a The version's addresses.
  * @return The state; empty moby list when the table pointers are not inside memory.
  */
-GameState read_game_state(std::span<const std::uint8_t> ram, const GameAddresses& a);
+host::GameState read_game_state(std::span<const std::uint8_t> ram, const GameAddresses& a);
 
 /** The moby at address m as the renderers place it; none when its position or scale is unusable. */
-std::optional<LiveMoby> read_live_moby(std::span<const std::uint8_t> ram, std::uint32_t m);
+std::optional<host::LiveMoby> read_live_moby(std::span<const std::uint8_t> ram, std::uint32_t m);
 
 /**
  * Whether MobyProc leaves a moby out by its distance, as ReRAC's moby_lod.rs replays it: the
@@ -127,4 +84,4 @@ std::uint32_t shown_chain(std::span<const std::uint8_t> ram, const GameAddresses
 /** Reads a 32 MB memory picture from a file. */
 bool load_memory(const std::filesystem::path& path, std::vector<std::uint8_t>& out, std::string& error);
 
-}  // namespace openrac::viewer
+}  // namespace openrac::game::rac1

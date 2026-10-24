@@ -95,9 +95,6 @@ except	scene/level_renderer.h:27	enhanced/viewer/sun_shadow.h	P2-39: scene owns 
 # game/common -> viewer: the game program uses the viewer's game state, and reaches the scene through
 # the headers viewer/ keeps forwarding to scene/ until P2-37.
 except	game/common/debug_overlay.cpp:45	viewer/screenshot.h	P2-37 includes scene/ directly and removes the forwarder
-except	game/common/debug_overlay.h:26	game/rac1/game_state.h	P2-03 moves the game state into rac1's GameProfile
-except	game/common/frontend.cpp:40	game/rac1/game_state.h	P2-03 moves the game state into rac1's GameProfile
-except	game/common/frontend/state.h:28	game/rac1/game_state.h	P2-03 moves the game state into rac1's GameProfile
 except	game/common/frontend.cpp:58	viewer/level.h	P2-37 includes scene/ directly and removes the forwarder
 except	game/common/frontend.cpp:59	viewer/level_renderer.h	P2-37 includes scene/ directly and removes the forwarder
 except	game/common/frontend.cpp:60	viewer/moby_pose.h	P2-37 includes scene/ directly and removes the forwarder

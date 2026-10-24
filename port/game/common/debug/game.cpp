@@ -24,7 +24,7 @@ void game_section() {
     text("{}   level {}", s.game, level);
     text("tick {}   game mode {}", s.tick, read<std::int32_t>(0x0015F6E8));
 
-    if (const viewer::LiveMoby* h = hero()) {
+    if (const host::LiveMoby* h = hero()) {
         text(
             "hero {:.2f} {:.2f} {:.2f}   state {}",
             h->matrix[12],
@@ -36,7 +36,7 @@ void game_section() {
         ImGui::TextDisabled("no hero moby");
     }
 
-    const viewer::GameState& g = s.state;
+    const host::GameState& g = s.state;
     text(
         "camera {:.2f} {:.2f} {:.2f}",
         g.camera_position[0],

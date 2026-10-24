@@ -557,7 +557,7 @@ void tick(const Tick& t) {
     s.tick = t.tick;
     s.counts = t;
     if (s.follow_hero) {
-        if (const viewer::LiveMoby* h = hero()) {
+        if (const host::LiveMoby* h = hero()) {
             s.selected = h->address;
         }
     }

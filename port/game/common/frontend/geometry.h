@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <array>
+
 #include "renderer/math.h"
 
 namespace openrac::frontend {
@@ -57,5 +59,17 @@ renderer::Mat4 blend_matrix(const renderer::Mat4& from, const renderer::Mat4& to
 // moved more than 8 units (64 is that squared), or turned so far that its forward axes' cosine is
 // below 0.7, is `to`. `t`: how far, from 0 (`from`) to 1 (`to`).
 CameraPose blend_pose(const CameraPose& from, const CameraPose& to, float t);
+
+// Returns a world sphere (centre, radius) that holds a moby drawn with `drawn`, a matrix part way
+// between `from` and `to`, whose joint poses blend between the ones `from_sphere` and `to_sphere`
+// bound at those ticks: a conservative bound for linearly blended joint poses and model matrices.
+// A missing endpoint bound, or a singular transform, returns an unknown sphere (radius 0).
+std::array<float, 4> moby_sphere_envelope(
+    const std::array<float, 4>& from_sphere,
+    const renderer::Mat4& from,
+    const std::array<float, 4>& to_sphere,
+    const renderer::Mat4& to,
+    const renderer::Mat4& drawn
+);
 
 }  // namespace openrac::frontend

@@ -25,7 +25,7 @@
 #include <vector>
 
 #include "enhanced/game/scripted_moby_colour.h"
-#include "game/rac1/game_state.h"
+#include "game/common/profile.h"
 #include "openrac/guest.h"
 #include "platform/input.h"
 #include "platform/window.h"
@@ -50,7 +50,7 @@ namespace openrac::frontend {
 // (between), and the last tick's camera and moby matrices to move them from.
 struct Kept {
     int level = -3;  // the level the mobys belong to: another one starts over
-    viewer::GameState state, prev_state;
+    host::GameState state, prev_state;
     bool has_state = false, has_prev_state = false;
     std::vector<viewer::Instance> live;
     std::vector<std::uint32_t> addresses;  // each live moby's address, for its last matrix
@@ -80,7 +80,7 @@ struct Kept {
     struct TargetMoby {
         std::uint32_t address = 0;
         viewer::Instance instance;
-        viewer::GameState camera;
+        host::GameState camera;
     };
 
     std::vector<TargetMoby> target_mobys;
@@ -93,6 +93,9 @@ struct Kept {
 // the game drew since the last frame (gathered for frame()), and the window as the settings left it.
 struct State {
     std::string game;
+    // What the game's folder knows of its memory (game/common/profile.h): a constant of the
+    // program's, never null while the window is open.
+    const host::GameProfile* profile = nullptr;
     ScriptedMobyColours scripted_moby_colours;
     std::filesystem::path levels;
     std::unique_ptr<platform::Platform> sdl;
@@ -114,9 +117,9 @@ struct State {
     // rectangle: given again to each renderer made (use_level makes a new one per level).
     std::vector<renderer::ImageUpload> images;
     // The camera the game's world renderers drew with this frame (world_drawn), if they ran.
-    std::optional<viewer::GameState> world_camera;
+    std::optional<host::GameState> world_camera;
     // Mobys drawn this frame with a camera of their own (mobys_drawn): address, that camera.
-    std::vector<std::pair<std::uint32_t, viewer::GameState>> moby_cameras;
+    std::vector<std::pair<std::uint32_t, host::GameState>> moby_cameras;
     // The world effect quads the game drew since the last frame (effect_quad).
     std::vector<renderer::EffectQuad> effects;
     std::vector<renderer::ImageUpload> effect_uploads;  // the quads' textures (EffectQuad::uploads)
@@ -302,11 +305,11 @@ void use_level(int number);
 
 // The sky sprites the game drew since the last frame, as effect quads seen from `state`'s camera,
 // put first among the frame's effect quads: drawn behind everything (frontend/world.cpp).
-void sky_sprite_quads(const viewer::GameState& state);
+void sky_sprite_quads(const host::GameState& state);
 
 // The particles the game drew since the last frame, as effect quads back to front, seen from
 // `state`'s camera; their textures read from `ram` (frontend/world.cpp).
-void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& state);
+void particle_quads(std::span<const std::uint8_t> ram, const host::GameState& state);
 
 // Whether the frame cap lets a frame start now (frontend/interpolation.cpp).
 bool frame_due(std::chrono::steady_clock::time_point now);

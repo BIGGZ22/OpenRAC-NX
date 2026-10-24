@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
+//
+// rac1's game state (game_state.h): the per-disc and per-level address tables, and the reads of
+// the camera, the fog and the live mobys from game memory.
 
 #include "game/rac1/game_state.h"
 
@@ -10,7 +13,7 @@
 #include <fstream>
 #include <string_view>
 
-namespace openrac::viewer {
+namespace openrac::game::rac1 {
 
 /*
  * PAL addresses (the US ones, documented in docs/engine and in ReRAC's game_camera_fog.md, are
@@ -86,74 +89,7 @@ renderer::Mat4 rotation_z(float a) {
 
 }  // namespace
 
-renderer::Mat4 GameState::view() const {
-    return renderer::look_along(camera_position, forward, up);
-}
-
-renderer::Mat4 GameState::projection(float aspect, float near_z, float far_z) const {
-    // The game's vertical field of view; the horizontal one follows the target's shape.
-    return renderer::perspective_reversed(2.0f * std::atan(tan_half_fov_y), aspect, near_z, far_z);
-}
-
-std::array<float, 4> moby_sphere_envelope(
-    const std::array<float, 4>& from_sphere,
-    const renderer::Mat4& from,
-    const std::array<float, 4>& to_sphere,
-    const renderer::Mat4& to,
-    const renderer::Mat4& drawn
-) {
-    // Each endpoint sphere bounds its posed vertices in world space. Map it
-    // back to a sphere about the model origin: inverse Frobenius norm bounds
-    // inverse stretch. The convex blend of the two local poses stays within
-    // the larger origin sphere, even while the model itself turns or scales.
-    const auto local_radius = [](const std::array<float, 4>& sphere, const renderer::Mat4& matrix) {
-        if (!(sphere[3] > 0)
-            || !std::all_of(sphere.begin(), sphere.end(), [](float x) { return std::isfinite(x); })
-            || !std::all_of(matrix.begin(), matrix.end(), [](float x) { return std::isfinite(x); })
-            || matrix[3] != 0 || matrix[7] != 0 || matrix[11] != 0 || matrix[15] != 1) {
-            return -1.0;
-        }
-        const std::array<double, 3> a{matrix[0], matrix[1], matrix[2]};
-        const std::array<double, 3> b{matrix[4], matrix[5], matrix[6]};
-        const std::array<double, 3> c{matrix[8], matrix[9], matrix[10]};
-        const auto cross = [](const auto& x, const auto& y) {
-            return std::array<double, 3>{
-                x[1] * y[2] - x[2] * y[1], x[2] * y[0] - x[0] * y[2], x[0] * y[1] - x[1] * y[0]
-            };
-        };
-        const auto bc = cross(b, c), ca = cross(c, a), ab = cross(a, b);
-        const double determinant = a[0] * bc[0] + a[1] * bc[1] + a[2] * bc[2];
-        if (determinant == 0) {
-            return -1.0;
-        }
-        double inverse_squared = 0, offset_squared = 0;
-        for (unsigned k = 0; k < 3; ++k) {
-            inverse_squared += bc[k] * bc[k] + ca[k] * ca[k] + ab[k] * ab[k];
-            const double offset = double(sphere[k]) - matrix[12 + k];
-            offset_squared += offset * offset;
-        }
-        return std::sqrt(inverse_squared) / std::abs(determinant)
-               * (std::sqrt(offset_squared) + sphere[3]);
-    };
-    const double r0 = local_radius(from_sphere, from), r1 = local_radius(to_sphere, to);
-    if (r0 < 0 || r1 < 0 || drawn[3] != 0 || drawn[7] != 0 || drawn[11] != 0 || drawn[15] != 1
-        || !std::all_of(drawn.begin(), drawn.end(), [](float x) { return std::isfinite(x); })) {
-        return {};
-    }
-    double stretch_squared = 0;
-    for (unsigned column = 0; column < 3; ++column) {
-        for (unsigned row = 0; row < 3; ++row) {
-            stretch_squared += double(drawn[4 * column + row]) * drawn[4 * column + row];
-        }
-    }
-    const float radius = static_cast<float>(std::max(r0, r1) * std::sqrt(stretch_squared));
-    if (!(radius > 0) || !std::isfinite(radius)) {
-        return {};
-    }
-    return {drawn[12], drawn[13], drawn[14], radius};
-}
-
-std::optional<LiveMoby> read_live_moby(std::span<const std::uint8_t> ram, std::uint32_t m) {
+std::optional<host::LiveMoby> read_live_moby(std::span<const std::uint8_t> ram, std::uint32_t m) {
     if (m == 0 || m + 0x100 > ram.size()) {
         return std::nullopt;
     }
@@ -163,7 +99,7 @@ std::optional<LiveMoby> read_live_moby(std::span<const std::uint8_t> ram, std::u
     if (!std::isfinite(pos[0]) || !std::isfinite(scale) || scale <= 0.0f || scale > 1000.0f) {
         return std::nullopt;
     }
-    LiveMoby live;
+    host::LiveMoby live;
     live.address = m;
     live.class_id = at<std::int16_t>(ram, m + 0xA6);
     live.occlusion = at<std::uint16_t>(ram, m + 0x36);
@@ -227,8 +163,8 @@ bool moby_beyond_draw_distance(const std::uint8_t* moby, const renderer::Vec3& e
     return depth > static_cast<float>(distance) || depth + std::fabs(sphere[3]) / 1024.0f <= 32.0f / 1024.0f;
 }
 
-GameState read_game_state(std::span<const std::uint8_t> ram, const GameAddresses& a) {
-    GameState s;
+host::GameState read_game_state(std::span<const std::uint8_t> ram, const GameAddresses& a) {
+    host::GameState s;
     s.camera_position = vec3(ram, a.camera_position);
     s.forward = vec3(ram, a.camera_rows);
     s.left = vec3(ram, a.camera_rows + 0x10);
@@ -339,4 +275,4 @@ bool load_memory(const std::filesystem::path& path, std::vector<std::uint8_t>& o
     return true;
 }
 
-}  // namespace openrac::viewer
+}  // namespace openrac::game::rac1

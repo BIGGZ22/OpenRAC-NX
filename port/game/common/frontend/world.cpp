@@ -342,7 +342,7 @@ void sky_sprite(const std::uint8_t* record, std::uint64_t tex0) {
 // the half-diagonal size * 832 / depth frame-buffer pixels, turned by the rotation, additive, behind
 // everything. Drawn far out along their direction (kSkyDistance, inside the far plane) and scaled to
 // match, so the world's depth hides them where it is in front of the sky.
-void sky_sprite_quads(const viewer::GameState& state) {
+void sky_sprite_quads(const host::GameState& state) {
     constexpr float kSkyDistance = 1900.0f;
     const std::array<float, 3> cam = state.camera_position;
     const std::array<float, 3> fwd = state.forward;
@@ -485,7 +485,7 @@ std::uint32_t particle_texture(
 // front; a sprite faces the camera, its half-diagonal size / 210000 units (y scaled by 1.0625 as the
 // game does on screen), turned by its rotation byte; a flat quad lies in the world's XY plane; a
 // ribbon joins its two ends across the view. Lines are not drawn yet.
-void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& state) {
+void particle_quads(std::span<const std::uint8_t> ram, const host::GameState& state) {
     const auto f32 = [](const std::uint8_t* b) {
         float v;
         std::memcpy(&v, b, 4);

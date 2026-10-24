@@ -227,17 +227,17 @@ int run(const Options& options) {
     }
 
     // The running game's camera and mobys, from its memory.
-    std::optional<viewer::GameState> game;
+    std::optional<host::GameState> game;
     if (!options.state.empty()) {
         std::vector<std::uint8_t> ram;
-        if (!viewer::load_memory(options.state, ram, error)) {
+        if (!game::rac1::load_memory(options.state, ram, error)) {
             log::error("{}", error);
             return 1;
         }
-        game = viewer::read_game_state(ram, viewer::rac1_pal_addresses(ram));
+        game = game::rac1::read_game_state(ram, game::rac1::rac1_pal_addresses(ram));
         std::vector<viewer::Instance> live;
         int unknown = 0;
-        for (const viewer::LiveMoby& m : game->mobys) {
+        for (const host::LiveMoby& m : game->mobys) {
             auto cls = level.moby_classes.find(m.class_id);
             if (cls == level.moby_classes.end()) {
                 ++unknown;

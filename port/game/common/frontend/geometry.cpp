@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (c) 2026 the OpenRAC contributors
 //
-// The frontend's geometry (geometry.h): the frame box, the frame size and the blends between ticks.
+// The frontend's geometry (geometry.h): the frame box, the frame size, the blends between ticks
+// and the bound of a moby drawn between them.
 
 #include "game/common/frontend/geometry.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 namespace openrac::frontend {
@@ -153,6 +155,64 @@ CameraPose blend_pose(const CameraPose& from, const CameraPose& to, float t) {
     c.left = renderer::normalize(renderer::cross(u, c.forward));
     c.up = renderer::cross(c.forward, c.left);
     return c;
+}
+
+std::array<float, 4> moby_sphere_envelope(
+    const std::array<float, 4>& from_sphere,
+    const renderer::Mat4& from,
+    const std::array<float, 4>& to_sphere,
+    const renderer::Mat4& to,
+    const renderer::Mat4& drawn
+) {
+    // Each endpoint sphere bounds its posed vertices in world space. Map it
+    // back to a sphere about the model origin: inverse Frobenius norm bounds
+    // inverse stretch. The convex blend of the two local poses stays within
+    // the larger origin sphere, even while the model itself turns or scales.
+    const auto local_radius = [](const std::array<float, 4>& sphere, const renderer::Mat4& matrix) {
+        if (!(sphere[3] > 0)
+            || !std::all_of(sphere.begin(), sphere.end(), [](float x) { return std::isfinite(x); })
+            || !std::all_of(matrix.begin(), matrix.end(), [](float x) { return std::isfinite(x); })
+            || matrix[3] != 0 || matrix[7] != 0 || matrix[11] != 0 || matrix[15] != 1) {
+            return -1.0;
+        }
+        const std::array<double, 3> a{matrix[0], matrix[1], matrix[2]};
+        const std::array<double, 3> b{matrix[4], matrix[5], matrix[6]};
+        const std::array<double, 3> c{matrix[8], matrix[9], matrix[10]};
+        const auto cross = [](const auto& x, const auto& y) {
+            return std::array<double, 3>{
+                x[1] * y[2] - x[2] * y[1], x[2] * y[0] - x[0] * y[2], x[0] * y[1] - x[1] * y[0]
+            };
+        };
+        const auto bc = cross(b, c), ca = cross(c, a), ab = cross(a, b);
+        const double determinant = a[0] * bc[0] + a[1] * bc[1] + a[2] * bc[2];
+        if (determinant == 0) {
+            return -1.0;
+        }
+        double inverse_squared = 0, offset_squared = 0;
+        for (unsigned k = 0; k < 3; ++k) {
+            inverse_squared += bc[k] * bc[k] + ca[k] * ca[k] + ab[k] * ab[k];
+            const double offset = double(sphere[k]) - matrix[12 + k];
+            offset_squared += offset * offset;
+        }
+        return std::sqrt(inverse_squared) / std::abs(determinant)
+               * (std::sqrt(offset_squared) + sphere[3]);
+    };
+    const double r0 = local_radius(from_sphere, from), r1 = local_radius(to_sphere, to);
+    if (r0 < 0 || r1 < 0 || drawn[3] != 0 || drawn[7] != 0 || drawn[11] != 0 || drawn[15] != 1
+        || !std::all_of(drawn.begin(), drawn.end(), [](float x) { return std::isfinite(x); })) {
+        return {};
+    }
+    double stretch_squared = 0;
+    for (unsigned column = 0; column < 3; ++column) {
+        for (unsigned row = 0; row < 3; ++row) {
+            stretch_squared += double(drawn[4 * column + row]) * drawn[4 * column + row];
+        }
+    }
+    const float radius = static_cast<float>(std::max(r0, r1) * std::sqrt(stretch_squared));
+    if (!(radius > 0) || !std::isfinite(radius)) {
+        return {};
+    }
+    return {drawn[12], drawn[13], drawn[14], radius};
 }
 
 }  // namespace openrac::frontend

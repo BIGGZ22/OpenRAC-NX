@@ -37,7 +37,7 @@
 #include "game/common/frontend/pacing.h"
 #include "game/common/frontend/state.h"
 #include "game/common/particle_texture_cache.h"
-#include "game/rac1/game_state.h"
+#include "game/common/profile.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
 #include "options_menu.h"
@@ -306,6 +306,7 @@ static void ensure_linux_desktop_integration(const std::string& game_id) {
 bool open(const std::string& game_id, const std::filesystem::path& levels, std::string& error) {
     g = std::make_unique<State>();
     g->game = game_id;
+    g->profile = &host::game_profile(game_id);
     g->levels = levels;
     // Before SDL starts: on Wayland the app id names the program to the desktop, and a machine
     // with two graphics cards is asked for the fast one.
@@ -389,9 +390,7 @@ void mobys_drawn(std::span<const std::uint8_t> ram, std::uint32_t first, int cou
         return;
     }
     const int level = openrac_game_loaded_overlay();
-    const viewer::GameAddresses& a =
-        viewer::rac1_addresses(g->game, level);
-    const viewer::GameState camera = viewer::read_game_state(ram, a);
+    const host::GameState camera = g->profile->read_state(ram, level);
     for (int i = 0; i < count; ++i) {
         g->moby_cameras.emplace_back(first + static_cast<std::uint32_t>(i) * 0x100u, camera);
     }
@@ -402,9 +401,7 @@ void world_drawn(std::span<const std::uint8_t> ram) {
         return;
     }
     const int level = openrac_game_loaded_overlay();
-    const viewer::GameAddresses& a =
-        viewer::rac1_addresses(g->game, level);
-    g->world_camera = viewer::read_game_state(ram, a);
+    g->world_camera = g->profile->read_state(ram, level);
 }
 
 bool show_picture(const std::uint8_t* rgba, int width, int height, float black) {

@@ -185,10 +185,8 @@ void slow_frame() {
 }
 
 // The camera part way from the last tick's to this one's (a cut is not blended).
-viewer::GameState blend_camera(
-    const viewer::GameState& from, const viewer::GameState& to, float t
-) {
-    viewer::GameState c = to;
+host::GameState blend_camera(const host::GameState& from, const host::GameState& to, float t) {
+    host::GameState c = to;
     const CameraPose pose = blend_pose(
         {from.camera_position, from.forward, from.left, from.up},
         {to.camera_position, to.forward, to.left, to.up},
@@ -238,7 +236,7 @@ void draw_kept(bool first) {
         );
     }
     Kept& k = g->kept;
-    const viewer::GameState state =
+    const host::GameState state =
         k.has_prev_state && alpha < 1.0f ? blend_camera(k.prev_state, k.state, alpha) : k.state;
     if (!g->level.models.empty()) {
         std::vector<viewer::Instance> live = k.live;
@@ -250,7 +248,7 @@ void draw_kept(bool first) {
                     const auto sphere = k.prev_spheres.find(k.addresses[i]);
                     live[i].world_sphere = sphere == k.prev_spheres.end()
                                                ? std::array<float, 4>{}
-                                               : viewer::moby_sphere_envelope(
+                                               : moby_sphere_envelope(
                                                      sphere->second,
                                                      it->second,
                                                      k.live[i].world_sphere,
@@ -467,7 +465,7 @@ void draw_kept(bool first) {
         const std::uint32_t first = static_cast<std::uint32_t>(marker);
         const std::uint32_t count = static_cast<std::uint32_t>(marker >> 32) & 0xFFu;
         std::vector<viewer::Instance> instances;
-        const viewer::GameState* camera = nullptr;
+        const host::GameState* camera = nullptr;
         for (const Kept::TargetMoby& t : k.target_mobys) {
             if (t.address >= first && t.address < first + count * 0x100u) {
                 instances.push_back(t.instance);

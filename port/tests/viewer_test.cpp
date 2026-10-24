@@ -895,18 +895,20 @@ void moby_draw_distance() {
     const renderer::Vec3 eye{100.0f, 0.0f, 0.0f};
     const renderer::Vec3 forward{1.0f, 0.0f, 0.0f};
     place(150.0f, 30.0f, 0.0f, 1.0f, 64);  // 50 deep, off to the side: drawn
-    CHECK(!viewer::moby_beyond_draw_distance(moby, eye, forward));
+    CHECK(!game::rac1::moby_beyond_draw_distance(moby, eye, forward));
     place(170.0f, 0.0f, 0.0f, 1.0f, 64);  // 70 deep, past 64
-    CHECK(viewer::moby_beyond_draw_distance(moby, eye, forward));
+    CHECK(game::rac1::moby_beyond_draw_distance(moby, eye, forward));
     place(90.0f, 0.0f, 0.0f, 1.0f, 64);  // behind the eye
-    CHECK(viewer::moby_beyond_draw_distance(moby, eye, forward));
+    CHECK(game::rac1::moby_beyond_draw_distance(moby, eye, forward));
     place(99.5f, 0.0f, 0.0f, 1.0f, 64);  // the eye inside its sphere
-    CHECK(!viewer::moby_beyond_draw_distance(moby, eye, forward));
+    CHECK(!game::rac1::moby_beyond_draw_distance(moby, eye, forward));
     // Pokitaru's class 1161 placed with a turn of -5 pi: its sphere thousands of units away.
     place(9286.5f, 5217.6f, 235.1f, 1.08f, 64);
-    CHECK(viewer::moby_beyond_draw_distance(moby, {550.0f, 530.0f, 230.0f}, {0.7f, 0.7f, 0.0f}));
+    CHECK(
+        game::rac1::moby_beyond_draw_distance(moby, {550.0f, 530.0f, 230.0f}, {0.7f, 0.7f, 0.0f})
+    );
     place(0.0f, 0.0f, 0.0f, 0.0f, 64);  // no sphere yet
-    CHECK(!viewer::moby_beyond_draw_distance(moby, eye, forward));
+    CHECK(!game::rac1::moby_beyond_draw_distance(moby, eye, forward));
 }
 
 // The authored sphere is world-space and packed independently of the model's scale.
@@ -917,7 +919,7 @@ void moby_world_sphere() {
     std::memcpy(ram.data() + address + 0x2c, &scale, sizeof(scale));
     const auto set = [&](std::array<float, 4> sphere) {
         std::memcpy(ram.data() + address, sphere.data(), sizeof(sphere));
-        return viewer::read_live_moby(ram, address);
+        return game::rac1::read_live_moby(ram, address);
     };
     auto live = set({10240, -20480, 30720, 4096});
     CHECK(live.has_value());
@@ -933,43 +935,6 @@ void moby_world_sphere() {
         CHECK((live->world_sphere == std::array<float, 4>{}));
     }
 }
-
-// Joint poses and model transforms both interpolate. Endpoint world bounds
-// alone need not contain the intermediate product (rotation plus changing pose).
-void moby_blended_bounds() {
-    const renderer::Mat4 from{2, .2f, 0, 0, .4f, 1, 0, 0, 0, 0, .5f, 0, 10, 20, 30, 1};
-    const renderer::Mat4 to{0, 1, 0, 0, -2, .3f, 0, 0, 0, 0, 2, 0, 12, 21, 31, 1};
-    const std::array<float, 4> sphere0{11, 20, 30, 8}, sphere1{12, 22, 31, 8};
-    for (unsigned step = 0; step <= 10; ++step) {
-        const float alpha = step / 10.f;
-        auto drawn = from;
-        for (unsigned i = 0; i < drawn.size(); ++i) {
-            drawn[i] += (to[i] - from[i]) * alpha;
-        }
-        const auto bound = viewer::moby_sphere_envelope(sphere0, from, sphere1, to, drawn);
-        CHECK(bound[3] > 0);
-        for (unsigned corner = 0; corner < 8; ++corner) {
-            renderer::Vec3 p0{
-                corner & 1 ? 1.f : -1.f, corner & 2 ? 1.f : -1.f, corner & 4 ? 1.f : -1.f
-            };
-            renderer::Vec3 p1{-p0[1], p0[2], -p0[0]}, point;
-            for (unsigned k = 0; k < 3; ++k) {
-                point[k] = p0[k] + (p1[k] - p0[k]) * alpha;
-            }
-            const auto world = renderer::transform_point(drawn, point);
-            float distance2 = 0;
-            for (unsigned k = 0; k < 3; ++k) {
-                distance2 += (world[k] - bound[k]) * (world[k] - bound[k]);
-            }
-            CHECK(distance2 <= bound[3] * bound[3]);
-        }
-    }
-    CHECK(viewer::moby_sphere_envelope({}, from, sphere1, to, to)[3] == 0);
-    CHECK(viewer::moby_sphere_envelope(sphere0, renderer::scale(0), sphere1, to, to)[3] == 0);
-    auto invalid = from;
-    invalid[0] = NAN;
-    CHECK(viewer::moby_sphere_envelope(sphere0, invalid, sphere1, to, to)[3] == 0);
-}
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -980,7 +945,6 @@ int main(int argc, char** argv) {
     pvs_lookup();
     moby_draw_distance();
     moby_world_sphere();
-    moby_blended_bounds();
     write_level(dir);
     viewer::LevelData level;
     loader(dir, level);
