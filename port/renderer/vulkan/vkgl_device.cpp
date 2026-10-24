@@ -798,6 +798,11 @@ void destroy_all() {
         if (g->dummy_buffer != VK_NULL_HANDLE) {
             vmaDestroyBuffer(g->allocator, g->dummy_buffer, g->dummy_allocation);
         }
+        // The descriptor sets kept across frames go with their pools (R-14).
+        for (VkDescriptorPool pool : g->persistent_sets.pools) {
+            vkDestroyDescriptorPool(g->device, pool, nullptr);
+        }
+
         for (Frame& f : g->frames) {
             for (const Chunk& c : f.chunks) {
                 vmaDestroyBuffer(g->allocator, c.buffer, c.allocation);

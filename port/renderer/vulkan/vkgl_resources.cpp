@@ -157,6 +157,7 @@ ImagePtr make_image(
             destroy_image_now(*i);
         }
     });
+    image->serial = ++g->image_serial;
     const bool depth = (format.aspect & VK_IMAGE_ASPECT_DEPTH_BIT) != 0;
     VkImageCreateInfo info{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
     info.imageType = VK_IMAGE_TYPE_2D;

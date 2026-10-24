@@ -26,6 +26,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -298,6 +299,10 @@ struct Image {
     VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
     std::uint64_t touched = 0;  // the recording that last used it in `main`
+    // A number of its own, never given to another image of the backend: a descriptor set kept
+    // across frames names the image by it, since a destroyed view's handle may be handed out again
+    // (R-14). 0 for an image destroy_image_now has emptied.
+    std::uint64_t serial = 0;
     // The aspects whose contents glInvalidateFramebuffer let go and nothing wrote since: the next
     // pass on the image does not load them (attachment-discard, docs/port/RENDER_PERF.md "R-06").
     VkImageAspectFlags discarded = 0;
@@ -487,6 +492,45 @@ struct DrawScratch {
     std::vector<VkWriteDescriptorSet> writes;          // descriptors(): a new set's writes.
     std::vector<VkDescriptorBufferInfo> buffer_infos;  // descriptors(): what the writes point at.
     std::vector<VkDescriptorImageInfo> image_infos;    // descriptors(): what the writes point at.
+};
+
+// ---- Descriptor sets kept across frames (R-14) ----
+
+// A hash of a descriptor set's key bytes for PersistentSets, which looks keys up as views.
+struct KeyBytesHash {
+    using is_transparent = void;
+
+    // Returns std::hash of the bytes.
+    std::size_t operator()(std::string_view bytes) const {
+        return std::hash<std::string_view>{}(bytes);
+    }
+};
+
+// A descriptor set kept across frames: the set, the pool it came from, and the frame it was last
+// bound in.
+struct PersistentSet {
+    VkDescriptorSet set = VK_NULL_HANDLE;    // The set, written once.
+    VkDescriptorPool pool = VK_NULL_HANDLE;  // The pool it was allocated from, to free it to.
+    std::uint64_t used_frame = 0;            // The frame (frame_count) that last bound it.
+};
+
+// The descriptor sets that bind only long-lived things, kept from frame to frame on the path
+// without bindless materials (vk-persistent-descriptors, docs/port/RENDER_PERF.md "R-14"): a
+// program's set of the same textures, samplers and ring chunk is written once, not every frame.
+//
+// A key names its program by its serial (new at each link) and each sampled image by its serial
+// (never reused), so a set of a deleted program or texture is never found again; it stays until
+// evicted, least recently bound first, when kCapacity are held. Its pools allow freeing one set.
+// Only the thread that draws uses it; the backend's close destroys the pools.
+struct PersistentSets {
+    // The sets held at most, and the sets one pool of `pools` holds.
+    static constexpr std::size_t kCapacity = 4096;
+    static constexpr std::uint32_t kPoolSets = 1024;
+
+    std::vector<VkDescriptorPool> pools;  // Every pool made, each with FREE_DESCRIPTOR_SET.
+    // The sets, by their key's bytes.
+    std::unordered_map<std::string, PersistentSet, KeyBytesHash, std::equal_to<>> sets;
+    std::vector<std::uint64_t> key;  // The key being looked up, kept for its capacity.
 };
 
 // A GL program: its shaders, the compiled SPIR-V and what it declares (shader_compiler.h), its
@@ -974,6 +1018,8 @@ struct Context {
     PipelineManifest manifest;         // The keys to make ahead, by program identity (R-10).
     PipelinePrewarm prewarm;           // The worker that makes them (R-10).
     SpirvCache spirv_cache;            // What glslang made, kept between runs (R-12).
+    PersistentSets persistent_sets;    // Descriptor sets kept across frames (R-14).
+    std::uint64_t image_serial = 0;    // The last Image::serial given out.
     DrawScratch scratch;               // The draw's temporaries, kept for their capacity (R-04).
     bool byte_indices_logged = false;  // The 8-bit index emulation has been reported once.
     std::vector<std::pair<std::uint64_t, VkSampler>> vk_samplers;  // by a packed key

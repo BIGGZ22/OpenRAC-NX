@@ -1512,6 +1512,209 @@ VkDescriptorSet descriptors_reference(Program& p, std::span<const Sampled> sampl
     return set;
 }
 
+// ---- Descriptor sets kept across frames (R-14) ----
+
+// Returns whether `buffer` lives as long as the backend: a frame's ring chunk, the dummy buffer,
+// or none. A set naming only such buffers can be kept; a GL buffer's may be deleted and its
+// handle given out again.
+bool long_lived_buffer(VkBuffer buffer) {
+    // None, or the zeros every unbound input reads.
+    if (buffer == VK_NULL_HANDLE || buffer == g->dummy_buffer) {
+        return true;
+    }
+
+    // Each frame's ring chunks, which go only when the backend closes.
+    for (const Frame& f : g->frames) {
+        // A chunk of this frame's ring.
+        for (const Chunk& c : f.chunks) {
+            // This one.
+            if (c.buffer == buffer) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+// Returns whether the texel view `view` lives as long as the backend: none, or a dummy view.
+bool long_lived_texels(VkBufferView view) {
+    return view == VK_NULL_HANDLE
+           || std::ranges::find(g->dummy_views, view) != std::end(g->dummy_views);
+}
+
+// Fills `out` with the key a set of program `p` binding `blocks` and `samplers` is kept under:
+// the program's serial, the set's `key`, then each sampled image's serial. False when the set
+// names a resource that may die and give its handle to another (a GL buffer, a texture buffer):
+// such a set is made each frame, as before.
+bool persistent_key(
+    const Program& p,
+    std::span<const BufferRef> blocks,
+    std::span<const Sampled> samplers,
+    std::span<const std::uint64_t> key,
+    std::vector<std::uint64_t>& out
+) {
+    // The default uniforms come from the ring, but a program may bind none.
+    if (!long_lived_buffer(p.uniforms_buffer)) {
+        return false;
+    }
+
+    // Each block's buffer.
+    for (const BufferRef& block : blocks) {
+        // A GL buffer: not kept.
+        if (!long_lived_buffer(block.buffer)) {
+            return false;
+        }
+    }
+
+    // Each sampler's texel view and image.
+    for (const Sampled& s : samplers) {
+        // A texture buffer's view, or an image destroy_image_now emptied.
+        if (!long_lived_texels(s.texels) || (s.image != nullptr && s.image->serial == 0)) {
+            return false;
+        }
+    }
+
+    out.clear();
+    out.push_back(p.serial);
+    out.insert(out.end(), key.begin(), key.end());
+
+    // The images by their serials, which no later image takes.
+    for (const Sampled& s : samplers) {
+        out.push_back(s.image != nullptr ? s.image->serial : 0);
+    }
+
+    return true;
+}
+
+// Makes a pool for kept sets, of PersistentSets::kPoolSets sets that can be freed one by one.
+VkDescriptorPool new_persistent_pool() {
+    constexpr std::uint32_t kSets = PersistentSets::kPoolSets;
+    // Each set binds a few of each kind at most (assumed: the port's programs bind up to a
+    // handful of blocks and samplers), so twice the sets of each.
+    const VkDescriptorPoolSize sizes[] =
+        {{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2 * kSets},
+         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, kSets},
+         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 * kSets},
+         {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, kSets},
+         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, kSets}};
+    VkDescriptorPoolCreateInfo info{VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
+    info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    info.maxSets = kSets;
+    info.poolSizeCount = static_cast<std::uint32_t>(std::size(sizes));
+    info.pPoolSizes = sizes;
+    VkDescriptorPool pool = VK_NULL_HANDLE;
+    check(vkCreateDescriptorPool(g->device, &info, nullptr, &pool), "a descriptor pool");
+    return pool;
+}
+
+// Allocates a set of `layout` from the kept sets' pools, making a pool when all are full; null
+// with `pool` untouched when none can be made. `pool` is set to the pool it came from.
+VkDescriptorSet allocate_persistent(VkDescriptorSetLayout layout, VkDescriptorPool& pool) {
+    PersistentSets& kept = g->persistent_sets;
+    VkDescriptorSetAllocateInfo info{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+    info.descriptorSetCount = 1;
+    info.pSetLayouts = &layout;
+
+    // The newest pool first, then a new one: older pools have room only where sets were freed.
+    for (int attempt = 0; attempt < 2; ++attempt) {
+        // No pool, or the newest is full: one more.
+        if (attempt == 1 || kept.pools.empty()) {
+            const VkDescriptorPool fresh = new_persistent_pool();
+
+            // The device cannot make another.
+            if (fresh == VK_NULL_HANDLE) {
+                return VK_NULL_HANDLE;
+            }
+
+            kept.pools.push_back(fresh);
+        }
+
+        info.descriptorPool = kept.pools.back();
+        VkDescriptorSet set = VK_NULL_HANDLE;
+
+        // Allocated.
+        if (vkAllocateDescriptorSets(g->device, &info, &set) == VK_SUCCESS) {
+            ++g->submission.descriptor_sets_allocated;
+            pool = info.descriptorPool;
+            return set;
+        }
+    }
+
+    return VK_NULL_HANDLE;
+}
+
+// Frees the kept set bound least recently, if no frame in flight may still use it. False when
+// every set was bound too recently: the new one is then not kept.
+bool evict_persistent_set() {
+    PersistentSets& kept = g->persistent_sets;
+    auto oldest = kept.sets.end();
+
+    // The set bound longest ago.
+    for (auto it = kept.sets.begin(); it != kept.sets.end(); ++it) {
+        // Older than the oldest so far.
+        if (oldest == kept.sets.end() || it->second.used_frame < oldest->second.used_frame) {
+            oldest = it;
+        }
+    }
+
+    // A frame still in flight may bind it: the kFrames before this one.
+    if (oldest == kept.sets.end()
+        || oldest->second.used_frame + static_cast<std::uint64_t>(kFrames) >= g->frame_count) {
+        return false;
+    }
+
+    vkFreeDescriptorSets(g->device, oldest->second.pool, 1, &oldest->second.set);
+    kept.sets.erase(oldest);
+    return true;
+}
+
+// Returns the kept set of program `p` for `blocks` and `samplers`, whose per-frame key is `key`,
+// making and writing it when there is none; null when the set may not be kept (persistent_key)
+// or cannot be made, and the caller makes one for this frame.
+VkDescriptorSet persistent_set(
+    Program& p,
+    std::span<const BufferRef> blocks,
+    std::span<const Sampled> samplers,
+    std::span<const std::uint64_t> key
+) {
+    PersistentSets& kept = g->persistent_sets;
+
+    // A set of resources that may die is not kept.
+    if (!persistent_key(p, blocks, samplers, key, kept.key)) {
+        return VK_NULL_HANDLE;
+    }
+
+    const std::string_view bytes(
+        reinterpret_cast<const char*>(kept.key.data()), kept.key.size() * sizeof(std::uint64_t)
+    );
+
+    // Written in an earlier frame: bound again, unwritten.
+    if (const auto found = kept.sets.find(bytes); found != kept.sets.end()) {
+        found->second.used_frame = g->frame_count;
+        ++g->submission.descriptor_reuses;
+        return found->second.set;
+    }
+
+    // Full: the least recently bound goes, unless every set was bound too lately.
+    if (kept.sets.size() >= PersistentSets::kCapacity && !evict_persistent_set()) {
+        return VK_NULL_HANDLE;
+    }
+
+    VkDescriptorPool pool = VK_NULL_HANDLE;
+    const VkDescriptorSet set = allocate_persistent(p.set_layout, pool);
+
+    // No pool could be made.
+    if (set == VK_NULL_HANDLE) {
+        return VK_NULL_HANDLE;
+    }
+
+    write_set(p, set, blocks, samplers, g->scratch);
+    ++g->submission.descriptor_sets;
+    kept.sets.emplace(std::string(bytes), PersistentSet{set, pool, g->frame_count});
+    return set;
+}
+
 // descriptors() with vk-draw-cache: the reference path's sets, found and made with
 // Context::scratch's arrays and Program::set_cache, so a set found allocates nothing.
 VkDescriptorSet descriptors_cached(Program& p, std::span<const Sampled> samplers) {
@@ -1540,15 +1743,27 @@ VkDescriptorSet descriptors_cached(Program& p, std::span<const Sampled> samplers
         }
     }
 
-    const VkDescriptorSet set = allocate_set(p.set_layout);
+    // A set kept from an earlier frame, or kept from now on (vk-persistent-descriptors).
+    VkDescriptorSet set = VK_NULL_HANDLE;
 
-    // The pools are exhausted and a new one could not be made.
-    if (set == VK_NULL_HANDLE) {
-        return VK_NULL_HANDLE;
+    // Kept sets need the reuse as well: without it every set is made anew, the reference.
+    if (reuse_uniforms()
+        && renderer::render_opt::enabled(renderer::render_opt::Opt::VkPersistentDescriptors)) {
+        set = persistent_set(p, scratch.blocks, samplers, key);
     }
 
-    write_set(p, set, scratch.blocks, samplers, scratch);
-    ++g->submission.descriptor_sets;
+    // Not kept: made for this frame, as before.
+    if (set == VK_NULL_HANDLE) {
+        set = allocate_set(p.set_layout);
+
+        // The pools are exhausted and a new one could not be made.
+        if (set == VK_NULL_HANDLE) {
+            return VK_NULL_HANDLE;
+        }
+
+        write_set(p, set, scratch.blocks, samplers, scratch);
+        ++g->submission.descriptor_sets;
+    }
 
     // Kept for the rest of the frame, unless the reuse is the reference that is switched off.
     if (reuse_uniforms()) {

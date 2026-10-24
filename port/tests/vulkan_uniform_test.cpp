@@ -664,7 +664,12 @@ void main() {
         }
         const auto after = vkgl::submission_counters();
         CHECK(after.uniform_uploads - before.uniform_uploads == (reference ? 5u : 3u));
-        CHECK(after.descriptor_sets - before.descriptor_sets == (reference ? 5u : 2u));
+        // Two sets for the two textures; with vk-persistent-descriptors (R-14) a later round may
+        // find them kept from an earlier one and make none.
+        const auto made = after.descriptor_sets - before.descriptor_sets;
+        const bool kept =
+            renderer::render_opt::enabled(renderer::render_opt::Opt::VkPersistentDescriptors);
+        CHECK(reference ? made == 5u : (kept ? made <= 2u : made == 2u));
         const auto pixels = frame.read_rgba();
         CHECK(pixels.size() == 20);
         for (unsigned i = 0; i < 5 && pixels.size() == 20; ++i) {
