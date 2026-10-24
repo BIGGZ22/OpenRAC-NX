@@ -98,7 +98,7 @@ the lanes, one at a time.
 | P2-35 | hostgen `main` and no_c `classify` in named steps | P2-10 | done | maintainer | [c71ced89](https://github.com/OpenRAC/OpenRAC/commit/c71ced89), [f9412cae](https://github.com/OpenRAC/OpenRAC/commit/f9412cae), [ccd78ccf](https://github.com/OpenRAC/OpenRAC/commit/ccd78ccf), and this page |
 | P2-36 | The frontend's rac1 addresses and game-id branches move into the profile | P2-03 | todo | | |
 | P2-37 | `game/common` includes `scene/` directly; `openrac::scene`; forwarders removed | P2-02, P2-05, P2-18, P2-27 | todo | | |
-| P2-38 | rac1 host C reads through the C entry point | P2-19, the level loader, the rac1 sync | todo | | |
+| P2-38 | rac1 host C reads through the C entry point | P2-19, the level loader, the rac1 sync | done | maintainer | [493981b3](https://github.com/OpenRAC/OpenRAC/commit/493981b3), [5aa9fc31](https://github.com/OpenRAC/OpenRAC/commit/5aa9fc31), and this page |
 | P2-39 | `scene` stops including `enhanced/`: lighting and shadow hooks | P2-07 | todo | | |
 
 ## Phase R: what drawing costs
@@ -490,3 +490,5 @@ Found while doing a package, for another package or the maintainers.
 | P2-03 | `layering.py` still warns on three rows of `rules.tsv` that predate P2-03: `debug_overlay.cpp:45` (`viewer/screenshot.h`, now line 40) and `main.cpp:74`, `:75` (no longer break the layers). | P2-37 |
 | P2-03 | The rac1 sync (4edec0d3): OpenRAC's 36509111 credits Lombyte as GPL-3.0 in `games/rac1` while rac1-decomp still writes "Lombyte (MIT)", so every sync rejects the hunks that touch those lines (140 files this time) and brings new MIT credits in; this sync merged them three ways and applied the same wording. The wording fixed in rac1-decomp itself would make the next sync clean. rac1-decomp's new `src/versions/` (jp, pal_v1, us) is skipped by rac1-pal's `hostgen.json`. | the maintainers (rac1-decomp) |
 | P2-03 | On the Mac, `ctest --preset release -j 8` failed `vulkan_uniform` and two other GPU tests once, which pass alone and in a serial run (all 153): the GPU tests contend for the device under `-j`. Verification here used serial runs. | the record |
+| P2-38 | `check_conventions.py`'s `GETENV_EXCEPTIONS` still names `port/game/rac1/host/boot.c`, `collision.c`, `hand.c` and `ui2d.c`; none reads a variable with `getenv` now (the check reports three of them as stale, advisory). The four entries can go, which leaves the test's. `port/tools/conventions/` is outside P2-38's paths. | the owner of `port/tools/conventions/` |
+| P2-38 | `hand.c` also read `OPENRAC_SOUND_LOG` with `getenv` (P2-19's follow-up names it; the brief's list did not): it moved with the others. `boot.c`, `hand.c` and `ui2d.c` still include `<stdlib.h>`, which they may no longer need; left as they were. | the record |
