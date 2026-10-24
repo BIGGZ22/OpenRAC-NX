@@ -46,6 +46,7 @@ before and after, and how its frames are shown to be the same.
 | `vk-state-skip` | on | none (exact) | The Vulkan draw records dynamic state and binds only when they differ from what its command buffer holds (R-03). |
 | `static-buffers-device-local` | on | none (exact) | A static GL buffer of 64 KiB or more gets device memory at its first draw and lets its CPU copy go ([R-05](#r-05-static-buffers-in-device-memory)). |
 | `static-buffers-force-staging` | off | none (exact) | With the entry above, fills that memory by a staging copy even where device memory is mappable, so the tests take that path on every machine ([R-05](#r-05-static-buffers-in-device-memory)). |
+| `texture-prepare` | on | none (exact) | A level's textures are created, uploaded and mipped at its load (`LevelScene::upload`), not by the first draw that uses them ([R-13](#r-13-a-levels-textures-made-at-its-load)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -534,3 +535,88 @@ On real levels (the maintainers'): `openrac_render_bench --level assets/port/rac
 --warmup 3 --frames 10`, with and without `--opt-off static-buffers-device-local`, and the summary
 line's `warmup` counters.
 
+## R-13: a level's textures made at its load
+
+**What changed** (`renderer/texture_pool.*`, `scene/level_renderer.cpp`, `tests/render_fixture.h`):
+
+- `texture-prepare`. A texture of the pool was made by the first draw that used it
+  (`TexturePool::gl_texture`: `glGenTextures`, `glTexImage2D`, `glGenerateMipmap`, the sampler
+  parameters), so the first frame after a level change made every texture it saw, each an image, a
+  staging copy and a blit chain in that frame's upload command buffer on Vulkan. That code is now
+  `create_gl`, the one place a pool texture is made, and `TexturePool::prepare(handles)` runs it
+  for every handle that has no GL texture yet. `LevelScene::upload` hands it every texture its
+  materials draw with (colour and emission images, white where there is none) after its buffers,
+  before it returns: while the level loads and no frame is shown. The uploads go in batches of at
+  most 32 MiB of texels with a `glFinish` between two, and the load logs one verbose line
+  (`level textures: 601 made at the load, 54.7 MiB uploaded, 72.9 MiB with mip chains, 2 batches`
+  on the synthetic scene). Off, every texture is made at its first draw, as before.
+- Not changed: textures made lazily by anything else (the HUD's, particles', uploaded and field
+  textures) stay lazy; no placeholder and no per-frame budget (both would show). PR #43's 2x
+  colours are still built at a texture's first draw with an edge-aware filter: they follow the
+  frame's filter setting and each bind's wrap modes, which the load does not know.
+- Lifetime: level textures were never evicted (`end_frame` drops only uploaded and field
+  textures), so making them early changes when they appear, not how long they live. Memory: all of
+  a level's material textures are resident from the load on, seen or not: 72.9 MiB with mip
+  chains on the synthetic scene (600 textures; 54.7 MiB as uploaded).
+- The fixture's `reupload` made the scene's textures again only in name: `LevelScene::release`
+  keeps its texture handles, so a second upload into the same object appended 600 new handles and
+  the materials drew the first ones. `SceneRenderer::reupload` now makes a new `LevelScene`, as the
+  frontend's `use_level` does, so the scenario makes the level's textures again (1,201 images in its
+  reload frame, before 1).
+
+**The counter.** The benchmark publishes the counters once a present, so a frame's gauges also hold
+whatever the load did since the last present; the summary's `load` and `warmup` counters are taken
+by `vkgl::submission_counters()` around `SceneRenderer::open` and are exact. The warm-up is the
+level's first ten frames. `render_bench.py --synthetic --compare-opt texture-prepare` (entry off,
+then on), 1920x1080, five runs a setting, the same on the Mac and box1 and in every run:
+
+| Setting | textures created in the first ten frames | texel bytes uploaded in them |
+|---|---|---|
+| base (walk, cold), warm cache, static camera, between x3, gpu-driven off, materials off, half size | 1,201 to 1 (the moby palette) | 58,949,632 to 1,638,400 (the palette, ten frames) |
+| enhanced | 1,208 to 7 (the palette and six images of the Enhanced passes, made at their first frame) | 58,949,636 to 1,638,400 |
+
+The level textures made inside the first ten frames go from 600 (1,200 images: each texture's
+image, then its mip chain's) to 0, and their bytes from 57,311,236 to 0; the load makes them
+instead (load counters: 3 images to 1,203). Every per-frame counter of the measured frames is the
+same with the entry on and off (draws, triangles, commands, ring bytes, descriptor writes, heap
+allocations).
+
+On the `reupload` scenario (`openrac_render_bench --scenario reupload --warmup 0 --frames 40`,
+the level uploaded again before frame 20), no frame after a load's first made a texture, entry on
+or off: the synthetic camera sees all 600 materials in its first frame, so the whole cost is in that
+frame. On a real level the camera finds materials as it moves, so with the entry off textures are
+also made in later frames; with it on none are.
+
+**Milliseconds, as information** (median of five runs, lowest to highest; entry off to on):
+
+| Timing | Mac (M5 Max, MoltenVK) | box1 (GTX 1070) |
+|---|---|---|
+| the level's upload | 117.6 (116.1 to 121.0) to 206.1 (203.3 to 208.3) | 187.6 (186.1 to 194.9) to 303.2 (300.7 to 308.8) |
+| its first picture | 76.4 (71.0 to 81.5) to 22.2 (22.0 to 22.9) | 133.1 (123.3 to 136.7) to 29.8 (28.8 to 30.4) |
+| upload and first picture | 194.0 to 228.3 | 320.7 to 333.0 |
+| the first picture after the reupload | 40.0 (39.7 to 43.2) to 13.9 (13.5 to 14.0) | 98.6 (89.5 to 103.2) to 6.8 (6.8 to 8.9) |
+
+The first picture of a level loses 54 ms on the Mac and 103 ms on box1, and the load gains about
+88 and 116 ms: the same work moved out of the frame loop, plus the two batches' `glFinish` waits.
+The picture time of the measured frames is unchanged (within the noise on both machines).
+
+**Equivalence.** `render_equivalence_vulkan` draws `texture-prepare` on and off in every scenario,
+Enhanced off and on, the `reupload` one included (its first frames after the load are compared),
+byte for byte under the validation layer: identical, no validation message, on the Mac and box1.
+The whole release preset passes on both (the OpenGL tests, `viewer`, `viewer_es` and
+`renderer_texture` among them, on box1; they skip on the Mac), and the headless preset on the Mac.
+The change reaches the GL and GLES paths through the pool: `viewer`, `viewer_es` and
+`renderer_texture` are the tests to run on a machine with a GL context.
+
+Measured with:
+
+```sh
+python3 port/tools/perf/render_bench.py --synthetic --compare-opt texture-prepare
+OPENRAC_GL_API=vulkan port/build/release/openrac_render_bench --scenario reupload --warmup 0 --frames 40
+OPENRAC_GL_API=vulkan port/build/release/openrac_render_bench --scenario reupload --warmup 0 --frames 40 --opt-off texture-prepare
+OPENRAC_LOG=verbose OPENRAC_GL_API=vulkan port/build/release/openrac_render_bench --frames 1 --warmup 0
+```
+
+On real levels the maintainers' commands are
+`python3 port/tools/perf/render_bench.py --level assets/port/rac1/pal/level_01 --compare-opt texture-prepare`
+(the warm-up rows) and the same for level_12.
