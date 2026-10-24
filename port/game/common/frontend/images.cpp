@@ -40,8 +40,14 @@ void upload_image(
         return;
     }
     log::debug(
-        "library image to block {:#x} width {} psm {:#x} at {},{} size {}x{}", base, width_units, psm, x,
-        y, width, height
+        "library image to block {:#x} width {} psm {:#x} at {},{} size {}x{}",
+        base,
+        width_units,
+        psm,
+        x,
+        y,
+        width,
+        height
     );
     renderer::ImageUpload image;
     image.dbp = base;
@@ -63,12 +69,22 @@ void upload_image(
     g->images.push_back(std::move(image));
 }
 
-bool store_image(std::uint32_t base, std::uint32_t width_units, std::uint8_t psm, int x, int y,
-                 int width, int height, std::span<std::uint8_t> out) {
+bool store_image(
+    std::uint32_t base,
+    std::uint32_t width_units,
+    std::uint8_t psm,
+    int x,
+    int y,
+    int width,
+    int height,
+    std::span<std::uint8_t> out
+) {
     int fx = 0;
     int fy = 0;
     // The draw buffer as the game left it: the last frame with its world in.
-    const renderer::FrameBuffer* source = g && g->last_world.id() != 0 ? &g->last_world : g ? &g->frame : nullptr;
+    const renderer::FrameBuffer* source = g && g->last_world.id() != 0 ? &g->last_world
+                                          : g                          ? &g->frame
+                                                                       : nullptr;
     if (source == nullptr || psm != 0 || source->id() == 0 || source->width() <= 0
         || !renderer::frame_pixel(base, width_units, x, y, fx, fy)) {
         return false;
@@ -94,7 +110,9 @@ bool store_image(std::uint32_t base, std::uint32_t width_units, std::uint8_t psm
         if (snap_w != source->width() || snap_h != source->height()) {
             snap_w = source->width();
             snap_h = source->height();
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, snap_w, snap_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+            glTexImage2D(
+                GL_TEXTURE_2D, 0, GL_RGBA8, snap_w, snap_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr
+            );
         }
         glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, snap_w, snap_h);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -109,7 +127,8 @@ bool store_image(std::uint32_t base, std::uint32_t width_units, std::uint8_t psm
             for (int cx = 0; cx < kChipWidth; ++cx) {
                 const int sx = std::min(fw - 1, (2 * cx + 1) * fw / (2 * kChipWidth));
                 const std::uint8_t* p = full.data() + (static_cast<std::size_t>(sy) * fw + sx) * 4;
-                std::uint8_t* q = chip.data() + (static_cast<std::size_t>(cy) * kChipWidth + cx) * 4;
+                std::uint8_t* q =
+                    chip.data() + (static_cast<std::size_t>(cy) * kChipWidth + cx) * 4;
                 q[0] = p[0];
                 q[1] = p[1];
                 q[2] = p[2];
@@ -126,7 +145,9 @@ bool store_image(std::uint32_t base, std::uint32_t width_units, std::uint8_t psm
         for (int c = 0; c < width; ++c) {
             std::uint8_t* q = out.data() + (static_cast<std::size_t>(r) * width + c) * 4;
             if (renderer::frame_pixel(base, width_units, x + c, y + r, fx, fy)) {
-                std::memcpy(q, chip.data() + (static_cast<std::size_t>(fy) * kChipWidth + fx) * 4, 4);
+                std::memcpy(
+                    q, chip.data() + (static_cast<std::size_t>(fy) * kChipWidth + fx) * 4, 4
+                );
             } else {
                 std::memset(q, 0, 4);
             }

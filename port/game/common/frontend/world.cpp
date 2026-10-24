@@ -65,8 +65,12 @@ gaddr light_bank_address() {
 
 // The four shadow directions in each version's executable (relocated when read).
 gaddr shadow_directions_address() {
-    if (g->game == "rac1-pal") return 0x001CAE00u;
-    if (g->game == "rac1-ntsc") return 0x001CAA80u;
+    if (g->game == "rac1-pal") {
+        return 0x001CAE00u;
+    }
+    if (g->game == "rac1-ntsc") {
+        return 0x001CAA80u;
+    }
     return 0;
 }
 
@@ -84,10 +88,13 @@ gaddr hero_state_address() {
 // world's, or level 0's when the title world was not extracted.
 void use_level(int number) {
     int wanted = number;
-    if (number == -2 && std::filesystem::exists(g->levels / std::format("level_{:02d}", kFlightWorld))) {
+    if (number == -2
+        && std::filesystem::exists(g->levels / std::format("level_{:02d}", kFlightWorld))) {
         wanted = kFlightWorld;
     } else if (number < 0) {
-        wanted = std::filesystem::exists(g->levels / std::format("level_{:02d}", kTitleWorld)) ? kTitleWorld : 0;
+        wanted = std::filesystem::exists(g->levels / std::format("level_{:02d}", kTitleWorld))
+                     ? kTitleWorld
+                     : 0;
     }
     if (wanted == g->loaded) {
         return;
@@ -122,9 +129,15 @@ void use_level(int number) {
     // picture is the 2D path, both its parts, and nothing is missing to tell the player about.
     const bool has_levels = g->game == "rac1-pal" || g->game == "rac1-ntsc";
     if (!has_levels && !viewer::load_level(dir, g->level, error, edited)) {
-        log::info("level {}: no scenery for this game yet ({}); the 2D path is drawn alone", wanted, error);
-        auto hud = std::make_unique<renderer::DirectRenderer>("hud", renderer::Bucket::Hud, renderer::DirectConfig{},
-                                                              renderer::DirectRenderer::Input::Vif);
+        log::info(
+            "level {}: no scenery for this game yet ({}); the 2D path is drawn alone", wanted, error
+        );
+        auto hud = std::make_unique<renderer::DirectRenderer>(
+            "hud",
+            renderer::Bucket::Hud,
+            renderer::DirectConfig{},
+            renderer::DirectRenderer::Input::Vif
+        );
         g->renderer->add(std::make_unique<renderer::DirectBackground>(*hud), error);
         g->renderer->add(std::move(hud), error);
         if (fresh) {
@@ -136,9 +149,19 @@ void use_level(int number) {
         log::warn("level {}: {} (extract it with editor/extract.py port)", wanted, error);
         // Said in the picture: the game goes on, its HUD over a black world, and a player takes
         // that for the game being broken.
-        debug_overlay::notice("This level's scenery could not be read, so the world is black.\n"
-                              "Close the game and run \"Check the levels\" in the launcher (the log says which file).");
-        g->renderer->add(std::make_unique<renderer::DirectRenderer>("hud", renderer::Bucket::Hud, renderer::DirectConfig{}, renderer::DirectRenderer::Input::Vif), error);
+        debug_overlay::notice(
+            "This level's scenery could not be read, so the world is black.\n"
+            "Close the game and run \"Check the levels\" in the launcher (the log says which file)."
+        );
+        g->renderer->add(
+            std::make_unique<renderer::DirectRenderer>(
+                "hud",
+                renderer::Bucket::Hud,
+                renderer::DirectConfig{},
+                renderer::DirectRenderer::Input::Vif
+            ),
+            error
+        );
         if (fresh) {
             g->renderer->init(error);
         }
@@ -149,8 +172,9 @@ void use_level(int number) {
         return;
     }
     // The 2D path: its part before the world first, the rest after the world renderers.
-    auto hud = std::make_unique<renderer::DirectRenderer>("hud", renderer::Bucket::Hud, renderer::DirectConfig{},
-                                                          renderer::DirectRenderer::Input::Vif);
+    auto hud = std::make_unique<renderer::DirectRenderer>(
+        "hud", renderer::Bucket::Hud, renderer::DirectConfig{}, renderer::DirectRenderer::Input::Vif
+    );
     g->renderer->add(std::make_unique<renderer::DirectBackground>(*hud), error);
     static const bool& hero_pixel_shadow = stats::probe(
         "OPENRAC_HERO_SHADOW",
@@ -170,7 +194,8 @@ void use_level(int number) {
     for (std::size_t layer = 0; layer < viewer::kLayerCount; ++layer) {
         // The caster is drawn after its shadow, so its proxy cannot darken
         // Ratchet himself. Opaque scenery has already filled the depth buffer.
-        if (shadow_directions_address() != 0 && layer == static_cast<std::size_t>(viewer::Layer::Mobys)) {
+        if (shadow_directions_address() != 0
+            && layer == static_cast<std::size_t>(viewer::Layer::Mobys)) {
             if (g->renderer->add(std::make_unique<renderer::ShadowRenderer>(), error) == nullptr) {
                 log::error("shadow renderer: {}", error);
             }
@@ -182,13 +207,18 @@ void use_level(int number) {
         // The liquids (the seas and lava the game draws solid) after the ties, where retail's draw
         // callback list 3 draws them, before the shrubs and mobys (renderer/effects.h).
         if (static_cast<viewer::Layer>(layer) == viewer::Layer::Ties
-            && g->renderer->add(std::make_unique<renderer::EffectRenderer>("liquids", renderer::EffectPart::Liquids,
-                                                                           renderer::Bucket::Ties),
-                                error) == nullptr) {
+            && g->renderer->add(
+                   std::make_unique<renderer::EffectRenderer>(
+                       "liquids", renderer::EffectPart::Liquids, renderer::Bucket::Ties
+                   ),
+                   error
+               ) == nullptr) {
             log::error("liquid renderer: {}", error);
         }
     }
-    if (g->renderer->add(std::make_unique<renderer::EffectRenderer>("effects", renderer::EffectPart::Rest), error)
+    if (g->renderer->add(
+            std::make_unique<renderer::EffectRenderer>("effects", renderer::EffectPart::Rest), error
+        )
         == nullptr) {
         log::error("effect renderer: {}", error);
     }
@@ -200,8 +230,9 @@ void use_level(int number) {
     const auto sky = viewer::load_sky_textures(dir);
     for (std::size_t i = 0; i < sky.size(); ++i) {
         if (sky[i].width > 0) {
-            const renderer::TextureHandle h = g->renderer->textures().add(sky[i], renderer::AlphaScale::Full,
-                                                                          std::format("sky {} of level {}", i, wanted));
+            const renderer::TextureHandle h = g->renderer->textures().add(
+                sky[i], renderer::AlphaScale::Full, std::format("sky {} of level {}", i, wanted)
+            );
             g->renderer->textures().place(kSkyTextureKey + static_cast<std::uint32_t>(i), h);
         }
     }
@@ -225,7 +256,8 @@ void effect_quad(std::span<const std::uint8_t> ram, const openrac_game_quad& qua
     q.cbp = cbp;
     const std::uint32_t width = 1u << ((quad.tex0 >> 26) & 0xF);
     const std::uint32_t height = 1u << ((quad.tex0 >> 30) & 0xF);
-    if (pixels != 0 && clut != 0 && pixels + width * height <= ram.size() && clut + 1024 <= ram.size()) {
+    if (pixels != 0 && clut != 0 && pixels + width * height <= ram.size()
+        && clut + 1024 <= ram.size()) {
         renderer::ImageUpload palette;
         palette.dbp = cbp;
         palette.dbw = 1;
@@ -267,13 +299,15 @@ int hud_side() {
     int window_width = 0;
     int window_height = 0;
     g->window->drawable_size(window_width, window_height);
-    const Box box = frame_box(window_width, window_height, picture_aspect(window_width, window_height));
+    const Box box =
+        frame_box(window_width, window_height, picture_aspect(window_width, window_height));
     if (box.height <= 0) {
         return 0;
     }
     // The picture is box.width / box.height wide where the game's is 4:3: each side gained half
     // the difference, in pixels of which the game's picture has 512.
-    const float wider = static_cast<float>(box.width) / (kTvAspect * static_cast<float>(box.height));
+    const float wider =
+        static_cast<float>(box.width) / (kTvAspect * static_cast<float>(box.height));
     return wider > 1.0f ? static_cast<int>(256.0f * (wider - 1.0f)) : 0;
 }
 
@@ -290,7 +324,9 @@ float picture_wider() {
     if (aspect <= kTvAspect || box.width <= 0 || box.height <= 0) {
         return 1.0f;
     }
-    return std::max(1.0f, static_cast<float>(box.width) / (kTvAspect * static_cast<float>(box.height)));
+    return std::max(
+        1.0f, static_cast<float>(box.width) / (kTvAspect * static_cast<float>(box.height))
+    );
 }
 
 void sky_sprite(const std::uint8_t* record, std::uint64_t tex0) {
@@ -361,17 +397,28 @@ void sky_sprite_quads(const viewer::GameState& state) {
         quads.push_back(q);
     }
     if (!quads.empty()) {
-        std::stable_sort(quads.begin(), quads.end(), [](const renderer::EffectQuad& a, const renderer::EffectQuad& b) {
-            if (a.tbp != b.tbp) return a.tbp < b.tbp;
-            return a.alpha < b.alpha;
-        });
+        std::stable_sort(
+            quads.begin(),
+            quads.end(),
+            [](const renderer::EffectQuad& a, const renderer::EffectQuad& b) {
+                if (a.tbp != b.tbp) {
+                    return a.tbp < b.tbp;
+                }
+                return a.alpha < b.alpha;
+            }
+        );
         g->effects.insert(g->effects.begin(), quads.begin(), quads.end());
     }
     g->sky_sprites.clear();
 }
 
-void particle(std::span<const std::uint8_t> ram, const std::uint8_t* record, std::uint32_t pixels,
-              std::uint32_t clut, int log2_side) {
+void particle(
+    std::span<const std::uint8_t> ram,
+    const std::uint8_t* record,
+    std::uint32_t pixels,
+    std::uint32_t clut,
+    int log2_side
+) {
     (void)ram;
     State::Particle p;
     std::memcpy(p.record.data(), record, p.record.size());
@@ -388,29 +435,39 @@ void particle(std::span<const std::uint8_t> ram, const std::uint8_t* record, std
 // another the next, and the conversions the pool kept mixed them up (the nanotech crates' orbs as
 // white squares). 0 when the addresses are not in memory.
 // Refactor note: other effect textures (effect_quad) still go through uploads at their GS blocks.
-std::uint32_t particle_texture(std::span<const std::uint8_t> ram, std::uint32_t pixels, std::uint32_t clut) {
+std::uint32_t particle_texture(
+    std::span<const std::uint8_t> ram, std::uint32_t pixels, std::uint32_t clut
+) {
     constexpr std::uint32_t kParticleTextureKey = 0x30000;  // past the sky's (kSkyTextureKey)
     constexpr std::size_t kSide = 32;
-    if (!g->renderer || pixels == 0 || clut == 0 || pixels + kSide * kSide > ram.size() || clut + 1024 > ram.size()) {
+    if (!g->renderer || pixels == 0 || clut == 0 || pixels + kSide * kSide > ram.size()
+        || clut + 1024 > ram.size()) {
         return 0;
     }
-    if (g->particle_textures_for != g->renderer.get()) {  // a new renderer (a level loaded): a new pool
+    if (g->particle_textures_for
+        != g->renderer.get()) {  // a new renderer (a level loaded): a new pool
         g->particle_textures.clear();
         g->particle_textures_for = g->renderer.get();
     }
     const std::span<const std::uint8_t> indices = ram.subspan(pixels, kSide * kSide);
     const std::span<const std::uint8_t> colours = ram.subspan(clut, 1024);
-    const std::uint64_t id = renderer::hash_bytes(indices.data(), indices.size())
-                             ^ (renderer::hash_bytes(colours.data(), colours.size()) * 0x9E3779B97F4A7C15ull);
+    const std::uint64_t id =
+        renderer::hash_bytes(indices.data(), indices.size())
+        ^ (renderer::hash_bytes(colours.data(), colours.size()) * 0x9E3779B97F4A7C15ull);
     if (const auto found = g->particle_textures.find(id); found != g->particle_textures.end()) {
         return found->second;
     }
     const renderer::gs::Texa texa{0, false, 0x80};
     const std::vector<std::uint32_t> palette = renderer::clut_csm1(colours, 0x00, 16, 256, texa);
-    renderer::Rgba8Image image = renderer::convert_t8(indices, kSide, kSide, palette, renderer::AlphaScale::Gs);
+    renderer::Rgba8Image image =
+        renderer::convert_t8(indices, kSide, kSide, palette, renderer::AlphaScale::Gs);
     const renderer::TextureHandle h = g->renderer->textures().add(
-        std::move(image), renderer::AlphaScale::Gs, std::format("particle {:#x}/{:#x}", pixels, clut));
-    const std::uint32_t key = kParticleTextureKey + static_cast<std::uint32_t>(g->particle_textures.size());
+        std::move(image),
+        renderer::AlphaScale::Gs,
+        std::format("particle {:#x}/{:#x}", pixels, clut)
+    );
+    const std::uint32_t key =
+        kParticleTextureKey + static_cast<std::uint32_t>(g->particle_textures.size());
     g->renderer->textures().place(key, h);
     g->particle_textures.emplace(id, key);
     return key;
@@ -437,10 +494,12 @@ void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& 
     const std::array<float, 3> fwd = state.forward;
     const std::array<float, 3> right{-state.left[0], -state.left[1], -state.left[2]};
     const std::array<float, 3> down{-state.up[0], -state.up[1], -state.up[2]};
+
     struct Item {
         float depth;
         renderer::EffectQuad quad;
     };
+
     std::vector<Item> items;
     // RAM cannot change during extraction. Resolve each visible address pair once,
     // retaining the content cache in particle_texture across passes/animation.
@@ -469,7 +528,8 @@ void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& 
                 centre[i] = (p1[i] + p2[i]) * 0.5f;
             }
         }
-        const float z = (centre[0] - cam[0]) * fwd[0] + (centre[1] - cam[1]) * fwd[1] + (centre[2] - cam[2]) * fwd[2];
+        const float z = (centre[0] - cam[0]) * fwd[0] + (centre[1] - cam[1]) * fwd[1]
+                        + (centre[2] - cam[2]) * fwd[2];
         const int z12 = static_cast<int>(z * 4096.0f);
         const int near12 = (r[9] & 0xF) << 10;
         const int far12 = std::min((r[9] >> 4) << 17, 0x1F4000);
@@ -517,7 +577,8 @@ void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& 
             const float k2 = f32(r + 0x2C);
             const float e[3] = {p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]};
             const float m[3] = {centre[0] - cam[0], centre[1] - cam[1], centre[2] - cam[2]};
-            float n[3] = {e[1] * m[2] - e[2] * m[1], e[2] * m[0] - e[0] * m[2], e[0] * m[1] - e[1] * m[0]};
+            float n[3] =
+                {e[1] * m[2] - e[2] * m[1], e[2] * m[0] - e[0] * m[2], e[0] * m[1] - e[1] * m[0]};
             const float len = std::sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
             if (len <= 0.0f) {
                 continue;
@@ -551,7 +612,9 @@ void particle_quads(std::span<const std::uint8_t> ram, const viewer::GameState& 
     }
     stats::gauge("particle texture resolves", double(texture_resolves));
     stats::gauge("particle texture reuse", reuse_textures ? 1 : 0);
-    std::stable_sort(items.begin(), items.end(), [](const Item& a, const Item& b) { return a.depth > b.depth; });
+    std::stable_sort(items.begin(), items.end(), [](const Item& a, const Item& b) {
+        return a.depth > b.depth;
+    });
     for (const Item& it : items) {
         g->effects.push_back(it.quad);
     }
