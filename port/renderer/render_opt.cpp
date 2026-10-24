@@ -76,6 +76,9 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::ShadowAtlasDiscard, "shadow-atlas-discard",
      "the shadow atlas pass neither loads nor stores its unsampled colour and its stencil",
      true, Tolerance{}},
+    {Opt::SpirvDiskCache, "spirv-disk-cache",
+     "what glslang made of each program kept on disk, so a warm start and a level load compile none",
+     true, Tolerance{}},
 }};
 // clang-format on
 
