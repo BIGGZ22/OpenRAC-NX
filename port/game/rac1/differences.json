@@ -94,6 +94,15 @@
       "original": "Start alone skips a scene only on Veldin once it is beaten, or in a replay; elsewhere Start needs L1, L2, R1 and R2 held with it.",
       "port": "With the Skip cutscenes setting on (the default), Start alone skips an in-game scene: the port holds the four shoulder buttons for it, so the game's own skip ends the scene.",
       "refs": ["commit 0f17ce2e", "port/game/common/frontend.cpp"]
+    },
+    {
+      "id": "remembered-options",
+      "kind": "port",
+      "name": "Remembered language and sound",
+      "discs": ["pal", "ntsc"],
+      "original": "The language comes from the console's own setting, and the Sound page (playback mode, music and sound volume) resets at power off; loading a save takes the options stored in it.",
+      "port": "The port keeps the language and the Sound page in its settings file and puts them back at every start. Loading a save keeps the player's options instead of the save's.",
+      "refs": ["commit 09248d29", "port/game/rac1/host/options.c"]
     }
   ]
 }
