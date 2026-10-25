@@ -1782,6 +1782,7 @@ extern u64 D_0019E7C0[3];
 extern s32 D_00160008 MACRO_ADDR;
 extern s32 D_001B5D00[];
 extern s32 D_00160000 MACRO_ADDR;
+extern s32 D_0016100C MACRO_ADDR;
 extern s32 D_0015F560 MACRO_ADDR;
 extern char D_001CAE40[0x1000];
 extern u8 D_0019C2C0[];
@@ -1823,7 +1824,7 @@ extern void func_0012E1C8(s32 cmd, void *arg, s64 data);
 extern void func_0022F090();
 #define sequence (*(f32 *)&D_0015F53C)
 #define D_001413D0 ((s32 *)&D_001414D0)
-#define current_vu_chain (*(s32 *)((u8 *)&D_00160000 + 0x100C))
+#define current_vu_chain D_0016100C
 #define space_load_in_progress (*(s32 *)((u8 *)&D_0015F560 + 0x19C))
 #define D_0015F440 D_0015F540
 #define gs_texture_allocation_base D_0015EF8C

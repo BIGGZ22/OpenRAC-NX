@@ -51,6 +51,11 @@ Everything else is exactly as it was at that commit.
 - `tools/lombyte.py` and `tools/names.py` read Lombyte from
   `games/rac1/ntsc` and its published report from `progress/sources/`;
   `docs/SIBLING_DECOMPS.md` says where the sibling projects are.
+- `src/game/space.c` names the display list's size `D_0016100C` itself, not
+  `D_00160000` + 0x100C: the same address on the console, but each level
+  keeps its own copy of the variable and the port moves only the address the
+  code names. The level's copy was left at the pause menu's size, and loading
+  a save from the pause crashed the flight.
 
 **rac1/ntsc**
 - The README credits the NTSC decomp by that name only
