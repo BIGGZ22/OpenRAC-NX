@@ -34,25 +34,26 @@ OpenRAC/
 
 ## The rules that keep it organised
 
-**A game version is a self-contained project.** `games/<game>/<version>/` (or the `dir` its `game.json` entry names: rac1 is being merged into one tree at `games/rac1/`, the PAL tree, with NTSC-U built from it; see games/rac1/VERSIONS.md)
-has its own README, license, build, tools and docs, and you work on it from
-inside that directory: its paths are relative to it, and its build never
-reaches into another game. Its own docs are the authority on how a match is
-proven there.
+**Each game version is its own project.** It lives in
+`games/<game>/<version>/`, or in the `dir` its `game.json` entry names. It has
+its own README, license, build, tools and docs. Work from inside that
+directory: its paths are relative to it, and its build never reaches into
+another game. Its own docs decide how a match is proven there. rac1 is being
+merged into one tree at `games/rac1/` (the PAL tree), with NTSC-U built from
+it ([games/rac1/VERSIONS.md](../games/rac1/VERSIONS.md)).
 
-**Shared things live at the top level, and only shared things.** A tool,
-document or component goes to the top level when it serves more than one
-game, or the repository itself: the editor, the launcher, `tools/openrac.py`,
-the extractor, the policies, the cross-game references. A game may use
-top-level components (rac1/pal uses the editor's readers); the top level
-never depends on one game's internals, apart from the per-game knowledge the
-editor decodes.
+**Only shared things live at the top level**: things that serve more than one
+game, or the repository itself. That is the editor, the launcher,
+`tools/openrac.py`, the extractor, the policies and the cross-game references.
+A game may use top-level parts (rac1/pal uses the editor's readers). The top
+level never depends on one game's internals, apart from the per-game
+knowledge the editor decodes.
 
 **Generated and personal files stay out of git.** Disc images, extracted
-data, assembly, build output, the generated Godot project and toolchains
-are ignored, at the top level and in each game's own `.gitignore`.
-`progress/` and the tables in `README.md` are generated but committed: they
-are what readers see.
+data, assembly, build output, the generated Godot projects and toolchains are
+ignored, by the top-level `.gitignore` and by each game's own. `progress/`
+and the tables in `README.md` are generated but committed, because they are
+what readers see.
 
 ## Where a new file goes
 
@@ -98,28 +99,30 @@ The arrangement follows OpenGOAL's (`jak-project`):
 | `out/<game>/` | `assets/port/<game>/<version>`, `build/` | what is built from your disc |
 
 One difference shapes the rest. OpenGOAL edits its decompiled source for the
-PC directly (`#when PC_PORT`), so there is one copy of the game. `games/`
-holds C that still builds the PS2 executable byte for byte, most of it
-followed from projects of its own (rac1-decomp, Lombyte), so the PC's
+PC directly (`#when PC_PORT`), so it has one copy of the game. OpenRAC's
+`games/` holds C that still builds the PS2 executable byte for byte, and most
+of it follows projects of their own (rac1-decomp, Lombyte). So the PC's
 changes to the game live beside it, in `port/game/<game>-<version>/`
-(`hand/`, `host/`, `libraries.tsv`, `split_places.tsv`), applied by hostgen.
-Each version needs its own copy of those changes.
+(`hand/`, `host/`, `libraries.tsv`, `split_places.tsv`), and hostgen applies
+them. Each version needs its own copy of those changes.
 
 Where it goes from here:
 
-- `port/` stays: it is the engine, OpenGOAL's `game/`.
-- `port/game/<game>-<version>/` shrinks over time. A change the game's own C
-  needs on the PC (an argument the PS2 passed in a register, a call through
-  an address) goes into `games/` as C that builds the same PS2 bytes, and is
-  offered to the project the tree follows; changes kept only in OpenRAC's
-  copy are listed in that tree's `OPENRAC_PATCHES.md` so a sync keeps them.
-  What can only be PC code goes under `#ifdef OPENRAC_PC` in `games/` once
-  that project takes it; until then it stays in `port/game/`.
-- What is built from a disc has one root per game and a folder per
-  version: the levels the port draws are `assets/port/<game>/<version>` in a
-  checkout and `<data>/port/<version>` in an installed launcher, where the
-  game also looks without `--levels`. No version gets a sibling folder of
-  its own name beside them.
+- `port/` stays: it is the engine, like OpenGOAL's `game/`.
+- `port/game/<game>-<version>/` shrinks over time:
+  - A change the game's C needs on the PC (an argument the PS2 passed in a
+    register, a call through an address) goes into `games/` as C that builds
+    the same PS2 bytes, and is offered to the project that tree follows.
+    Changes kept only in OpenRAC's copy are listed in that tree's
+    `OPENRAC_PATCHES.md`, so a sync keeps them.
+  - Code that can only be PC code goes into `games/` under
+    `#ifdef OPENRAC_PC` once that project accepts it. Until then it stays in
+    `port/game/`.
+- What is built from a disc has one root per game and one folder per
+  version. The levels the port draws are in `assets/port/<game>/<version>`
+  in a checkout and in `<data>/port/<version>` in an installed launcher,
+  where the game also looks when `--levels` is not given. No version gets a
+  sibling folder named after it next to these.
 
 ## Where this is heading
 
