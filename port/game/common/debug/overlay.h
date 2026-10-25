@@ -225,6 +225,10 @@ struct State {
     // What eases from one state to the next (tween()), by ImGui's id.
     std::unordered_map<ImGuiID, float> tweens;
     float ui_scale = 1.0f;          // the screen's density, for rows a thumb can press
+    // The drawer's logo in ImGui's font atlas (initialise()): its custom rectangle, -1 before it is
+    // made, and where its name starts, in pixels from its left.
+    int logo_rect = -1;
+    int logo_name_x = 0;
     // Fingers on the screen as ImGui's pointer: the first one down, and those the drawer took from
     // the on-screen pad (their moves and lifts are the drawer's too).
     SDL_FingerID pointer = 0;

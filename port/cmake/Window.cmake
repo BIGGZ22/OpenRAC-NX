@@ -173,12 +173,13 @@ openrac_warnings(openrac_renderer)
 
 # ---- renderer/ui (renderer/README.md, "ui/") ----
 # What the program draws over the game's picture with the renderer's GL: Dear ImGui's draw lists on
-# a window whose GL is the Vulkan renderer's, the on-screen pad, the frame-rate counter and the debug
-# menu's picture. Its own library, so that the renderer itself needs neither ImGui nor the
-# platform's touch pad.
+# a window whose GL is the Vulkan renderer's, the on-screen pad, the frame-rate counter, the debug
+# menu's picture and the logo they show. Its own library, so that the renderer itself needs neither
+# ImGui nor the platform's touch pad.
 add_library(openrac_renderer_ui STATIC
   renderer/ui/fps_counter.cpp
   renderer/ui/imgui_gl.cpp
+  renderer/ui/logo.cpp
   renderer/ui/picture_blit.cpp
   renderer/ui/touch_overlay.cpp
 )
@@ -409,6 +410,7 @@ openrac_add_test(frontend_geometry SOURCES tests/frontend_geometry_test.cpp
 openrac_add_test(frontend_pacing SOURCES tests/frontend_pacing_test.cpp
                  game/common/frontend/pacing.cpp INCLUDES .)
 
+openrac_add_test(logo SOURCES tests/logo_test.cpp renderer/ui/logo.cpp INCLUDES .)
 openrac_add_test(touch_overlay LIBS openrac_renderer_ui openrac_platform)
 set_tests_properties(touch_overlay PROPERTIES SKIP_RETURN_CODE 77)
 

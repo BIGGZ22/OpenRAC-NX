@@ -7,7 +7,6 @@
 // as a thumb; and the bar shown while the on-screen pad's layout is edited.
 
 #include <algorithm>
-#include <cfloat>
 #include <cmath>
 #include <format>
 #include <imgui.h>
@@ -61,6 +60,38 @@ ImGuiID item_part(const char* part) {
 
 constexpr float kFast = 0.15f;    // --fast
 constexpr float kMedium = 0.28f;  // --medium
+
+// The logo from the font atlas (debug_overlay.cpp, add_logo): the mark in the amber, the name in
+// the text's colour, as the logo stands on the launcher's dark pages. `left_middle` is its left
+// edge at the height of its letters, which the lombax's ears rise above.
+void draw_logo(ImDrawList* list, ImVec2 left_middle) {
+    ImFontAtlas* atlas = ImGui::GetIO().Fonts;
+    const ImFontAtlasCustomRect* at =
+        s.logo_rect >= 0 ? atlas->GetCustomRectByIndex(s.logo_rect) : nullptr;
+    if (at == nullptr) {
+        return;
+    }
+    ImVec2 uv0;
+    ImVec2 uv1;
+    atlas->CalcCustomRectUV(at, &uv0, &uv1);
+    const float w = at->Width;
+    const float h = at->Height;
+    // The capitals of "RAC" sit 63% of the way down the logo's box (y 320 to 455 of 176 to 510).
+    const ImVec2 a(std::round(left_middle.x), std::round(left_middle.y - h * 0.633f));
+    const float split = static_cast<float>(s.logo_name_x);
+    const float uv_split = uv0.x + (uv1.x - uv0.x) * split / w;
+    list->AddImage(
+        atlas->TexID, a, ImVec2(a.x + split, a.y + h), uv0, ImVec2(uv_split, uv1.y), ui().amber
+    );
+    list->AddImage(
+        atlas->TexID,
+        ImVec2(a.x + split, a.y),
+        ImVec2(a.x + w, a.y + h),
+        ImVec2(uv_split, uv0.y),
+        uv1,
+        ui().text
+    );
+}
 
 // The focus ring a gamepad moves, around the item just drawn, easing in as it arrives.
 void focus_ring(ImDrawList* list, ImVec2 a, ImVec2 b, float round) {
@@ -442,7 +473,7 @@ void drawer(const Shown& shown) {
             back->PopClipRect();
         }
         {
-            // The header: the wordmark, and what the game is doing while the drawer is out.
+            // The header: the logo, and what the game is doing while the drawer is out.
             ImDrawList* front = ImGui::GetForegroundDrawList();
             const ImVec2 top(x, viewport->Pos.y);
             const ImVec2 bottom(x + width, viewport->Pos.y + header);
@@ -454,13 +485,7 @@ void drawer(const Shown& shown) {
             if (under > 0.0f) {
                 front->AddLine(ImVec2(top.x, bottom.y), bottom, ui_colors::fade(ui().line, under));
             }
-            ImFont* font = ImGui::GetFont();
-            const float size = ImGui::GetFontSize() * 1.2f;
-            const float text_y = top.y + (header - size) * 0.5f;
-            const float text_x = top.x + inset + dp(18.0f);
-            const float open = font->CalcTextSizeA(size, FLT_MAX, 0.0f, "Open").x;
-            front->AddText(font, size, ImVec2(text_x, text_y), ui().text, "Open");
-            front->AddText(font, size, ImVec2(text_x + open, text_y), ui().amber, "RAC");
+            draw_logo(front, ImVec2(top.x + inset + dp(18.0f), top.y + header * 0.5f));
             const char* state = s.keep_paused ? "Paused" : "Paused while open";
             const ImVec2 state_size = ImGui::CalcTextSize(state);
             const ImVec2 pill_b(

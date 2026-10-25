@@ -31,7 +31,7 @@ struct Colors {
     Color bar_top = rgba(0xe5, 0xa0, 0x13);       // --bar-top, --bar-bottom: a main button's
     Color bar_bottom = rgba(0xcd, 0x83, 0x00);    //   gradient
     Color bar_ink = rgba(0x1b, 0x12, 0x06);       // --bar-ink-deep: the text on it
-    Color amber = rgba(0xff, 0xb4, 0x43);         // --amber: the focus, the arrows, the wordmark
+    Color amber = rgba(0xff, 0xb4, 0x43);         // --amber: the focus, the arrows, the logo's mark
     Color gold = rgba(0xff, 0xd0, 0x8a);          // --gold: values, headings
     Color text = rgba(0xe8, 0xf0, 0xff);          // --text
     Color soft = rgba(0xaa, 0xb6, 0xdc);          // --soft: what is said under or beside
