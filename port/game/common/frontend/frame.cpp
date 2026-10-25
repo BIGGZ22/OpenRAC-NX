@@ -1451,13 +1451,25 @@ void report_tick(std::span<const std::uint8_t> ram, int level) {
 // Map's and the mission page's planet picture), so left out, it was never seen and the picture
 // stayed empty or half drawn. A false match only keeps a frame that could have been left out.
 bool sends_image(std::span<const std::uint8_t> packets) {
-    for (std::size_t at = 0; at + 16 <= packets.size(); at += 16) {
+    // An A+D write is one GIF qword: the register's value in its low 8 bytes, the register's
+    // address in the byte after them (documented: the GS manual's A+D packing).
+    constexpr std::size_t kQwordBytes = 16;
+    constexpr std::size_t kAddressByte = 8;
+    // TRXDIR's XDIR field (bits 0-1) for a transfer from the host to the chip (documented).
+    constexpr std::uint32_t kHostToLocal = 0;
+
+    // Every qword is read as one: a GIF tag or image data read so is the false match above.
+    for (std::size_t at = 0; at + kQwordBytes <= packets.size(); at += kQwordBytes) {
         std::uint64_t value = 0;
-        std::memcpy(&value, packets.data() + at, 8);
-        if (packets[at + 8] == renderer::gs::kTrxdir && (value & 3) == 0) {
+        std::memcpy(&value, packets.data() + at, sizeof(value));
+
+        // A transfer to the chip: its image follows in the packets.
+        if (packets[at + kAddressByte] == renderer::gs::kTrxdir
+            && renderer::gs::bits(value, 0, 2) == kHostToLocal) {
             return true;
         }
     }
+
     return false;
 }
 

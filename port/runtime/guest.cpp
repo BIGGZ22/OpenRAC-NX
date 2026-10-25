@@ -439,7 +439,8 @@ gaddr openrac_folded_address(const uint32_t* places, int count, gaddr caller, ui
         // of them, gets a copy of the same function: nothing to say.)
         if (other != 0 && !called) {
             warn(
-                "the copy at {:#x} (overlay {}) takes {:#x}, not one its C names; it gets {:#x}",
+                "the copy at {:#010x} (overlay {}) takes {:#010x}, not one its C names; it gets "
+                "{:#010x}",
                 caller,
                 overlay,
                 other,
