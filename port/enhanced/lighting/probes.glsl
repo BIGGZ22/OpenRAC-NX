@@ -450,16 +450,25 @@ float hero_shadow_visibility(vec3 p, vec3 n) {
     return hero_shadow_applies(n) ? hero_shadow_sample(p, n) : 1.0;
 }
 
+// The sun cascades' normal offset and depth bias, in texels of the cascade sampled.
+const float kSunNormalOffsetTexels = 1.0;
+const float kSunDepthBiasTexels = 0.5;
+
 float sun_shadow_pcf_rect(sampler2D map, ivec4 rect, mat4 matrix, vec3 p, vec3 n, vec3 plane_normal) {
-    vec3 position = (matrix * vec4(p + n * 0.025, 1.0)).xyz * 0.5 + 0.5;
-    if (any(lessThan(position, vec3(0.0))) || any(greaterThan(position, vec3(1.0)))) {
-        return 1.0;
-    }
-    // Receiver-plane depth follows the geometric face across PCF taps.
     // The orthographic rows are scaled orthogonal light-space axes.
     vec3 row_x = vec3(matrix[0].x, matrix[1].x, matrix[2].x);
     vec3 row_y = vec3(matrix[0].y, matrix[1].y, matrix[2].y);
     vec3 row_z = vec3(matrix[0].z, matrix[1].z, matrix[2].z);
+    // One of this cascade's texels in world units: a far cascade's are thirty times the nearest's.
+    // The normal offset and depth bias follow it, so the far cascades do not shadow their own
+    // receivers in speckles and stair steps; the nearest keeps its fixed 0.025 and 0.01.
+    float texel = 2.0 / (length(row_x) * float(rect.z));
+    vec3 position =
+        (matrix * vec4(p + n * max(0.025, kSunNormalOffsetTexels * texel), 1.0)).xyz * 0.5 + 0.5;
+    if (any(lessThan(position, vec3(0.0))) || any(greaterThan(position, vec3(1.0)))) {
+        return 1.0;
+    }
+    // Receiver-plane depth follows the geometric face across PCF taps.
     vec3 plane = vec3(
         dot(row_x, plane_normal) / dot(row_x, row_x),
         dot(row_y, plane_normal) / dot(row_y, row_y),
@@ -467,8 +476,9 @@ float sun_shadow_pcf_rect(sampler2D map, ivec4 rect, mat4 matrix, vec3 p, vec3 n
     );
     vec2 slope =
         abs(plane.z) > 1e-5 ? clamp(-plane.xy / plane.z, vec2(-2.0), vec2(2.0)) : vec2(0.0);
-    // A world-space bias avoids detachment growing with whole-level depth.
-    float bias = length(row_z) * 0.5 * 0.01;
+    // A world-space bias (half a texel of the cascade, at least 0.01) avoids detachment growing
+    // with whole-level depth.
+    float bias = length(row_z) * 0.5 * max(0.01, kSunDepthBiasTexels * texel);
     return shadow_pcf_kernel_rect(map, rect, position, bias, slope, true);
 }
 
