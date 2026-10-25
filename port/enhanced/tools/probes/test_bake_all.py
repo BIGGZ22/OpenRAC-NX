@@ -158,7 +158,7 @@ class AllLevelBake(unittest.TestCase):
             self.assertEqual(batch.with_threads([], 3, share=False), ['--threads', '0'])
             self.assertEqual(batch.with_threads([], 1, share=False), [])
 
-    def test_android_bakes_the_largest_levels_first_with_every_thread(self):
+    def test_bakes_the_largest_levels_first_with_every_thread(self):
         (self.levels/'level_99/big.bin').write_bytes(bytes(4096))
         (self.levels/'level_02/mid.bin').write_bytes(bytes(1024))
         self.assertEqual([batch.discover_levels(self.levels)[i].name
@@ -172,8 +172,7 @@ class AllLevelBake(unittest.TestCase):
             (work/'sparse.orpg').write_text(level.name)
             return work/'sparse.orpg'
 
-        with patch.object(batch, 'ANDROID', True), \
-                patch.object(batch.bake_level, 'bake_level', side_effect=bake):
+        with patch.object(batch.bake_level, 'bake_level', side_effect=bake):
             self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, jobs=2))
         # Two at once: the two largest start together, each with every thread.
         self.assertEqual({name for name, _ in calls[:2]}, {'level_99', 'level_02'})

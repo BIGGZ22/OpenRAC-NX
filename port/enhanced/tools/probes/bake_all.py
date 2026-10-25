@@ -4,9 +4,9 @@
 
 Uses each level's settings. Outputs contain game data and must stay local.
 --jobs bakes that many levels at once (0: one per CPU thread, as many as half
-the memory holds, each baker taking an equal share of the threads; on Android
-every baker may use every thread, the largest levels first, so that the last
-levels to finish still use the whole CPU). Without --update a new output root
+the memory holds). With more than one at once every baker may use every thread
+and the largest levels start first, so that the last levels to finish still use
+the whole CPU. Without --update a new output root
 is required and previous bakes are preserved. With --update (the launcher's
 way) the root is a cache: a level whose export, levels format, baker and
 options are those of its last verified bake is kept, any other is baked again
@@ -36,10 +36,9 @@ import seed_regions as seeds  # noqa: E402
 STAMP = 'openrac-bake.json'
 # Options that change the bake's bytes; --threads does not (bake_level preserves output bytes).
 BAKE_OPTIONS = ('--rays', '--bounces')
-# A phone's levels are baked by few, slow cores, where an equal share of the threads leaves the
-# largest level baking on one core long after the others have finished (the launcher's
-# Python on Android has sys.getandroidapilevel).
-ANDROID = hasattr(sys, 'getandroidapilevel')
+# An equal share of the threads (one each when a bake runs per thread) leaves the largest level
+# baking on one core long after the others have finished, the rest of the CPU idle: every
+# baker takes every thread instead, and the system shares them out while several run.
 
 
 def discover_levels(levels_dir: Path):
@@ -172,7 +171,7 @@ def bake_all(levels_dir: Path, output_dir: Path, baker: Path, *, disc=None,
         return True
 
     output_dir.mkdir(parents=True, exist_ok=update)
-    options = with_threads(options, jobs, share=not ANDROID)
+    options = with_threads(options, jobs, share=False)
     baker_hash = digest.sha256(baker) if update else None
     report = {'version': 1, 'levels_dir': str(levels_dir), 'levels': [
         {'level': level.name, 'verified': False} for level in levels]}
@@ -228,7 +227,7 @@ def bake_all(levels_dir: Path, output_dir: Path, baker: Path, *, disc=None,
         finished(result, 'baked')
 
     save_report()
-    order = largest_first(levels) if ANDROID and jobs > 1 else range(len(levels))
+    order = largest_first(levels) if jobs > 1 else range(len(levels))
     if jobs == 1:
         for index in order:
             bake(index)
