@@ -10,7 +10,7 @@ and `Cargo.lock`.
 The colours, type, header bar, game cards and progress bar follow
 [OpenRAC/openrac-site](https://github.com/OpenRAC/openrac-site) (`src/app/globals.css`,
 `src/components/Header.tsx`, `src/components/Progress.tsx`, `src/lib/projects.ts`).
-`public/wrench.webp` is the site's `public/wrench.webp`. The app icons are
+The app icons are
 OpenRAC's own: the logo's mark (`src/components/Logo.svelte`) in `--ink-deep` on
 the bar's orange, drawn at 1024 px and made into `src-tauri/icons/` and
 `public/icon.png` with `tauri icon`; `icon.icns` is `make_macos_icon.py`'s. The
