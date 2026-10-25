@@ -142,8 +142,9 @@ running (`port/game/common/debug_overlay.cpp:1138-1149`).
 ## 3. The settings file
 
 `<data home>/openrac/settings/<id>.ini` by default, or `--settings FILE`.
-`data home` is `$XDG_DATA_HOME/openrac` or `~/.local/share/openrac` on Linux
-and `~/Library/Application Support/OpenRAC` on macOS.
+`data home` is `$XDG_DATA_HOME/openrac` or `~/.local/share/openrac` on Linux,
+`~/Library/Application Support/OpenRAC` on macOS and `%LOCALAPPDATA%\openrac`
+on Windows.
 
 Syntax: `key = value` a line, `#` for a comment, whitespace trimmed. An
 unknown *value* warns in the log and falls back to the default; an unknown
