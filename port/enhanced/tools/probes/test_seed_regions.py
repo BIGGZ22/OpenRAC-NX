@@ -79,6 +79,23 @@ class AuthoredSeeds(unittest.TestCase):
         ordered = sorted(boxes, key=lambda b: b[0])
         self.assertTrue(all(a[3] > b[0] for a, b in zip(ordered, ordered[1:])))
 
+    def test_a_scene_without_collision_plans_its_volumes(self):
+        # The title screen (99) and the flight (98) have gameplay but no collision.glb: their
+        # authored volumes are planned, with no moby seeds and no geometry coverage.
+        import types
+        with tempfile.TemporaryDirectory() as tmp:
+            level = Path(tmp)
+            (level/'manifest.json').write_text(json.dumps({'game': 'rac1', 'version': 'pal', 'level': 99}))
+            coarse = dict(self.coarse, level=99, game_version='rac1-pal')
+            options = types.SimpleNamespace(
+                spacing=None, vertical_spacing=None, padding=8, vertical_padding=4, max_probes=4096,
+                no_moby_seeds=False, no_geometry_coverage=False, geometry_max_rise=32, geometry_padding=3,
+                moby_whitelist=Path(seeds.__file__).with_name('moby_seed_whitelist.json'))
+            plan = seeds.plan_level(level, coarse, {'dense_spacing': 4}, gameplay([1]), options)
+        self.assertTrue(plan['regions'])
+        self.assertEqual(plan['moby_seeds'], [])
+        self.assertIsNone(plan['geometry_sha256'])
+
     def test_bad_data(self):
         for data in (b'', gameplay([1])[:-1]):
             with self.assertRaises(ValueError):

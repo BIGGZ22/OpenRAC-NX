@@ -246,10 +246,14 @@ def plan_level(level_dir: Path, coarse: dict, profile: dict, gameplay: bytes, op
     geometry_hash = None
     coverage = []
     import moby_seeds
-    if not options.no_moby_seeds or (regions and not options.no_geometry_coverage):
-        geometry = moby_seeds.Ground.read_triangles(level_dir/'collision.glb')
-        geometry_hash = digest.sha256(level_dir/'collision.glb')
-    if not options.no_moby_seeds:
+    # The title screen (99) and the flight between planets (98) are scenes with no collision of
+    # their own: they get no moby seeds and no geometry coverage, only their authored volumes.
+    ground = level_dir/'collision.glb'
+    has_ground = ground.is_file()
+    if has_ground and (not options.no_moby_seeds or (regions and not options.no_geometry_coverage)):
+        geometry = moby_seeds.Ground.read_triangles(ground)
+        geometry_hash = digest.sha256(ground)
+    if has_ground and not options.no_moby_seeds:
         allowed = moby_seeds.whitelist(options.moby_whitelist)
         whitelist_hash = digest.sha256(options.moby_whitelist)
         placements = json.loads((level_dir/'placements.json').read_text())
@@ -260,7 +264,7 @@ def plan_level(level_dir: Path, coarse: dict, profile: dict, gameplay: bytes, op
             regions, boxes, coarse, spacing, options.max_probes,
             preserve_height=not options.no_geometry_coverage)
         skipped += bad_mobys+clipped
-    if regions and not options.no_geometry_coverage:
+    if regions and geometry is not None and not options.no_geometry_coverage:
         from surface_coverage import extend_regions
         regions, coverage = extend_regions(regions, geometry, coarse, spacing, options.max_probes,
                                             options.geometry_max_rise, options.geometry_padding)
