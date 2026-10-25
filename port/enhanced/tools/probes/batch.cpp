@@ -161,7 +161,7 @@ void run_probe_batch(
         throw std::runtime_error("source level changed during planning; no batch started");
     }
 
-    ProbeBaker baker(exported.scene, options.settings);
+    ProbeBaker baker(exported.scene, options.settings, options.threads);
     std::optional<ProbeVolume> coarse;
 
     for (const auto& job : jobs) {

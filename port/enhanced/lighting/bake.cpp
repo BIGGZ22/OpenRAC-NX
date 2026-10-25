@@ -387,9 +387,9 @@ struct ProbeBaker::Impl {
     std::mutex direction_mutex;  // protects table creation; workers only read immutable entries
     std::map<std::pair<std::uint32_t, int>, std::unique_ptr<const BakeDirections>> direction_cache;
 
-    Impl(const BakeScene& input, const BakeSettings& options)
+    Impl(const BakeScene& input, const BakeSettings& options, std::uint32_t threads)
         : settings(options),
-          scene(input, options.sunlight_direction) {}
+          scene(input, options.sunlight_direction, threads) {}
 
     // Rounding is part of the key so reuse cannot change a later bake's arithmetic results.
     const BakeDirections& directions(std::uint32_t resolution) {
@@ -404,9 +404,9 @@ struct ProbeBaker::Impl {
     }
 };
 
-ProbeBaker::ProbeBaker(const BakeScene& input, const BakeSettings& settings) {
+ProbeBaker::ProbeBaker(const BakeScene& input, const BakeSettings& settings, std::uint32_t threads) {
     bake_detail::validate_bake_scene(input, settings);
-    m_impl = std::make_unique<Impl>(input, settings);
+    m_impl = std::make_unique<Impl>(input, settings, threads);
 }
 
 ProbeBaker::~ProbeBaker() = default;
@@ -460,7 +460,7 @@ ProbeVolume bake_probes(
     std::uint32_t thread_count
 ) {
     grid.validate();
-    return ProbeBaker(scene, settings).bake(grid, progress, thread_count);
+    return ProbeBaker(scene, settings, thread_count).bake(grid, progress, thread_count);
 }
 
 }  // namespace openrac::lighting

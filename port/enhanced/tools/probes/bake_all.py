@@ -3,10 +3,11 @@
 """Bake and verify sparse/dense probes for every exported level in one version.
 
 Uses each level's settings. Outputs contain game data and must stay local.
---jobs bakes that many levels at once (0: one per CPU thread, as many as half
-the memory holds). With more than one at once every baker may use every thread
-and the largest levels start first, so that the last levels to finish still use
-the whole CPU. Without --update a new output root
+--jobs bakes that many levels at once (0: one per four of the threads the bake
+may use, as many as half the memory holds). The bake uses all but a few of the
+CPU's threads (openrac_common.background), shared between the levels baking,
+at below-normal priority: the computer stays usable while it runs, and the
+largest levels start first. Without --update a new output root
 is required and previous bakes are preserved. With --update (the launcher's
 way) the root is a cache: a level whose export, levels format, baker and
 options are those of its last verified bake is kept, any other is baked again
@@ -27,7 +28,7 @@ import sys
 import threading
 
 sys.path.insert(1, str(next(p for p in Path(__file__).resolve().parents if (p / "tools/openrac_common").is_dir()) / "tools"))
-from openrac_common import digest  # noqa: E402
+from openrac_common import background, digest  # noqa: E402
 
 import bake_level  # noqa: E402
 import seed_regions as seeds  # noqa: E402
@@ -36,9 +37,12 @@ import seed_regions as seeds  # noqa: E402
 STAMP = 'openrac-bake.json'
 # Options that change the bake's bytes; --threads does not (bake_level preserves output bytes).
 BAKE_OPTIONS = ('--rays', '--bounces')
-# An equal share of the threads (one each when a bake runs per thread) leaves the largest level
-# baking on one core long after the others have finished, the rest of the CPU idle: every
-# baker takes every thread instead, and the system shares them out while several run.
+# The threads each level bakes with when the levels are shared out (--jobs 0): enough that the
+# largest level, which starts first, is not left on one core long after the others, few enough that
+# several levels bake at once. Every baker taking every thread instead (as before 2026-10-24) ran
+# one per CPU thread at once, hundreds of threads at normal priority, and left a 16-core desktop
+# barely usable for the length of the bake.
+THREADS_PER_LEVEL = 4
 
 
 def discover_levels(levels_dir: Path):
@@ -121,21 +125,21 @@ def physical_memory() -> int | None:
 
 
 def automatic_jobs() -> int:
-    """One level per CPU thread, as many as half the memory holds."""
-    jobs = os.cpu_count() or 1
+    """One level per THREADS_PER_LEVEL of the threads the bake may use, as many as half the
+    memory holds."""
+    jobs = max(1, background.cpu_budget() // THREADS_PER_LEVEL)
     memory = physical_memory()
     if memory:
         jobs = min(jobs, max(1, memory // 2 // LEVEL_MEMORY))
     return jobs
 
 
-def with_threads(options, jobs: int, *, share=True) -> list[str]:
-    """OPTIONS with --threads sharing the CPU between JOBS bakes at once, unless it names one.
-    Without SHARE each bake may use every thread (0), and the system shares them out: a level
-    left baking alone still has the whole CPU."""
+def with_threads(options, jobs: int) -> list[str]:
+    """OPTIONS with --threads sharing the bake's threads (background.cpu_budget) between JOBS
+    bakes at once, unless it names a count itself."""
     options = list(options)
-    if jobs > 1 and '--threads' not in options:
-        options += ['--threads', str(max(1, (os.cpu_count() or 1) // jobs) if share else 0)]
+    if '--threads' not in options:
+        options += ['--threads', str(max(1, background.cpu_budget() // jobs))]
     return options
 
 
@@ -171,7 +175,7 @@ def bake_all(levels_dir: Path, output_dir: Path, baker: Path, *, disc=None,
         return True
 
     output_dir.mkdir(parents=True, exist_ok=update)
-    options = with_threads(options, jobs, share=False)
+    options = with_threads(options, jobs)
     baker_hash = digest.sha256(baker) if update else None
     report = {'version': 1, 'levels_dir': str(levels_dir), 'levels': [
         {'level': level.name, 'verified': False} for level in levels]}
@@ -255,11 +259,13 @@ def main():
     parser.add_argument('--bounces', type=int, help='bounce override for every level')
     parser.add_argument('--threads', type=int, help='CPU bake threads; 0 uses all, 1 is serial')
     parser.add_argument('--jobs', type=int, default=1,
-                        help='levels baked at once; 0 is one per CPU thread, as memory allows (default 1)')
+                        help='levels baked at once; 0 is one per four threads of the bake, as memory allows (default 1)')
     parser.add_argument('--update', action='store_true',
                         help='keep up-to-date levels of an existing output root and bake the others again')
     parser.add_argument('--dry-run', action='store_true', help='list levels without baking or writing')
     args = parser.parse_args()
+    # Whatever the player does comes first; the bake has the rest of the CPU.
+    background.lower_priority()
     options = []
     for key in ('rays', 'bounces', 'threads'):
         value = getattr(args, key)

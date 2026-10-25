@@ -149,16 +149,25 @@ class AllLevelBake(unittest.TestCase):
         (level/'probe-bake.json').write_text('{"version": 1, "dense_spacing": [4, 4, 2]}')
         self.assertNotEqual(regions, batch.level_stamp(level, 'native', []))
 
-    def test_jobs_share_the_threads_unless_told(self):
-        self.assertEqual(batch.with_threads(['--rays', '8'], 1), ['--rays', '8'])
+    def test_jobs_share_the_budget_unless_told(self):
         self.assertEqual(batch.with_threads(['--threads', '2'], 4), ['--threads', '2'])
+        # 8 threads: 6 for the bake, 2 kept for the desktop (background.cpu_budget).
         with patch('os.cpu_count', return_value=8):
+            self.assertEqual(batch.with_threads(['--rays', '8'], 1), ['--rays', '8', '--threads', '6'])
             self.assertEqual(batch.with_threads([], 3), ['--threads', '2'])
             self.assertEqual(batch.with_threads([], 16), ['--threads', '1'])
-            self.assertEqual(batch.with_threads([], 3, share=False), ['--threads', '0'])
-            self.assertEqual(batch.with_threads([], 1, share=False), [])
+            self.assertEqual(batch.automatic_jobs(), 1)
+        # A 16-core, 32-thread desktop: 28 threads, seven levels at once with four each, as
+        # memory allows.
+        with patch('os.cpu_count', return_value=32), \
+             patch.object(batch, 'physical_memory', return_value=128 << 30):
+            self.assertEqual(batch.automatic_jobs(), 7)
+            self.assertEqual(batch.with_threads([], 7), ['--threads', '4'])
+        with patch('os.cpu_count', return_value=32), \
+             patch.object(batch, 'physical_memory', return_value=4 << 30):
+            self.assertEqual(batch.automatic_jobs(), 2)
 
-    def test_bakes_the_largest_levels_first_with_every_thread(self):
+    def test_bakes_the_largest_levels_first_sharing_the_threads(self):
         (self.levels/'level_99/big.bin').write_bytes(bytes(4096))
         (self.levels/'level_02/mid.bin').write_bytes(bytes(1024))
         self.assertEqual([batch.discover_levels(self.levels)[i].name
@@ -172,11 +181,12 @@ class AllLevelBake(unittest.TestCase):
             (work/'sparse.orpg').write_text(level.name)
             return work/'sparse.orpg'
 
-        with patch.object(batch.bake_level, 'bake_level', side_effect=bake):
+        with patch.object(batch.bake_level, 'bake_level', side_effect=bake), \
+             patch('os.cpu_count', return_value=8):
             self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, jobs=2))
-        # Two at once: the two largest start together, each with every thread.
+        # Two at once: the two largest start together, each with half of the bake's 6 threads.
         self.assertEqual({name for name, _ in calls[:2]}, {'level_99', 'level_02'})
-        self.assertTrue(all(options == ['--threads', '0'] for _, options in calls))
+        self.assertTrue(all(options == ['--threads', '3'] for _, options in calls))
         # The report keeps the levels' own order.
         report = json.loads((self.output/'bake-all-result.json').read_text())
         self.assertEqual([level['level'] for level in report['levels']],
@@ -186,8 +196,10 @@ class AllLevelBake(unittest.TestCase):
         with patch('sys.argv', ['bake_all.py', '--levels-dir', str(self.levels),
                                '--output-dir', str(self.output), '--threads', '0',
                                '--rays', '32', '--bounces', '2', '--dry-run']), \
+             patch.object(batch.background, 'lower_priority') as lowered, \
              patch.object(batch, 'bake_all', return_value=False) as run:
             self.assertEqual(batch.main(), 1)
+        lowered.assert_called_once()
         self.assertEqual(run.call_args.kwargs['options'],
                          ['--rays', '32', '--bounces', '2', '--threads', '0'])
         self.assertTrue(run.call_args.kwargs['dry_run'])

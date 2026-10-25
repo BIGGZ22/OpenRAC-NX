@@ -7,6 +7,8 @@
 #include "enhanced/lighting/bake_material.h"
 #include "enhanced/lighting/bake_math.h"
 
+#include <string>
+
 namespace openrac::lighting::bake_detail {
 namespace {
 // ---- Validation ----
@@ -292,7 +294,7 @@ void Scene::build_geometry(unsigned group) {
     rtcReleaseGeometry(geometry);
 }
 
-Scene::Scene(const BakeScene& source, const std::optional<Float3>& sunlight_direction)
+Scene::Scene(const BakeScene& source, const std::optional<Float3>& sunlight_direction, std::uint32_t threads)
     : input(source) {
     collect_triangles();
 
@@ -304,7 +306,8 @@ Scene::Scene(const BakeScene& source, const std::optional<Float3>& sunlight_dire
         to_suns.push_back(mul(unit(direction), -1));
     }
 
-    device = rtcNewDevice(nullptr);
+    const std::string config = threads > 0 ? "threads=" + std::to_string(threads) : std::string();
+    device = rtcNewDevice(config.empty() ? nullptr : config.c_str());
 
     // Device creation may fail before a scene can own it.
     if (!device) {

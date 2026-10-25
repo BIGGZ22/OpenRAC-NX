@@ -67,7 +67,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from openrac_common import digest, paths, proc
+from openrac_common import background, digest, paths, proc
 
 ROOT = paths.repo_root()
 PORT = ROOT / "port"
@@ -263,7 +263,8 @@ def build_embree(cmake: str, env: dict[str, str], compilers: tuple[str, str, str
                  f"-DCMAKE_INSTALL_PREFIX={install.as_posix()}",
                  *(f"-D{key}={value}" for key, value in tools.items() if value),
                  *(f"-D{key}={value}" for key, value in embree_options().items())]
-    for command in (configure, [cmake, "--build", str(work)], [cmake, "--install", str(work)]):
+    build = [cmake, "--build", str(work), "--parallel", str(background.cpu_budget())]
+    for command in (configure, build, [cmake, "--install", str(work)]):
         say("> " + " ".join(f'"{part}"' if " " in part else part for part in command))
         if subprocess.run(command, cwd=EMBREE_DIR, env=env).returncode != 0:
             raise BuildError(f"Embree did not build ({Path(command[0]).name} {command[1]})")
@@ -467,7 +468,10 @@ def commands(
     else:
         changed = [f"-D{key}={value}" for key, value in wanted.items() if not same_path(cache.get(key, ""), value)]
         out = [[cmake, "-S", str(PORT), "-B", str(build), *changed]] if changed else []
-    out.append([cmake, "--build", "--preset", preset, "--target", *targets(names, more)])
+    # All but a few of the CPU's threads (Ninja's own default is every one, and two more): the
+    # computer stays usable while the port builds.
+    out.append([cmake, "--build", "--preset", preset, "--parallel", str(background.cpu_budget()),
+                "--target", *targets(names, more)])
     return out
 
 
@@ -601,6 +605,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--clean", action="store_true",
                         help="delete the build folder first and build everything again (its --source and --disc kept)")
     args = parser.parse_args(argv)
+    # Whatever the player does comes first; the compilers have the rest of the CPU.
+    background.lower_priority()
 
     names = args.games or [DEFAULT_GAME]
     unknown = [name for name in names if name not in known]
