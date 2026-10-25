@@ -3,6 +3,8 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
+#include <string>
 
 #include "game/common/settings.h"
 #include "tests/check.h"
@@ -56,6 +58,44 @@ void test_frame_counter_modes(const std::filesystem::path& file) {
     }
 }
 
+// Returns the whole of `file` as text.
+std::string read_file(const std::filesystem::path& file) {
+    std::ifstream in(file);
+    return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+}
+
+// A game's own options (keys game_*) load from the file and come back as written; a number past
+// the file's range, or not a number, is no option and the caller's fallback answers.
+void test_game_options_load_from_the_file(const std::filesystem::path& file) {
+    namespace settings = openrac::settings;
+    std::ofstream(file) << "game_language = 3\ngame_music_volume = 1024\n"
+                           "game_sound_volume = 2000000\ngame_playback = loud\n";
+    settings::load(file);
+    CHECK(settings::game_option("game_language", 1) == 3);
+    CHECK(settings::game_option("game_music_volume", -1) == 0x400);
+    CHECK(settings::game_option("game_sound_volume", -1) == -1);
+    CHECK(settings::game_option("game_playback", -1) == -1);
+    CHECK(settings::game_option("game_missing", 7) == 7);
+}
+
+// An option the game sets is saved and read back at the next load; setting the value it already
+// has leaves the file as it is (the game sets its options every frame).
+void test_game_options_are_saved_when_they_change(const std::filesystem::path& file) {
+    namespace settings = openrac::settings;
+    std::ofstream(file) << "";
+    settings::load(file);
+    settings::set_game_option("game_language", 2);
+    settings::load(file);
+    CHECK(settings::game_option("game_language", 1) == 2);
+    CHECK(read_file(file).find("game_language = 2\n") != std::string::npos);
+    // A file changed behind the settings' back is not written again for an unchanged value.
+    std::ofstream(file) << "# untouched\n";
+    settings::set_game_option("game_language", 2);
+    CHECK(read_file(file) == "# untouched\n");
+    settings::set_game_option("game_language", 4);
+    CHECK(read_file(file).find("game_language = 4\n") != std::string::npos);
+}
+
 }  // namespace
 
 int main() {
@@ -72,6 +112,8 @@ int main() {
     CHECK(settings::get().temporal_quality == renderer::TemporalQuality::Quality);
     test_temporal_settings(file);
     test_frame_counter_modes(file);
+    test_game_options_load_from_the_file(file);
+    test_game_options_are_saved_when_they_change(file);
     CHECK(settings::get().texture_filter == renderer::TextureFilter::EdgeAware);
     CHECK(settings::get().anisotropy == 0);
     CHECK(settings::get().anisotropy_samples(true) == 4);
