@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
+import contextlib
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -25,6 +27,14 @@ class AllLevelBake(unittest.TestCase):
             level.mkdir()
             (level/'manifest.json').write_text('{}')
         (self.levels/'textures').mkdir()
+        # The fake baker's profile (--print-profile): its file's text stands for what it bakes.
+        profile = patch.object(batch, 'baker_profile', side_effect=self.profile)
+        profile.start()
+        self.addCleanup(profile.stop)
+
+    def profile(self, baker, level, options):
+        return json.dumps({'probe_format_version': 3, 'bake_version': 1, 'baker': baker.read_text(),
+                           'options': batch.bake_options(options)})
 
     def test_all_levels_in_numeric_order_and_options_forwarded(self):
         def bake(level, output, baker, **kwargs):
@@ -90,12 +100,12 @@ class AllLevelBake(unittest.TestCase):
     def fake_bake(self, fail=()):
         def bake(level, output, baker, **kwargs):
             if level.name in fail:
-                output.mkdir(parents=True)
+                output.mkdir(parents=True, exist_ok=True)
                 (output/'sparse.bake.log').write_text('failed')
                 raise subprocess.CalledProcessError(1, ['fake-baker'])
-            output.mkdir(parents=True)
+            output.mkdir(parents=True, exist_ok=True)
             (output/'sparse.orpg').write_text(level.name)
-            (output/'bake-result.json').write_text('{}')
+            (output/'bake-result.json').write_text('{"bake_version": 1, "probe_format_version": 3}')
             return output/'sparse.orpg'
         return bake
 
@@ -110,7 +120,7 @@ class AllLevelBake(unittest.TestCase):
         with patch.object(batch.bake_level, 'bake_level', side_effect=self.fake_bake()) as run:
             self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True, jobs=2))
         run.assert_not_called()
-        # A level read again from the disc, another baker, or other options: baked again.
+        # A level read again from the disc, a baker that bakes otherwise, or other options: baked again.
         (self.levels/'level_02/manifest.json').write_text('{"format": 4}')
         with patch.object(batch.bake_level, 'bake_level', side_effect=self.fake_bake()) as run:
             self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True))
@@ -137,6 +147,82 @@ class AllLevelBake(unittest.TestCase):
         self.assertEqual((self.output/'.level_10.failed/sparse.bake.log').read_text(), 'failed')
         report = json.loads((self.output/'bake-all-result.json').read_text())
         self.assertEqual([level['verified'] for level in report['levels']], [True, True, False, True])
+
+    def test_a_new_build_of_the_same_baker_keeps_every_bake(self):
+        # The baker's file changes with every build (its version and commit); its profile does not.
+        with patch.object(batch.bake_level, 'bake_level', side_effect=self.fake_bake()):
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True))
+        self.baker.write_bytes(b'a build of the next commit')
+        same = lambda baker, level, options: json.dumps({'probe_format_version': 3, 'bake_version': 1})
+        with patch.object(batch, 'baker_profile', side_effect=same), \
+             patch.object(batch.bake_level, 'bake_level', side_effect=self.fake_bake()) as run:
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True))
+            run.reset_mock()
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True))
+        run.assert_not_called()
+
+    def test_bakes_stamped_with_the_bakers_file_are_kept(self):
+        # Version 2 named the baker by its file's digest: kept when all else agrees and the bake has
+        # this baker's probe format and bake version, so the change bakes nothing again.
+        with patch.object(batch.bake_level, 'bake_level', side_effect=self.fake_bake()):
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True))
+        for name in ('level_00', 'level_02', 'level_10', 'level_99'):
+            stamp = json.loads((self.output/name/batch.STAMP).read_text())
+            del stamp['baker_profile_sha256']
+            stamp.update(version=2, baker_sha256='an old build', planner_sha256='an old planner')
+            (self.output/name/batch.STAMP).write_text(json.dumps(stamp))
+        (self.output/'level_99/bake-result.json').write_text('{"bake_version": 0, "probe_format_version": 3}')
+        with patch.object(batch.bake_level, 'bake_level', side_effect=self.fake_bake()) as run:
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True))
+        self.assertEqual([call.args[0].name for call in run.call_args_list], ['level_99'])
+        self.assertEqual(json.loads((self.output/'level_00'/batch.STAMP).read_text())['version'],
+                         batch.STAMP_VERSION)
+
+    def test_a_stopped_bake_goes_on_from_where_it_was(self):
+        stopped = self.output/'.level_02.partial'
+        stopped.mkdir(parents=True)
+        (stopped/'region-000.orpg').write_text('verified before the stop')
+        other = self.output/'.level_10.partial'
+        other.mkdir()
+        (other/'region-000.orpg').write_text('from other inputs')
+        (other/batch.PARTIAL_STAMP).write_text('{"version": 3, "manifest_sha256": "another"}')
+        seen = {}
+
+        def bake(level, output, baker, **kwargs):
+            seen[level.name] = (kwargs['resume'], sorted(p.name for p in output.iterdir()))
+            return self.fake_bake()(level, output, baker)
+        # Its stamp is written as the bake starts: here, as an earlier run of these inputs left it.
+        stamp = batch.level_stamp(self.levels/'level_02',
+                                  batch.hashlib.sha256(self.profile(self.baker, None, []).encode()).hexdigest(), [])
+        (stopped/batch.PARTIAL_STAMP).write_text(json.dumps(stamp))
+        with patch.object(batch.bake_level, 'bake_level', side_effect=bake), \
+             contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True))
+        self.assertEqual(seen['level_02'], (True, [batch.PARTIAL_STAMP, 'region-000.orpg']))
+        self.assertEqual(seen['level_10'], (True, [batch.PARTIAL_STAMP]))
+        self.assertIn('level_02: going on from the bake that was stopped', out.getvalue())
+        self.assertFalse((self.output/'level_02'/batch.PARTIAL_STAMP).exists())
+        self.assertFalse(list(self.output.glob('.*')))
+
+    def test_progress_over_every_level_for_the_launcher(self):
+        def bake(level, output, baker, *, progress, **kwargs):
+            progress(0.5)
+            return self.fake_bake()(level, output, baker)
+        with patch.object(batch.bake_level, 'bake_level', side_effect=bake), \
+             contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True))
+        shown = [line for line in out.getvalue().splitlines() if line.startswith('Lighting ')]
+        self.assertEqual(shown[0], 'Lighting 0.0%')
+        self.assertEqual(shown[-1], 'Lighting 100.0%')
+        # After each level's "[n/total]", the whole bake's share is the newest line.
+        lines = out.getvalue().splitlines()
+        self.assertTrue(lines[lines.index('[4/4] level_99: baked') + 1].startswith('Lighting 100.0%'))
+
+    def test_time_left_in_round_words(self):
+        self.assertEqual(batch.time_left(30), 'less than a minute left')
+        self.assertEqual(batch.time_left(70), 'about a minute left')
+        self.assertEqual(batch.time_left(12 * 60 + 10), 'about 12 minutes left')
+        self.assertEqual(batch.time_left(3 * 3600), 'about 3 hours left')
 
     def test_cache_stamp_tracks_planner_and_level_settings(self):
         level = self.levels/'level_02'
@@ -175,7 +261,7 @@ class AllLevelBake(unittest.TestCase):
                          ['level_99', 'level_02'])
         calls = []
 
-        def bake(level, work, baker, *, disc=None, options=()):
+        def bake(level, work, baker, *, disc=None, options=(), **kwargs):
             calls.append((level.name, list(options)))
             work.mkdir(parents=True)
             (work/'sparse.orpg').write_text(level.name)

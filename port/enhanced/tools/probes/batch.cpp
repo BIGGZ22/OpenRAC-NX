@@ -11,8 +11,10 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <iterator>
 #include <optional>
 #include <stdexcept>
+#include <string_view>
 
 #include "common/json.h"
 #include "enhanced/tools/probes/report.h"
@@ -108,13 +110,36 @@ std::vector<BatchJob> batch_jobs(
 
     for (const auto& job : jobs) {
         for (const auto& suffix : {"", ".txt", ".tmp", ".txt.tmp"}) {
-            if (fs::exists(job.path.string() + suffix)) {
+            const auto path = job.path.string() + suffix;
+            if (!fs::exists(path)) {
+                continue;
+            }
+            // Resuming: a write that was cut off is thrown away; a finished grid is checked later.
+            if (options.resume && std::string_view(suffix).ends_with(".tmp")) {
+                fs::remove(path);
+            } else if (!options.resume) {
                 throw std::runtime_error("probe batch output already exists");
             }
         }
     }
 
     return jobs;
+}
+
+// A grid a stopped bake already wrote, with its report: its bytes, or nothing when either file
+// is missing.
+std::optional<std::vector<std::uint8_t>> finished_bytes(const BatchJob& job) {
+    if (!fs::exists(job.path) || !fs::exists(job.path.string() + ".txt")) {
+        return std::nullopt;
+    }
+    std::ifstream input(job.path, std::ios::binary);
+    std::vector<std::uint8_t> bytes(
+        (std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>()
+    );
+    if (!input.good() && !input.eof()) {
+        return std::nullopt;
+    }
+    return bytes;
 }
 
 // Read the actual file back and verify exactly the bytes produced by this grid.
@@ -164,10 +189,57 @@ void run_probe_batch(
     ProbeBaker baker(exported.scene, options.settings, options.threads);
     std::optional<ProbeVolume> coarse;
 
+    // Progress over the whole level, in probes: every grid's, the ones kept counted as done.
+    std::size_t total = 0, done = 0, shown = 0;
+    for (const auto& job : jobs) {
+        total += job.grid.probe_count();
+    }
+    output << "Probe batch probes " << total << '\n' << std::flush;
+    const auto report_done = [&](std::size_t now) {
+        // Each half per cent at most: a level has up to a few million probes.
+        if (total > 0 && (now == total || (now - shown) * 200 >= total)) {
+            output << "Probes " << now << '/' << total << '\n' << std::flush;
+            shown = now;
+        }
+    };
+
     for (const auto& job : jobs) {
         const auto start = std::chrono::steady_clock::now();
+        if (options.resume) {
+            if (const auto bytes = finished_bytes(job)) {
+                try {
+                    RuntimeRounding rounding;
+                    auto checked = verify_batch_file(job, *bytes);
+                    if (checked.grid.settings_hash
+                        != probe_bake_settings_hash(checked.grid, options.settings)) {
+                        throw std::runtime_error("kept probe grid has other settings");
+                    }
+                    if (coarse) {
+                        validate_probe_pair(*coarse, checked);
+                    } else {
+                        coarse = std::move(checked);
+                    }
+                    output << "Kept " << job.path.filename().string() << '\n'
+                           << "Verified " << job.path.filename().string() << '\n' << std::flush;
+                    done += job.grid.probe_count();
+                    report_done(done);
+                    continue;
+                } catch (const std::exception&) {
+                    // Not this plan's grid, or damaged: baked again below.
+                }
+            }
+            // What is left of a grid the stop cut short (written, its report not yet): baked again.
+            fs::remove(job.path);
+            fs::remove(job.path.string() + ".txt");
+        }
         output << "Baking " << job.path.filename().string() << '\n' << std::flush;
-        const auto volume = baker.bake(job.grid, {}, options.threads);
+        const auto volume = baker.bake(
+            job.grid,
+            [&](std::size_t baked, std::size_t) { report_done(done + baked); },
+            options.threads
+        );
+        done += job.grid.probe_count();
+        report_done(done);
         const auto encoded = encode_probes(volume);
         write_bake_file(job.path, encoded);
         {

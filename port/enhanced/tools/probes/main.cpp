@@ -46,6 +46,7 @@ void usage() {
               << "openrac-probe-bake --level-dir DIR [--inspect | --output FILE | --verify FILE]\n"
               << "  --print-profile (resolved grid/quality defaults as JSON, no scene load)\n"
               << "  --batch-output DIR (prepare once, then read one JSON region plan on stdin)\n"
+              << "  --resume (with --batch-output: keep the grids a stopped bake verified)\n"
               << "  --spacing 128 (or X,Y,Z) --resolution 6 --rays 1024 --bounces 3 --seed 1\n"
               << "  --threads 0 (all CPU threads; 1 for serial baking, same quality)\n"
               << "  --light-set 0 --environment 0.1 (uniform fallback radiance)\n"
@@ -62,7 +63,7 @@ void usage() {
 int main(int argc, char** argv) {
     try {
         fs::path directory, output, verify, compare_coarse, batch_output;
-        bool inspect = false, game_rounding = false, print_profile = false;
+        bool inspect = false, game_rounding = false, print_profile = false, resume = false;
         // Resolve the directory first: explicit CLI overrides win in any order.
         for (int i = 1; i + 1 < argc; ++i) {
             if (std::string_view(argv[i]) == "--level-dir") {
@@ -98,6 +99,10 @@ int main(int argc, char** argv) {
             }
             if (argument == "--game-rounding") {
                 game_rounding = true;
+                continue;
+            }
+            if (argument == "--resume") {
+                resume = true;
                 continue;
             }
             if (i + 1 >= argc) {
@@ -297,6 +302,7 @@ int main(int argc, char** argv) {
             options.light_set = light_set;
             options.threads = threads;
             options.source_snapshot = source_snapshot;
+            options.resume = resume;
             if (!std::getline(std::cin, options.plan)) {
                 throw std::runtime_error("probe batch plan missing");
             }

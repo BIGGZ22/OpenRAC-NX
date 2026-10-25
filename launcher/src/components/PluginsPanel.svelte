@@ -91,6 +91,19 @@
     if (bakeAction && !bakeJob) void run({ kind: "version", key: v.key }, bakeAction);
   }
 
+  /** Every bake of this version gone, after the player says yes. */
+  async function deleteBakes() {
+    const b = enhanced?.bake;
+    if (!b || bakeJob) return;
+    if (!(await ask(T.ENHANCED.removeAsk(b.ready + b.partial + b.failed), T.ENHANCED.removeYes))) return;
+    try {
+      enhanced = await api.enhancedDeleteBakes(v.game, v.name);
+      said = { text: T.ENHANCED.removed, failed: false };
+    } catch (e) {
+      said = { text: message(e), failed: true };
+    }
+  }
+
   async function setEnhanced(on: boolean) {
     try {
       enhanced = await api.enhancedSetEnabled(v.game, v.name, on);
@@ -281,7 +294,9 @@
     onsave={(key, value) => saveSetting(mod, key, value)}
     onenable={(on) =>
       void (isEnhanced(mod.id) ? setEnhanced(on) : change(api.pluginsSetEnabled(v.game, v.name, mod.id, on)))}
-    builtIn={isEnhanced(mod.id) && enhanced ? { bake: enhanced.bake, job: bakeJob, onbake: bake } : null}
+    builtIn={isEnhanced(mod.id) && enhanced
+      ? { bake: enhanced.bake, job: bakeJob, onbake: bake, ondelete: deleteBakes }
+      : null}
     onupdate={() => void runUpdate(mod.id)}
     onpin={(pin) => void setPin(mod.id, pin)}
     onfolder={() => {

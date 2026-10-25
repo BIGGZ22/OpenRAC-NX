@@ -35,6 +35,16 @@ describe("readProgress", () => {
     expect(p.percent).toBeCloseTo(15.79, 1);
   });
 
+  it("reads the whole bake's share and the time left (bake_all.py, show_progress)", () => {
+    const p = readProgress(
+      "probe-bake",
+      out("[3/19] level_04: baked", "Lighting 42.5% (about 12 minutes left)", "Baking region-003.orpg"),
+    );
+    expect(p.percent).toBeCloseTo(42.5, 1);
+    expect(p.left).toBe("about 12 minutes left");
+    expect(readProgress("probe-bake", out("Lighting 0.0%")).left).toBeNull();
+  });
+
   it("reads ninja's [n/m] counter", () => {
     const p = readProgress("port-build", out("[1/4] a", "[1351/2273] Building C object CMakeFiles/x.o"));
     expect(p.percent).toBeCloseTo(59.43, 1);
