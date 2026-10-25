@@ -210,7 +210,6 @@ void finish() {
 #if defined(__ANDROID__)
     finish();
     stats::close_dump();
-    close_sound();
     openrac_sound_stop_readers();
     std::_Exit(0);
 #else
