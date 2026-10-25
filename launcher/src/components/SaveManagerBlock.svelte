@@ -11,7 +11,7 @@
   import { isPlaying } from "$lib/player.svelte";
   import { backupLabel, emptySlots, stampSeconds } from "$lib/saves";
   import { fold } from "$lib/motion";
-  import { onMount, tick } from "svelte";
+  import { tick } from "svelte";
   import { slide } from "svelte/transition";
 
   let { version }: { version: VersionView } = $props();
@@ -105,8 +105,9 @@
     }
   }
 
-  onMount(() => {
-    void loadStatus();
+  $effect(() => {
+    // Again whenever saves were brought onto the card from elsewhere (app.savesChanged: an import).
+    if (app.savesChanged >= 0) void loadStatus();
   });
 </script>
 

@@ -17,7 +17,7 @@
   import Menu, { type MenuItem } from "$components/Menu.svelte";
   import ReportsBlock from "$components/ReportsBlock.svelte";
   import SaveManagerBlock from "$components/SaveManagerBlock.svelte";
-  import { api, ask, onAndroid, type ActionView, type ReportEntry } from "$lib/api";
+  import { api, ask, onAndroid, pickMemoryCard, type ActionView, type ReportEntry } from "$lib/api";
   import {
     app,
     clock,
@@ -27,6 +27,7 @@
     jobs,
     openDevelop,
     run,
+    toast,
     uninstallGame,
   } from "$lib/app.svelte";
   import { choiceFor, programOf } from "$lib/discChoice";
@@ -131,6 +132,26 @@
     logs?.focus({ preventScroll: true });
   }
 
+  /** The game's saves from a PCSX2 memory card onto OpenRAC's card, after a backup of it. */
+  async function importPcsx2(serial: string) {
+    const dir = await api.pcsx2MemcardsDir().catch(() => null);
+    const source = await pickMemoryCard("Choose a PCSX2 memory card", dir);
+    if (!source) return;
+    const yes = await ask(
+      "Copy this game's saves from the PCSX2 memory card? The saves on OpenRAC's card are backed up first, then replaced.",
+      "Import saves",
+    );
+    if (!yes) return;
+    try {
+      const done = await api.importPcsx2Saves(serial, source);
+      app.savesChanged++; // the saves list reads the card again
+      const kept = done.backup ? " The saves that were there are in Backups." : "";
+      toast(`Imported the saves from PCSX2.${kept}`, "info");
+    } catch (e) {
+      toast(`Import failed: ${String(e)}`, "error");
+    }
+  }
+
   /** What is done less often than playing, in the menu beside the main button. */
   const menu = $derived.by<MenuItem[]>(() => {
     if (!v) return [];
@@ -160,6 +181,11 @@
     }
     // Android: the game's files are in the Files app (Settings, Your files), and the activity log
     // is the rail's running job.
+    // Not on Android: its file picker hands over no path to read the card from.
+    const serial = v.serial;
+    if (setUp && serial && !onAndroid) {
+      items.push({ label: "Import saves from PCSX2", icon: "save", run: () => void importPcsx2(serial) });
+    }
     if (!onAndroid) {
       items.push({ label: "Open the game's folder", icon: "folder", run: () => void guard(api.openPath(dir)) });
       items.push({ label: "Activity log", icon: "terminal", run: () => (app.page = "tasks") });

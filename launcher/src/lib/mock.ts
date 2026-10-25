@@ -2264,6 +2264,10 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     case "restore_backup":
     case "open_saves_folder":
       return delay(null);
+    case "pcsx2_memcards_dir":
+      return delay("/home/you/.config/PCSX2/memcards");
+    case "import_pcsx2_saves":
+      return delay({ folders: ["BESCES-50916RATCHET"], files: 8, backup: null });
     case "reports_list":
       return delay<ReportEntry[]>(args.game === "rac1" ? mockReports : []);
     case "report_delete":

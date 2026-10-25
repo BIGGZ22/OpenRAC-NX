@@ -57,6 +57,8 @@ interface AppState {
   stopped: StopNotice | null;
   /** Bumped when the logs may have changed (the game ended): the logs list reads them again. */
   reportsChanged: number;
+  /** Bumped when saves were brought onto a card from elsewhere (a PCSX2 import): the saves list reads them again. */
+  savesChanged: number;
   /** Each set-up game's crash reports: how many, and how many in the last three days (the tiles' mark). */
   crashes: Record<string, { total: number; recent: number }>;
   /** A disc image being copied into the Android app's storage, or a .chd being unpacked. */
@@ -89,6 +91,7 @@ export const app = $state<AppState>({
   showUpdateModal: false,
   stopped: null,
   reportsChanged: 0,
+  savesChanged: 0,
   crashes: {},
   discCopy: null,
   game: null,

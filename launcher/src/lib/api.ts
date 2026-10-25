@@ -29,6 +29,7 @@ import type { EnhancedView } from "./generated/EnhancedView";
 import type { FoundDisc } from "./generated/FoundDisc";
 import type { GameSaveStatus } from "./generated/GameSaveStatus";
 import type { GameView } from "./generated/GameView";
+import type { ImportedSaves } from "./generated/ImportedSaves";
 import type { JobEvent } from "./generated/JobEvent";
 import type { Library } from "./generated/Library";
 import type { ModSources } from "./generated/ModSources";
@@ -234,6 +235,11 @@ export const api = {
   inspectSaves: (serial: string) => call<GameSaveStatus>("inspect_saves", { serial }),
   backupSaves: (serial: string, note?: string) => call<SaveBackupInfo>("backup_saves", { serial, note }),
   restoreBackup: (serial: string, backupName: string) => call<null>("restore_backup", { serial, backupName }),
+  /** The game's saves copied in from a PCSX2 memory card (a card file, or a folder card's
+   *  _pcsx2_superblock), after a backup of the card. */
+  importPcsx2Saves: (serial: string, source: string) => call<ImportedSaves>("import_pcsx2_saves", { serial, source }),
+  /** Where PCSX2 keeps its memory cards, when found. */
+  pcsx2MemcardsDir: () => call<string | null>("pcsx2_memcards_dir"),
   openSavesFolder: (serial: string) => call<null>("open_saves_folder", { serial }),
   /** Android: OpenRAC's place in the system's Files app (the saves, settings, games, discs). */
   showFiles: () => call<null>("show_files"),
@@ -449,6 +455,23 @@ export async function relaunchApp(): Promise<void> {
 export async function pickFile(title: string): Promise<string | null> {
   if (!inTauri) return null;
   const picked = await open({ directory: false, multiple: false, title });
+  return typeof picked === "string" ? picked : null;
+}
+
+/** A picker for a PCSX2 memory card: a card file (.ps2), or a folder card's _pcsx2_superblock,
+ *  opening in `dir`; null when cancelled (or in the browser preview). */
+export async function pickMemoryCard(title: string, dir: string | null): Promise<string | null> {
+  if (!inTauri) return null;
+  const picked = await open({
+    directory: false,
+    multiple: false,
+    title,
+    defaultPath: dir ?? undefined,
+    filters: [
+      { name: "PS2 memory card", extensions: ["ps2", "mcd", "mc2", "bin"] },
+      { name: "All files", extensions: ["*"] },
+    ],
+  });
   return typeof picked === "string" ? picked : null;
 }
 

@@ -48,6 +48,7 @@ pub mod jobs;
 pub mod launcher_log;
 pub mod library;
 pub mod overrides;
+pub mod pcsx2_card;
 pub mod plugins;
 pub mod port_build;
 pub mod progress_sync;

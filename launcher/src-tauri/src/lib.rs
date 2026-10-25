@@ -827,6 +827,32 @@ async fn restore_backup(app: AppHandle, serial: String, backup_name: String) -> 
     .map_err(|e| e.to_string())?
 }
 
+/// Copies the game's saves from a PCSX2 memory card (a card file, or a folder card) onto its card,
+/// after a backup; refused while the game runs with it, as a restore is.
+#[tauri::command]
+async fn import_pcsx2_saves(
+    app: AppHandle,
+    serial: String,
+    source: String,
+) -> Result<openrac_launcher_core::pcsx2_card::ImportedSaves, String> {
+    let in_use = card_check(&app).await?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let card = openrac_launcher_core::saves::get_memcard_dir(&serial);
+        if let Some(game) = in_use(&card, &serial)? {
+            return Err(format!("{game} is running with this memory card: close it first"));
+        }
+        openrac_launcher_core::pcsx2_card::import_saves(&serial, Path::new(&source))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Where PCSX2 keeps its memory cards, for the file picker to open there; None when not found.
+#[tauri::command]
+fn pcsx2_memcards_dir() -> Option<String> {
+    openrac_launcher_core::pcsx2_card::pcsx2_memcards_dir().map(|p| p.to_string_lossy().to_string())
+}
+
 /// The skill points' names from the set-up rac1 disc (`<install>/active/rac1/data/iso_data/rac1/
 /// disc.iso`; both rac1 discs hold the same names at the same text ids), or none.
 fn skill_names(install: Option<PathBuf>) -> Vec<String> {
@@ -1344,6 +1370,8 @@ pub fn run() {
             inspect_saves,
             backup_saves,
             restore_backup,
+            import_pcsx2_saves,
+            pcsx2_memcards_dir,
             open_saves_folder,
             read_save,
             write_save,

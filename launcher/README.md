@@ -86,6 +86,9 @@ the game you used last.
   The editor will not write while the game runs, backs up the card before
   every write, and offers Undo
   ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#the-save-editor)).
+  **Import saves from PCSX2**, in the game's menu, copies the game's saves
+  from a PCSX2 memory card (a `.ps2` file, or a folder card's
+  `_pcsx2_superblock`) onto the card, after a backup of what was there.
 - **Crashes**: the game page says when the game stopped unexpectedly. Your
   saves are kept. **Copy report** gives text for a
   [GitHub issue](https://github.com/OpenRAC/OpenRAC/issues) or Discord.
