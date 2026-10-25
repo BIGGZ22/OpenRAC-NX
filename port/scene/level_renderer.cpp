@@ -16,6 +16,7 @@
 #include "renderer/world/gl_world.h"
 #include "renderer_shaders.h"
 #include "scene/hero_shadow.h"
+#include "scene/moby_passes.h"
 #include "scene/shadow_atlas.h"
 #include "scene_shaders.h"
 #if defined(OPENRAC_VULKAN)
@@ -2361,7 +2362,14 @@ void LevelScene::draw_layer(
     bool colour_set = false;
     const renderer::Shader* program = nullptr;
     bool program_depth_matched = false;
-    for (int pass = 0; pass < passes; ++pass) {
+    // The mobys' glow pass runs twice (scene/moby_passes.h): its texels at or above the GS's alpha
+    // reference first, writing depth, then the rest without.
+    const int steps = mobys ? static_cast<int>(kMobyPassSteps.size()) : passes;
+    for (int step = 0; step < steps; ++step) {
+        const MobyPassStep moby_step =
+            mobys ? kMobyPassSteps[static_cast<std::size_t>(step)] : MobyPassStep{};
+        const int pass = mobys ? moby_step.pass : step;
+        const int glow_split = moby_step.glow_split;
         if (state.depth_prepass && (mobys ? pass > 0 : pass > 1)) {
             break;
         }
@@ -2457,8 +2465,9 @@ void LevelScene::draw_layer(
             glEnable(GL_BLEND);
             glBlendEquation(GL_FUNC_ADD);
             glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
-            glDepthMask(GL_FALSE);
+            glDepthMask(mobys && moby_step.depth_write ? GL_TRUE : GL_FALSE);
         }
+        glUniform1i(program->uniform("glow_split"), glow_split);
         for (std::size_t gi = 0; gi < groups.size(); ++gi) {
             Group& g = groups[gi];
             if (!visible[gi] || (!metal && (g.blend != 0) != effects)) {

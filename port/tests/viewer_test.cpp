@@ -420,11 +420,12 @@ int draw(scene::LevelData& level) {
     CHECK(terrain[0] > 150 && terrain[1] < 60 && terrain[2] < 60);
     const std::uint8_t* tie = at(64, 64);
     CHECK(tie[2] > 150 && tie[0] < 60);
-    // Terrain and tie each draw once. Mobys also submit a glow pass; this
-    // fixture has no glow faces, so that pass discards all its fragments.
-    CHECK(renderer.last_stats().draw_calls == 4);
+    // Terrain and tie each draw once. Mobys also submit their glow pass, in two draws split at
+    // the GS's alpha reference (scene/moby_passes.h); this fixture has no glow faces, so they
+    // discard all their fragments.
+    CHECK(renderer.last_stats().draw_calls == 5);
 
-    // Removing the moby layer removes both its solid and glow submissions.
+    // Removing the moby layer removes its solid and glow submissions.
     renderer.renderers()[static_cast<std::size_t>(scene::Layer::Mobys)]->enabled = false;
     renderer.render(input, {frame.id(), 128, 128});
     CHECK(renderer.last_stats().draw_calls == 2);
@@ -471,7 +472,7 @@ int draw(scene::LevelData& level) {
     input.camera.position = camera.position;
     input.camera.view = camera.view();
     renderer.render(input, {frame.id(), 128, 128});
-    CHECK(renderer.last_stats().draw_calls == 4);  // alternate fragment, tie and moby survive
+    CHECK(renderer.last_stats().draw_calls == 5);  // alternate fragment, tie and moby survive
     camera.position[0] = 0;
     input.camera.position = camera.position;
     input.camera.view = camera.view();

@@ -115,6 +115,8 @@ openrac_add_test(scripted_moby_colour SOURCES enhanced/tests/scripted_moby_colou
 openrac_add_test(pause_options INCLUDES .)
 # Which undrawn ticks keep the window's last picture (game/common/program/undrawn_ticks.h).
 openrac_add_test(undrawn_ticks INCLUDES .)
+# The mobys' colour passes and their depth writes (scene/moby_passes.h).
+openrac_add_test(moby_passes INCLUDES .)
 # How each tick's frames start: cleared, the last picture, or under the tick's 2D
 # (game/common/frontend/tick_picture.h).
 openrac_add_test(tick_picture INCLUDES .)
