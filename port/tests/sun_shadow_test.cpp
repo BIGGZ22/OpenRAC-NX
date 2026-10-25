@@ -237,6 +237,89 @@ void main() {
     frame.release();
 }
 
+// A far cascade's texels are tens of times the nearest's (kSunResolutions over a 256-unit range).
+// A receiver steeper to the light than the filter's slope clamp, sampled against a map that holds
+// its own depth at each texel centre, must not shadow itself there: with a bias and normal offset
+// fixed in world units it did, in speckles and stair steps on distant hills and foliage, while the
+// near cascade was clean.
+void far_cascade_self_shadow_gpu() {
+    renderer::FrameBuffer frame;
+    renderer::Shader shader;
+    std::string error;
+    constexpr int kSamples = 256;
+    constexpr int kMap = 1024;
+    constexpr float kRadius = 150.0f;  // a far cascade's half extent, world units
+    constexpr float kRange = 400.0f;   // its depth range
+    constexpr float kRise = 3.0f;      // the receiver's height per unit across the map
+    CHECK(frame.create(kSamples, 1, error));
+    const char* vertex = R"glsl(#version 410 core
+void main() {
+    vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+    gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}
+)glsl";
+    const std::string fragment = std::string("#version 410 core\n") + lighting::shaders::probes_glsl
+                                 + R"glsl(layout(location = 0) out vec4 out_colour;
+uniform float radius;
+uniform float range;
+uniform float rise;
+void main() {
+    mat4 light = mat4(1.0);
+    light[0].x = 1.0 / radius;
+    light[1].y = 1.0 / radius;
+    light[2].z = 2.0 / range;
+    float x = (gl_FragCoord.x / float(textureSize(sun_shadow_map0, 0).x) * 0.25 - 0.1) * radius;
+    vec3 n = normalize(vec3(-rise, 0.0, 1.0));
+    float v = sun_shadow_pcf(sun_shadow_map0, light, vec3(x, 0.0, rise * x), n, n);
+    out_colour = vec4(v, v, v, 1.0);
+}
+)glsl";
+    CHECK(shader.build("far cascade self-shadowing", vertex, fragment, error));
+    // The receiver's depth at each texel centre, as drawing it into the cascade stores it.
+    std::vector<float> depths(std::size_t(kMap) * 4);
+    for (int i = 0; i < kMap; ++i) {
+        const float x = ((i + 0.5f) / kMap * 2.0f - 1.0f) * kRadius;
+        depths[std::size_t(i) * 4] = kRise * x / kRange + 0.5f;
+        depths[std::size_t(i) * 4 + 3] = 1.0f;
+    }
+    unsigned map = 0, vao = 0;
+    glGenTextures(1, &map);
+    glActiveTexture(GL_TEXTURE0 + 7);
+    glBindTexture(GL_TEXTURE_2D, map);
+    glTexImage2D(GL_TEXTURE_2D, 0, 0x8814, kMap, 1, 0, GL_RGBA, GL_FLOAT, depths.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glBindFramebuffer(GL_FRAMEBUFFER, frame.id());
+    glViewport(0, 0, kSamples, 1);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+    shader.use();
+    glUniform1i(shader.uniform("sun_shadow_map0"), 7);
+    glUniform1f(shader.uniform("radius"), kRadius);
+    glUniform1f(shader.uniform("range"), kRange);
+    glUniform1f(shader.uniform("rise"), kRise);
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    const auto rgba = frame.read_rgba();
+    int shadowed = 0;
+    for (int i = 0; i < kSamples; ++i) {
+        shadowed += rgba[std::size_t(i) * 4] < 250 ? 1 : 0;
+    }
+    std::printf(
+        "far cascade: %d of %d receiver samples shadowed by themselves\n", shadowed, kSamples
+    );
+    CHECK(shadowed == 0);
+    CHECK(glGetError() == GL_NO_ERROR);
+    glBindVertexArray(0);
+    glDeleteVertexArrays(1, &vao);
+    glDeleteTextures(1, &map);
+    glActiveTexture(GL_TEXTURE0);
+    shader.release();
+    frame.release();
+}
+
 // Compare both filters in one shader so every case sees identical arithmetic,
 // texture storage and coordinates. No game data or captures are involved.
 void unique_filter_gpu() {
@@ -1052,6 +1135,7 @@ int main(int argc, char**) {
             return test::kSkip;
         }
         filter_gpu();
+        far_cascade_self_shadow_gpu();
         unique_filter_gpu();
         gpu();
     }
