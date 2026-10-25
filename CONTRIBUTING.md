@@ -34,9 +34,9 @@ launcher (`launcher/`); the decompilations the port is built from live in
   `.git/hooks` serves all of OpenRAC.
 - **Open questions are decided together.** If your change depends on one
   ([docs/policy/OPEN_QUESTIONS.md](docs/policy/OPEN_QUESTIONS.md)), raise it.
-- **Decompilation work follows its game's rules.** Work from the game's
-  directory and follow its README: each game proves a match its own way, and
-  its checks have the last word.
+- **Decompilation work follows its game's rules** and
+  [docs/decomp](docs/decomp/README.md): work from the game's directory, and
+  let its checks have the last word.
 
 ## Commits
 

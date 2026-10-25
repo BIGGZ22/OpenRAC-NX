@@ -93,11 +93,12 @@ or a relative.
 
 A candidate marked `same` is the same machine code in both games, so the C
 that produces it in one game produces it in the other **when built the same
-way**. That last part is the catch: the projects do not agree on compilers.
-So:
+way**. That last part is the catch: the projects do not agree on compilers
+([docs/decomp/TOOLCHAINS.md](../decomp/TOOLCHAINS.md)). So:
 
 1. Take the C from the project that matched it, with its license and a
-   provenance note, as the projects already do.
+   provenance note, as the projects already do
+   ([docs/decomp/WORKFLOW.md](../decomp/WORKFLOW.md#6-porting-between-versions-and-games)).
    RAC3's code, and rac1/pal's since 2026-10-07, is GPL v3; it can only move
    into an MIT tree with its authors' agreement ([LICENSE.md](../../LICENSE.md)).
 2. Rename its symbols to the target's (addresses differ, and each project

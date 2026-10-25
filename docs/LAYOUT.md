@@ -21,6 +21,7 @@ OpenRAC/
 │   └── openrac_common/     the helpers the Python tools share (paths, game.json, tables, discs)
 ├── docs/                   knowledge and rules that span the games
 │   ├── assets/             the logo and the pictures README.md shows
+│   ├── decomp/             the decompilations across games: workflows, compilers, rules
 │   ├── policy/             sourcing policy, open questions
 │   ├── port/               the native port: design, studies, order of work
 │   ├── restructure/        the restructure's progress: packages, owners, how to help
@@ -68,6 +69,7 @@ are what readers see.
 | Decompiled code, a symbol map, a game's build change | `games/<game>/<version>/`, following that project's layout |
 | A note about one game | that game's `docs/` |
 | Knowledge that holds across games (a format, a subsystem) | `docs/engine/`, linking the per-game evidence |
+| Matching or compiler knowledge across games | `docs/decomp/` |
 | A file a second game needs unchanged (a library source, a build helper) | a copy in that game, listed with the original in `shared/files.json` ([shared/](../shared/README.md)) |
 | A new game version | `games/<game>/<version>/`, plus its entry in `games/<game>/game.json` (the editor reads a disc's identity from it: boot executable, size, SHA-1, region, disc version) |
 

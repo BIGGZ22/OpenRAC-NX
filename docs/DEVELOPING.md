@@ -68,7 +68,9 @@ mod SDK ([docs/port/MODS.md](port/MODS.md)).
 
 Each game version in `games/` is its own project, built from its own
 directory with a compiler you supply ([toolchains/README.md](../toolchains/README.md)).
-Start with [games/README.md](../games/README.md) and the game's own README.
+Start with [games/README.md](../games/README.md), the game's own README and
+[decomp/](decomp/README.md), which compares the projects and holds the rules
+for matching work.
 A few tools work across them:
 
 ```sh

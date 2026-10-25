@@ -41,6 +41,8 @@ Where to find what. Start with the first table.
 ## The decompilations
 
 Each game version in `games/` documents itself: start with its README.
+What spans the games (matching workflows, compilers, the rules for matching
+work, every game's document list) is in [decomp/](decomp/README.md).
 
 | Game | Start with |
 |---|---|

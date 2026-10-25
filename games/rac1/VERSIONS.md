@@ -44,7 +44,7 @@ in [progress/](../../progress/README.md).
   runs no step that edits compiler output and gives flags only per file
   ([docs/BUILD_FIDELITY.md](docs/BUILD_FIDELITY.md)). Settling which
   compiler built the game comes before merging the two into one tree
-  ([toolchains/README.md](../../toolchains/README.md),
+  ([docs/decomp/TOOLCHAINS.md](../../docs/decomp/TOOLCHAINS.md),
   [open questions](../../docs/policy/OPEN_QUESTIONS.md#4-one-ratchet--clank-tree-for-both-regions)).
 - **Different licenses.** The PAL project is GPL v3 since 2026-10-07 and the
   US project MIT, so US code can move into the PAL tree, and PAL code written
