@@ -123,6 +123,48 @@ fn dirs_home() -> PathBuf {
     std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("."))
 }
 
+/// The folders some development builds of the launcher kept in the install folder: the memory
+/// cards and the settings, which belong in [`data_home`].
+const INSTALL_FOLDERS: [&str; 2] = ["memcard", "settings"];
+
+/// Moves the memory cards and settings found in the install folder `install` into `to`'s
+/// `migrated/`, beside the ones in use, which it never replaces: a file already in `migrated/` is
+/// kept. A folder leaves `install` only once each of its files is copied, so a copy that failed is
+/// tried again at the next start. Returns how many files were copied.
+pub fn migrate_install_saves(install: &Path, to: &Path) -> Result<usize, String> {
+    let target = to.join("migrated");
+    let mut copied = 0;
+    for name in INSTALL_FOLDERS {
+        let from = install.join(name);
+        if !from.is_dir() || from == to.join(name) {
+            continue;
+        }
+        copied += copy_missing(&from, &target.join(name))?;
+        fs::remove_dir_all(&from).map_err(|e| format!("{} is copied but stays: {e}", from.display()))?;
+    }
+    Ok(copied)
+}
+
+/// Copies the files of `from` into `to` that `to` does not have yet, keeping their times (the Saves
+/// page shows them). Returns how many were copied.
+fn copy_missing(from: &Path, to: &Path) -> Result<usize, String> {
+    fs::create_dir_all(to).map_err(|e| format!("{}: {e}", to.display()))?;
+    let mut copied = 0;
+    for entry in fs::read_dir(from).map_err(|e| format!("{}: {e}", from.display()))?.flatten() {
+        let (src, dst) = (entry.path(), to.join(entry.file_name()));
+        if src.is_dir() {
+            copied += copy_missing(&src, &dst)?;
+        } else if !dst.exists() {
+            fs::copy(&src, &dst).map_err(|e| format!("{}: {e}", src.display()))?;
+            if let Ok(time) = entry.metadata().and_then(|m| m.modified()) {
+                let _ = fs::File::options().write(true).open(&dst).and_then(|f| f.set_modified(time));
+            }
+            copied += 1;
+        }
+    }
+    Ok(copied)
+}
+
 /// Decode BCD (Binary Coded Decimal) byte: e.g. 0x26 -> 26.
 fn decode_bcd(byte: u8) -> Option<u32> {
     let high = (byte >> 4) as u32;
@@ -610,6 +652,37 @@ mod tests {
         }
         out.extend_from_slice(&(-1i32).to_le_bytes());
         out
+    }
+
+    /// The install folder's cards and settings go to migrated/, the ones in use and a file already
+    /// migrated are left alone, and the install folder keeps only its games.
+    #[test]
+    fn install_saves_move_to_migrated() {
+        let (install, home) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+        let (install, home) = (install.path(), home.path());
+        for (path, text) in [
+            ("memcard/SCES_509.16/card/save0.bin", "old card"),
+            ("settings/rac1-pal.ini", "old ini"),
+            ("settings/rac1-ntsc.ini", "new ini?"),
+            ("active/rac1/keep", "a game"),
+        ] {
+            fs::create_dir_all(install.join(path).parent().unwrap()).unwrap();
+            fs::write(install.join(path), text).unwrap();
+        }
+        fs::create_dir_all(home.join("memcard/SCES_509.16/card")).unwrap();
+        fs::write(home.join("memcard/SCES_509.16/card/save0.bin"), "current").unwrap();
+        fs::create_dir_all(home.join("migrated/settings")).unwrap();
+        fs::write(home.join("migrated/settings/rac1-ntsc.ini"), "migrated before").unwrap();
+
+        assert_eq!(migrate_install_saves(install, home), Ok(2));
+        let read = |path: &str| fs::read_to_string(home.join(path)).unwrap();
+        assert_eq!(read("migrated/memcard/SCES_509.16/card/save0.bin"), "old card");
+        assert_eq!(read("migrated/settings/rac1-pal.ini"), "old ini");
+        assert_eq!(read("migrated/settings/rac1-ntsc.ini"), "migrated before");
+        assert_eq!(read("memcard/SCES_509.16/card/save0.bin"), "current");
+        assert!(!install.join("memcard").exists() && !install.join("settings").exists());
+        assert!(install.join("active/rac1/keep").is_file());
+        assert_eq!(migrate_install_saves(install, home), Ok(0));
     }
 
     /// Windows keeps the data in %LOCALAPPDATA%\openrac, as the port's data_home does.

@@ -1459,6 +1459,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     settle_root(&mut config, bundled.as_deref());
     let discord = start_discord(&config);
     start_log(app, config_file.as_deref());
+    migrate_install_saves(&config);
     app.manage(AppState { config: Mutex::new(config), config_file, jobs: Jobs::default(), discord, bundled });
     Ok(())
 }
@@ -1571,6 +1572,19 @@ fn start_discord(config: &Config) -> Arc<Mutex<DiscordState>> {
         });
     }
     discord
+}
+
+/// Memory cards and settings that some development builds kept in the install folder go to the
+/// data folder's migrated/ (core saves.rs). Android never kept them there.
+fn migrate_install_saves(config: &Config) {
+    let Some(install) = config.install_dir.as_deref().filter(|_| Platform::current() != Platform::Android) else {
+        return;
+    };
+    match openrac_launcher_core::saves::migrate_install_saves(install, &openrac_launcher_core::saves::data_home()) {
+        Ok(0) => {}
+        Ok(copied) => launcher_log::line(&format!("saves: {copied} files from {} are in migrated/", install.display())),
+        Err(e) => launcher_log::line(&format!("saves: not migrated: {e}")),
+    }
 }
 
 /// The launcher's own log, beside launcher.json (core launcher_log.rs), opened with the version and

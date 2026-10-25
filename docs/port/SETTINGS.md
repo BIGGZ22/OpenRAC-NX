@@ -25,7 +25,9 @@ the memory cards are too, is `%LOCALAPPDATA%\openrac` on Windows,
 (or `~/.local/share/openrac`) elsewhere. On Windows, older builds kept it in
 `.local/share/openrac` under `HOME` or the folder the game started in; the
 game copies that folder's cards and settings over once and renames it
-`openrac.moved`.
+`openrac.moved`. Some development builds of the launcher kept them in its
+install folder; the launcher moves those to `<data home>/openrac/migrated/`,
+beside the ones in use.
 
 In Ratchet & Clank (PAL) every setting but the last two is a row of the title
 menu's **Options, Video** page. The page shows four rows at a time and moves
