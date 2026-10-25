@@ -123,12 +123,8 @@ void rac1_start_level(int level) {
  */
 static void direct_start(unsigned frame) {
     static int done = 0;
-    if (flight_frames > 0) {
-        --flight_frames;
-    }
     static unsigned title_from = 0;
     (void)frame;
-    rac1_options_frame();
     if (done) {
         return;
     }
@@ -148,6 +144,16 @@ static void direct_start(unsigned frame) {
     }
     done = 1;
     rac1_start_level(openrac_game_start_level);
+}
+
+/* Once a frame (openrac_game_on_frame): the flight's frames counted down (skip), the options the
+ * port remembers (options.c), then the start straight into a level. */
+static void on_frame(unsigned frame) {
+    if (flight_frames > 0) {
+        --flight_frames;
+    }
+    rac1_options_frame();
+    direct_start(frame);
 }
 
 /* gBolts (include/names.h). */
@@ -217,6 +223,11 @@ static int hero(float position[3], float rotation[3], int32_t *state) {
     return 1;
 }
 
+/* The display list's size (D_0016100C, its copy of the loaded level's), and the largest the pause
+ * menu shrinks it to for its own buffers (seen in game code: CalculateDmaTransferAddress). */
+#define DISPLAY_LIST_SIZE OPENRAC_DATA(RAC1_ADDR(0x0016100Cu))
+#define PAUSE_LIST_SIZE 0x60000
+
 /*
  * initialize_level_runtime: a flight out of a level starts. It cuts its scene's two chunk buffers
  * from the ends of the display list's buffers: the list's size (D_0016100C, its copy of the loaded
@@ -230,7 +241,7 @@ static int hero(float position[3], float rotation[3], int32_t *state) {
  * pause's size still there, the level's size is put back first, as the close would have.
  */
 void func_00232278(void) {
-    if (GREF(int, OPENRAC_DATA(RAC1_ADDR(0x0016100Cu))) <= 0x60000) {
+    if (GREF(int, DISPLAY_LIST_SIZE) <= PAUSE_LIST_SIZE) {
         func_002348B8();
     }
     func_00232278__game();
@@ -269,7 +280,7 @@ __attribute__((constructor)) static void install_direct_start(void) {
      * port's library to keep them there too (lib/mc.c). */
     openrac_game_mc_state(RAC1_MC_COMMAND, RAC1_MC_RESULT);
 #endif
-    openrac_game_on_frame = direct_start;
+    openrac_game_on_frame = on_frame;
     openrac_game_bolts = bolts;
     openrac_game_skip_buttons = skip_buttons;
     openrac_game_skip = skip;
