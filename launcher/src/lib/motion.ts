@@ -10,8 +10,16 @@ import type { FlyParams, SlideParams } from "svelte/transition";
 export const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** Whether a page, or the game on it, gives way to the next in one slide (the browser's view
- *  transitions, app.css), rather than simply changing. */
-export const slides = !reduced && typeof document !== "undefined" && "startViewTransition" in document;
+ *  transitions, app.css), rather than simply changing. Off for good once the app says its webview
+ *  draws without accelerated compositing (stopSlides). */
+export let slides = !reduced && typeof document !== "undefined" && "startViewTransition" in document;
+
+/** No more page slides: WebKitGTK without its accelerated compositing mode (a Steam Deck, where the
+ *  launcher turns it off) crashed in a view transition whenever a page was opened. */
+export function stopSlides(): void {
+  slides = false;
+  if (typeof document !== "undefined") delete document.documentElement.dataset.motion;
+}
 
 /** Which way a slide goes: to a tab further along the bar (or down the rail on Android) or back,
  *  or to a game further down the game list or up it. */

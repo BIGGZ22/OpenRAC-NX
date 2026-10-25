@@ -1908,6 +1908,8 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
         standalone: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("standalone"),
         updates: STABLE,
         updateChannels: { stable: STABLE, dev: DEV },
+        // ?nocompositing: a Steam Deck's webview, without page slides.
+        noCompositing: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("nocompositing"),
       });
     case "get_config":
       return delay<Config>({ ...config });

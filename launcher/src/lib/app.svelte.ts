@@ -25,6 +25,7 @@ import {
   updateBranchOf,
   updateSourceOf,
 } from "./api";
+import { stopSlides } from "./motion";
 import { Queue, type Job } from "./queue";
 import { backgroundStatus } from "./progress";
 import { lastLines, PLAY_ACTIONS, unseenRecent, type StopNotice } from "./reports";
@@ -294,6 +295,7 @@ export async function start() {
       }
     }
     app.info = await api.appInfo();
+    if (app.info.noCompositing) stopSlides();
     // Android: the config names the carried tools' Python only once they are unpacked.
     if (onAndroid) await prepareTools();
     app.config = await firstRun(await api.getConfig());

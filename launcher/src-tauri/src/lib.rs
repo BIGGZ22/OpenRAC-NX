@@ -53,6 +53,10 @@ struct AppInfo {
     updates: openrac_launcher_core::update::UpdateSource,
     /// That repository's two channels, which the player chooses between (Settings, `updateChannel`).
     update_channels: UpdateChannels,
+    /// WebKitGTK draws without its accelerated compositing mode (a Steam Deck, or the player's
+    /// WEBKIT_DISABLE_COMPOSITING_MODE): the page gives its page slides up, whose view transitions
+    /// crashed the webview there whenever a page was opened (src/lib/motion.ts).
+    no_compositing: bool,
 }
 
 #[derive(Serialize)]
@@ -109,6 +113,7 @@ fn app_info(app: AppHandle, state: State<'_, AppState>) -> AppInfo {
             .is_some_and(|copy| detect::on_the_copy(state.config.lock().unwrap().root.as_deref(), copy)),
         update_channels: UpdateChannels { stable: updates.on(Channel::Stable), dev: updates.on(Channel::Dev) },
         updates,
+        no_compositing: cfg!(target_os = "linux") && std::env::var_os("WEBKIT_DISABLE_COMPOSITING_MODE").is_some(),
     }
 }
 

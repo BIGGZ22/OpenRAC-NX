@@ -132,6 +132,8 @@ export interface AppInfo {
   updates: UpdateSource;
   /** That repository's two channels, which the player chooses between (Config.updateChannel). */
   updateChannels: Record<UpdateChannel, UpdateSource>;
+  /** WebKitGTK draws without its accelerated compositing mode (a Steam Deck): no page slides. */
+  noCompositing: boolean;
 }
 
 /** The games folder looked through (scan_discs, src-tauri/src/lib.rs). */
