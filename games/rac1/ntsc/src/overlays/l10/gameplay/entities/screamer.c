@@ -2879,9 +2879,8 @@ extern int try_set_help_message_vendor(int, int) __asm__("FUN_00215130");
 extern void FUN_L00_00298840_vendor(int) __asm__("FUN_L00_00298840");
 extern int memcard_save_data_vendor(int, int) __asm__("FUN_0020b178");
 extern void FUN_L00_00263d40_vendor(int, int) __asm__("FUN_L00_00263d40");
-extern int D_0013ED98 __attribute__((section(".sdata")));
-extern int D_0013EDA0 __attribute__((sda));
-extern int D_L10_0013F640 __asm__("D_L10_0013F640") __attribute__((section(".sdata")));
+extern s32 hero_max_health __asm__("D_0015EDA0");
+extern int D_L10_0015F640 __asm__("D_L10_0015F640") __attribute__((section(".sdata")));
 
 void nanotech_upgrade_vendor_update(struct Moby *moby) __asm__("FUN_L10_002e8358");
 void nanotech_upgrade_vendor_update(struct Moby *moby) {
@@ -2911,8 +2910,8 @@ void nanotech_upgrade_vendor_update(struct Moby *moby) {
                     alternate_item_available[4] = 1;
                     upgrade_level = 5;
                     hero.health.hp = upgrade_level;
-                    current_bolt_count = D_0013ED98 - 4000;
-                    D_0013EDA0 = upgrade_level;
+                    current_bolt_count = current_bolt_count - 4000;
+                    hero_max_health = upgrade_level;
                     FUN_L00_00298840_vendor(0);
                     moby->state = 1;
                 } else {
@@ -2928,8 +2927,8 @@ void nanotech_upgrade_vendor_update(struct Moby *moby) {
                     alternate_item_available[5] = 1;
                     upgrade_level = 8;
                     hero.health.hp = upgrade_level;
-                    current_bolt_count = D_0013ED98 - 30000;
-                    D_0013EDA0 = upgrade_level;
+                    current_bolt_count = current_bolt_count - 30000;
+                    hero_max_health = upgrade_level;
                     FUN_L00_00298840_vendor(1);
                     moby->state = 1;
                 } else {
@@ -2950,7 +2949,7 @@ state_one:
         case FALSE: purchase = 0x271c; break;
         }
         FUN_L00_00263d40_vendor(purchase, -1);
-        D_L10_0013F640 = 0xb4;
+        D_L10_0015F640 = 0xb4;
         timer[1] = scale_game_frames(0xf0);
         moby->state = 0;
     }

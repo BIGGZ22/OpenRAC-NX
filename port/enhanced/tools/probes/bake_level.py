@@ -8,6 +8,7 @@ Generated plans, logs and probe assets contain game data and must stay local.
 from __future__ import annotations
 
 import argparse
+import contextlib
 from dataclasses import asdict, dataclass
 import json
 import math
@@ -63,10 +64,18 @@ class RegionSettings:
                                moby_whitelist=Path(__file__).with_name('moby_seed_whitelist.json'))
 
 
-def write_json(path, value):
+def write_json(path, value, *, replace=False):
+    if replace:
+        path.unlink(missing_ok=True)
     with path.open('x') as out:
         json.dump(value, out, indent=2, allow_nan=False)
         out.write('\n')
+
+
+def remove_grids(directory: Path):
+    """The grids a stopped bake wrote for another plan: every .orpg and its report."""
+    for path in directory.glob('*.orpg*'):
+        path.unlink()
 
 
 def inspection(text):
@@ -82,18 +91,29 @@ def inspection(text):
     return grid, emission, fields['scene_hash']
 
 
+# The baker's exit status for a level with nothing to bake (level_scene.h, kNothingToBake).
+NOTHING_TO_BAKE = 3
+
+
+class NothingToBake(Exception):
+    """The level has nothing for light to bounce off (the flight between planets: only a sky)."""
+
+
 class NativeBatch:
     """Keep one native scene alive while the Python planner chooses its grids."""
 
-    def __init__(self, command, log_path):
+    def __init__(self, command, log_path, *, append=False, progress=None):
         self.command = command
         self.log_path = log_path
+        self.append = append
+        # progress(fraction): the share of the level's probes baked, from the baker's "Probes" lines.
+        self.progress = progress
         self.process = None
         self.log = None
         self.inspection = ''
 
     def __enter__(self):
-        self.log = self.log_path.open('x')
+        self.log = self.log_path.open('a' if self.append else 'x')
         try:
             self.process = subprocess.Popen(self.command, stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -107,6 +127,8 @@ class NativeBatch:
                     return self
                 lines.append(line)
             self.process.wait()
+            if self.process.returncode == NOTHING_TO_BAKE:
+                raise NothingToBake(''.join(lines).strip().splitlines()[-1] if lines else 'nothing to bake')
             raise subprocess.CalledProcessError(self.process.returncode or 1, self.command)
         except BaseException:
             self.close()
@@ -119,8 +141,12 @@ class NativeBatch:
         for line in self.process.stdout:
             self.log.write(line)
             self.log.flush()
-            if line.startswith(('Baking ', 'Verified ')):
+            if line.startswith(('Baking ', 'Verified ', 'Kept ')):
                 print(line.rstrip(), flush=True)
+            elif line.startswith('Probes ') and self.progress is not None:
+                done, _, total = line[7:].strip().partition('/')
+                if done.isdigit() and total.isdigit() and int(total) > 0:
+                    self.progress(int(done) / int(total))
             completed |= line.strip() == 'Probe batch complete'
         result = self.process.wait()
         if result or not completed:
@@ -145,21 +171,36 @@ class NativeBatch:
         self.close()
 
 
-def bake_level(level_dir: Path, output_dir: Path, baker: Path, *, disc=None, options=()):
+def bake_level(level_dir: Path, output_dir: Path, baker: Path, *, disc=None, options=(), resume=False,
+               progress=None):
+    """RESUME: OUTPUT_DIR may hold what a stopped bake of this level wrote; the grids it verified
+    for the same plan are kept (the baker reads each back and checks it), the rest is baked.
+    PROGRESS(fraction) hears how far the level's probes are."""
     level_dir, output_dir, baker = level_dir.resolve(), output_dir.resolve(), baker.resolve()
     if output_dir.is_relative_to(level_dir):
         raise ValueError('bake outputs must be outside the source level directory')
-    if output_dir.exists():
+    if output_dir.exists() and not resume:
         raise ValueError('choose a new output directory; previous bakes are preserved')
     manifest = json.loads((level_dir/'manifest.json').read_text())
     settings = RegionSettings.load(level_dir)
     gameplay = seeds.read_gameplay(level_dir, manifest, disc) if settings.enabled else None
     common = [str(baker), '--level-dir', str(level_dir), *options]
     profile = json.loads(subprocess.check_output(common+['--print-profile'], text=True))
-    output_dir.mkdir(parents=True)
+    output_dir.mkdir(parents=True, exist_ok=resume)
 
-    command = common + ['--batch-output', str(output_dir)]
-    with NativeBatch(command, output_dir/'batch.log') as native:
+    command = common + ['--batch-output', str(output_dir)] + (['--resume'] if resume else [])
+    batch = NativeBatch(command, output_dir/'batch.log', append=resume, progress=progress)
+    try:
+        batch.__enter__()
+    except NothingToBake as nothing:
+        # Done, with no bake: the game keeps the level's original lighting (no sparse.orpg).
+        write_json(output_dir/'bake-result.json', replace=resume, value={
+            'version': 1, 'verified': True, 'empty': True, 'note': str(nothing),
+            'probe_format_version': profile['probe_format_version'], 'bake_version': profile['bake_version']})
+        print(f'Nothing to bake: {nothing}', flush=True)
+        return None
+    # Started above (its start says whether there is anything to bake): closed whatever happens.
+    with contextlib.closing(batch) as native:
         coarse, emission, source_hash = inspection(native.inspection)
         if settings.enabled and gameplay is not None:
             plan = seeds.plan_level(level_dir, coarse, profile, gameplay, settings.planner_options())
@@ -171,7 +212,15 @@ def bake_level(level_dir: Path, output_dir: Path, baker: Path, *, disc=None, opt
             raise ValueError('planned dense regions exceed the runtime region limit; adjust the level planning settings')
         plan.update(region_settings=asdict(settings), bake_profile=profile,
                     scene_hash=source_hash, emission=emission)
-        write_json(output_dir/'seed-plan.json', plan)
+        seed_plan = output_dir/'seed-plan.json'
+        if resume and seed_plan.is_file():
+            try:
+                same = json.loads(seed_plan.read_text()) == json.loads(json.dumps(plan, allow_nan=False))
+            except ValueError:
+                same = False
+            if not same:
+                remove_grids(output_dir)
+        write_json(seed_plan, plan, replace=resume)
         print(f"Planned {len(plan['regions'])} dense regions", flush=True)
 
         regions = []
@@ -184,9 +233,9 @@ def bake_level(level_dir: Path, output_dir: Path, baker: Path, *, disc=None, opt
     sparse = output_dir/'sparse.orpg'
     assets = [output_dir/f'region-{i:03d}.orpg' for i in range(len(plan['regions']))]
     registry = {'regions': [path.name for path in assets]}
-    write_json(Path(str(sparse)+'.regions.json'), registry)
-    write_json(output_dir/'regions.json', registry)
-    write_json(output_dir/'bake-result.json', {
+    write_json(Path(str(sparse)+'.regions.json'), registry, replace=resume)
+    write_json(output_dir/'regions.json', registry, replace=resume)
+    write_json(output_dir/'bake-result.json', replace=resume, value={
         'version': 1, 'game_version': coarse['game_version'], 'level': coarse['level'],
         'scene_hash': source_hash, 'sparse': sparse.name, 'regions': registry['regions'],
         'probe_format_version': profile['probe_format_version'],

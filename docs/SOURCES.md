@@ -59,6 +59,11 @@ Everything else is exactly as it was at that commit.
 - Added `host/`: a wrapper and a runner that build the project on an Apple
   Silicon Mac under rac1/pal's Wine ([host/README.md](../games/rac1/ntsc/host/README.md)).
   Nothing in the project reads them.
+- C patches for the native port (`port/game/rac1-ntsc`), each listed with its
+  reason in [OPENRAC_PATCHES.md](../games/rac1/ntsc/OPENRAC_PATCHES.md): the C
+  made explicit where it relied on a register or named a PAL address. A sync
+  keeps them, and leaves a `.rej` where the project changed the same lines;
+  they are to be offered to the project.
 
 **rac2/ntsc**
 - Nothing changed. Since 2026-10-11 the project carries the sourcing edits OpenRAC used to make

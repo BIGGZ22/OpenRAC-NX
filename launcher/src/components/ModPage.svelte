@@ -54,7 +54,7 @@
     onhomepage: () => void;
     onremove: () => void;
     /** A built-in entry's bake: its status, the job running it, and the way to start it. */
-    builtIn?: { bake: BakeStatus; job: Job | null; onbake: () => void } | null;
+    builtIn?: { bake: BakeStatus; job: Job | null; onbake: () => void; ondelete: () => void } | null;
   } = $props();
 
   const bakeProgress = $derived(builtIn?.job ? readProgress(builtIn.job.actionId, builtIn.job.lines) : null);
@@ -285,13 +285,16 @@
         <h3 id={`${mod.id}-bake`}>{T.ENHANCED.lightingTitle}</h3>
         <p class="muted" role="status">
           {#if job}
-            {phaseLabel(job)}{bakeProgress?.percent != null ? `, ${Math.round(bakeProgress.percent)} %` : "…"}
+            {phaseLabel(job)}{bakeProgress?.percent != null
+              ? `, ${Math.round(bakeProgress.percent)} %${bakeProgress.left ? `, ${bakeProgress.left}` : ""}`
+              : "…"}
           {:else if !bake.available}
             {bake.noBakerHere ? T.ENHANCED.noBakerHere : bake.levels === 0 ? T.ENHANCED.noLevels : T.ENHANCED.noBaker}
           {:else if bake.ready >= bake.levels}
             {T.ENHANCED.ready(bake.levels)}
           {:else}
             {T.ENHANCED.some(bake.ready, bake.levels)}
+            {#if bake.partial}{T.ENHANCED.partial(bake.partial)}{/if}
             {#if bake.failed}{T.ENHANCED.failed(bake.failed)}{/if}
           {/if}
         </p>
@@ -310,10 +313,24 @@
           <p class="dim small-print">{T.ENHANCED.fallback}</p>
         {/if}
       </div>
-      {#if !job && bake.available}
-        <button class:ghost={bake.ready >= bake.levels} onclick={builtIn.onbake}
-          ><Icon name="refresh" size={16} />{bake.ready >= bake.levels ? T.ENHANCED.again : T.ENHANCED.prepare}</button
-        >
+      {#if !job && (bake.available || bake.ready + bake.partial + bake.failed > 0)}
+        <div class="bake-actions">
+          {#if bake.available}
+            <button class:ghost={bake.ready >= bake.levels} onclick={builtIn.onbake}
+              ><Icon name="refresh" size={16} />{bake.ready >= bake.levels
+                ? T.ENHANCED.again
+                : bake.partial
+                  ? T.ENHANCED.goOn
+                  : T.ENHANCED.prepare}</button
+            >
+          {/if}
+          {#if bake.ready + bake.partial + bake.failed > 0}
+            <!-- Under the main one, plainer: it takes away what took a while to make. -->
+            <button class="ghost small danger" onclick={builtIn.ondelete}
+              ><Icon name="trash" size={14} />{T.ENHANCED.remove}</button
+            >
+          {/if}
+        </div>
       {/if}
     </section>
   {/if}
@@ -766,6 +783,18 @@
     flex-direction: row;
     align-items: center;
     gap: 16px;
+  }
+
+  /* Prepare, and under it the plainer Delete. */
+  .bake-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .bake-actions .danger {
+    color: var(--err);
   }
 
   .bake-text {

@@ -35,22 +35,27 @@ namespace {
 
 // OpenRAC's folder of the player's memory cards and settings, as the launcher finds it
 // (launcher/core/src/saves.rs, data_home): the one the launcher names (its install folder), else
-// the system's. Windows has no HOME: there it is the OpenRAC folder in the user's profile, the
-// launcher's default install folder, not a folder under wherever the game was started.
+// the system's.
 fs::path data_home() {
     if (const std::optional<std::string_view> chosen = env::value(env::Var::DataHome);
         chosen && !chosen->empty()) {
         return fs::path(std::string(*chosen));
     }
-#if defined(_WIN32)
-    if (const std::optional<std::string> profile = env::system_variable("USERPROFILE");
-        profile && !profile->empty()) {
-        return fs::path(*profile) / "OpenRAC";
-    }
-#endif
 #if defined(__APPLE__)
     const std::optional<std::string> home = env::system_variable("HOME");
     fs::path base = fs::path(home.value_or(".")) / "Library/Application Support/OpenRAC";
+#elif defined(_WIN32)
+    // %LOCALAPPDATA%\openrac: the same folder whatever folder the game is started in.
+    fs::path base;
+
+    if (const std::optional<std::string> local = env::system_variable("LOCALAPPDATA");
+        local && !local->empty()) {
+        base = fs::path(*local) / "openrac";
+    } else {
+        // No LOCALAPPDATA (a stripped environment): the same folder under the user's profile.
+        const std::optional<std::string> profile = env::system_variable("USERPROFILE");
+        base = fs::path(profile.value_or(".")) / "AppData/Local/openrac";
+    }
 #else
     fs::path base;
 
@@ -64,6 +69,56 @@ fs::path data_home() {
 #endif
     return base;
 }
+
+#if defined(_WIN32)
+// Moves the cards and settings of the folder Windows used before %LOCALAPPDATA% into `base`, the
+// data home. That was the other systems' folder, HOME's .local/share/openrac, and with no HOME
+// (the usual case there) the one under the folder the game was started in, which the launcher's
+// Play does not keep the same. Copied without replacing what `base` has, then the old folder is
+// renamed, so they come over once.
+void move_old_data_home(const fs::path& base) {
+    const std::optional<std::string> home = env::system_variable("HOME");
+    const fs::path old = fs::path(home.value_or(".")) / ".local/share/openrac";
+    std::error_code error;
+
+    // Nothing to move: no old folder, or HOME points where the data home is.
+    if (!fs::is_directory(old, error) || fs::equivalent(old, base, error)) {
+        return;
+    }
+
+    fs::create_directories(base, error);
+    fs::copy(old, base, fs::copy_options::recursive | fs::copy_options::skip_existing, error);
+
+    // A copy that stopped part way leaves the old folder in place, to be tried at the next start.
+    if (error) {
+        log::warn(
+            "the cards and settings in {} could not be copied to {}: {}",
+            old.string(),
+            base.string(),
+            error.message()
+        );
+        return;
+    }
+
+    const fs::path moved = fs::path(old).concat(".moved");
+    fs::rename(old, moved, error);
+
+    // Kept under its name, the old folder is copied again next start, the new files left alone.
+    if (error) {
+        log::warn(
+            "the cards and settings in {} are also in {}, but {} cannot be renamed {}: {}",
+            old.string(),
+            base.string(),
+            old.string(),
+            moved.filename().string(),
+            error.message()
+        );
+        return;
+    }
+
+    log::info("the cards and settings in {} are now in {}", old.string(), base.string());
+}
+#endif
 
 // Where the first memory card lives unless --cards says otherwise: the folder
 // the launcher's save manager reads and backs up: <data home>/openrac/memcard/<serial>.
@@ -179,6 +234,13 @@ Options parse(int argc, char** argv) {
         }
     }
 
+#if defined(_WIN32)
+    // The defaults below are in the data home: what an older build kept elsewhere comes over first.
+    if (o.cards.empty() || o.settings.empty()) {
+        move_old_data_home(data_home());
+    }
+
+#endif
     if (o.cards.empty()) {
         o.cards = default_cards();
     }

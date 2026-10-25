@@ -371,7 +371,7 @@ BakeSceneExport export_probe_scene(
         }
     }
     if (out.scene.triangles.empty()) {
-        throw std::runtime_error("no static render geometry to bake");
+        throw NothingToBake("no static render geometry to bake");
     }
     // All mobys remain receivers, including those excluded from transport.
     for (const auto& instance : level.instances[static_cast<std::size_t>(scene::Layer::Mobys)]) {

@@ -33,6 +33,7 @@
 #include "openrac/memory.h"
 #include "openrac/sound_engine.h"
 #include "program/program.h"
+#include "program/undrawn_ticks.h"
 
 #ifdef OPENRAC_FRONTEND
 #include "debug_overlay.h"
@@ -198,6 +199,10 @@ void finish() {
 
 #ifdef OPENRAC_FRONTEND
 [[noreturn]] void leave() {
+    // The sound's stream goes before the window, whose end is SDL's (Platform: SDL_Quit). Left to
+    // the exit, its destructor freed the stream into SDL's freed state: the heap was corrupted
+    // and the program faulted on its way out.
+    close_sound();
     // Join rendering while the window, profiler and GPU owners still exist.
     if (g_window) {
         frontend::close();
@@ -205,7 +210,6 @@ void finish() {
 #if defined(__ANDROID__)
     finish();
     stats::close_dump();
-    close_sound();
     openrac_sound_stop_readers();
     std::_Exit(0);
 #else
@@ -266,10 +270,17 @@ int vsync() {
         );
         const auto* ram = runtime::Memory::get().base();
         const std::uint32_t draws = g_reports_draws ? g_draws : ~0u;
+        // A tick of a level on which the game drew nothing between drawn frames keeps the last
+        // picture, as the console's undrawn back buffer does (program/undrawn_ticks.h). The count
+        // is per run, like this file's other statics, until vsync's state is an object (11.4).
+        static UndrawnTicks undrawn;
+        const bool in_level = openrac_game_loaded_overlay() != OPENRAC_OVERLAY_EXE;
+        const bool keep = undrawn.keep(g_reports_draws, draws, in_level);
         g_draws = 0;
 
-        if (!frontend::frame(
-                std::span<const std::uint8_t>(ram, 32u * 1024 * 1024), g_chain, draws
+        if (!keep
+            && !frontend::frame(
+                std::span<const std::uint8_t>(ram, GUEST_RAM_SIZE), g_chain, draws
             )) {
             leave();
         }

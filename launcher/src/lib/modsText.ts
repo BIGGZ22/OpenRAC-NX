@@ -148,8 +148,18 @@ export const ENHANCED = {
   noLevels: "Get the levels ready on the game's page first.",
   noBaker: "This copy of the game has no lighting baker.",
   noBakerHere: "Intel Macs ship without the lighting baker: the enhanced graphics keep the original lighting.",
+  partial: (n: number) =>
+    n === 1
+      ? "1 level was stopped part way: preparing goes on from there."
+      : `${n} levels were stopped part way: preparing goes on from there.`,
   prepare: "Prepare lighting",
+  goOn: "Go on preparing",
   again: "Prepare again",
+  remove: "Delete the lighting",
+  removeAsk: (levels: number) =>
+    `Delete the prepared lighting of ${levels === 1 ? "this level" : `these ${levels} levels`}? The game keeps its original lighting until you prepare it again, which takes a while.`,
+  removeYes: "Delete",
+  removed: "The prepared lighting is deleted.",
   advanced: "Advanced",
 } as const;
 

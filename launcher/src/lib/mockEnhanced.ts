@@ -112,5 +112,5 @@ export const mockEnhanced: EnhancedView = {
     kind: "built-in",
     path: "",
   },
-  bake: { available: true, why: "", noBakerHere: false, levels: 19, ready: 7, failed: 0 },
+  bake: { available: true, why: "", noBakerHere: false, levels: 19, ready: 7, failed: 0, partial: 2 },
 };

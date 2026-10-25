@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest import mock
 
 import build_port
+from openrac_common import background
 
 CACHE = """# This is the CMakeCache file.
 //Path to a program.
@@ -18,7 +19,19 @@ CMAKE_MAKE_PROGRAM:FILEPATH=C:/Ninja/ninja.exe
 OPENRAC_RAC1_PAL_SOURCE:PATH=C:/work/rac1-decomp
 WITH_EQUALS:STRING=a=b
 """
-BUILD = ["cmake", "--build", "--preset", "release", "--target", "openrac-rac1-pal", "openrac-extractor"]
+BUILD = ["cmake", "--build", "--preset", "release", "--parallel", str(background.cpu_budget()),
+         "--target", "openrac-rac1-pal", "openrac-extractor"]
+
+# main() lowers its own priority (background.lower_priority); not the test runner's.
+_priority = mock.patch.object(build_port.background, "lower_priority", return_value=True)
+
+
+def setUpModule():
+    _priority.start()
+
+
+def tearDownModule():
+    _priority.stop()
 
 
 class Reading(unittest.TestCase):

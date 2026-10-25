@@ -408,6 +408,24 @@ async fn enhanced_set_enabled(
     enhanced_view(state, game, version).await
 }
 
+/// Deletes every lighting bake of a version (Enhanced graphics' "Delete the lighting"): the game
+/// keeps the original lighting until it is prepared again.
+#[tauri::command]
+async fn enhanced_delete_bakes(
+    state: State<'_, AppState>,
+    game: String,
+    version: String,
+) -> Result<Option<openrac_launcher_core::enhanced::EnhancedView>, String> {
+    let config = state.config.lock().unwrap().clone();
+    let key = format!("{game}/{version}");
+    let k = key.clone();
+    tauri::async_runtime::spawn_blocking(move || openrac_launcher_core::enhanced::delete_bakes(&config, &k))
+        .await
+        .map_err(|e| e.to_string())??;
+    launcher_log::line(&format!("{key}: lighting bakes deleted"));
+    enhanced_view(state, game, version).await
+}
+
 /// Sets one of Enhanced graphics' settings for a version, in its settings file.
 #[tauri::command]
 async fn enhanced_set_setting(
@@ -1360,6 +1378,7 @@ pub fn run() {
             enhanced_view,
             enhanced_set_enabled,
             enhanced_set_setting,
+            enhanced_delete_bakes,
             plugins_set_enabled,
             plugins_move,
             plugins_set_setting,

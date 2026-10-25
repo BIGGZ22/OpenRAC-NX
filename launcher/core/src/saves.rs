@@ -6,13 +6,17 @@
 //! The PC runtime keeps its memory cards in `<data home>/memcard/<SERIAL>` and its settings in
 //! `<data home>/settings`. On a desktop the data home is the launcher's install folder, passed to
 //! the game as OPENRAC_DATA_HOME, so the games, saves and settings sit in one folder. Without the
-//! launcher, and on Android, it is [`system_data_home`].
+//! launcher, and on Android, it is [`system_data_home`]:
+//! - macOS: `~/Library/Application Support/OpenRAC`
+//! - Windows: `%LOCALAPPDATA%\openrac`
+//! - Linux/other: `~/.local/share/openrac` (or `$XDG_DATA_HOME/openrac`)
 //!
 //! Inside each game's serial folder, the PS2 memory card folder (e.g. `BESCES-50916RATCHET`)
 //! holds `icon.sys`, `static.ico`, and save files `save0.bin` ... `save4.bin`.
 //! This module reads, backs up, restores, and inspects these save files.
 
 use serde::{Deserialize, Serialize};
+use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
@@ -101,7 +105,8 @@ pub fn set_data_home(dir: Option<PathBuf>) {
 }
 
 /// OpenRAC's data folder, where the games keep their memory cards (`memcard/`) and settings
-/// (`settings/`).
+/// (`settings/`): the install folder once [`set_data_home`] names it, else the port's own
+/// `data_home()` (port/game/common/program/options.cpp), from the same variables.
 pub fn data_home() -> PathBuf {
     #[cfg(test)]
     if let Some(home) = TEST_DATA_HOME.with(|cell| cell.borrow().clone()) {
@@ -113,19 +118,20 @@ pub fn data_home() -> PathBuf {
     system_data_home()
 }
 
-/// The data home the game uses when OPENRAC_DATA_HOME is not set (the port's `data_home()`): on
-/// Windows `%USERPROFILE%\OpenRAC`, the default install folder; elsewhere [`unix_data_home`].
+/// The data home the game uses when OPENRAC_DATA_HOME is not set (the port's `data_home()`).
 pub fn system_data_home() -> PathBuf {
     if cfg!(windows) {
-        if let Some(profile) = std::env::var_os("USERPROFILE").filter(|p| !p.is_empty()) {
-            return PathBuf::from(profile).join("OpenRAC");
+        // %LOCALAPPDATA%\openrac, whatever folder the game was started in (at its start, the game
+        // moves there what it kept before in HOME's or that folder's .local/share/openrac).
+        if let Some(home) = windows_data_home(std::env::var_os("LOCALAPPDATA"), crate::detect::home_dir()) {
+            return home;
         }
     }
     unix_data_home().unwrap_or_else(|| PathBuf::from(".local/share/openrac"))
 }
 
 /// `~/Library/Application Support/OpenRAC` on macOS, else `$XDG_DATA_HOME/openrac` or
-/// `~/.local/share/openrac`; None without HOME. Every desktop used this before the install folder.
+/// `~/.local/share/openrac`; None without HOME.
 fn unix_data_home() -> Option<PathBuf> {
     let home = std::env::var_os("HOME").filter(|h| !h.is_empty()).map(PathBuf::from);
     if cfg!(target_os = "macos") {
@@ -138,10 +144,21 @@ fn unix_data_home() -> Option<PathBuf> {
         .map(|base| base.join("openrac"))
 }
 
-/// Where earlier versions kept the saves and settings: [`unix_data_home`], and on Windows (no HOME)
-/// the folder the game was started in, `<install>/active/<game>/data/.local/share/openrac`.
+/// The Windows data folder from `%LOCALAPPDATA%` (`local_app_data`, unless empty), else from the
+/// user's profile folder (`profile`); `None` with neither.
+fn windows_data_home(local_app_data: Option<OsString>, profile: Option<PathBuf>) -> Option<PathBuf> {
+    if let Some(local) = local_app_data.filter(|value| !value.is_empty()) {
+        return Some(PathBuf::from(local).join("openrac"));
+    }
+    profile.map(|profile| profile.join("AppData").join("Local").join("openrac"))
+}
+
+/// Where earlier versions kept the saves and settings: [`system_data_home`] and [`unix_data_home`]
+/// (the same folder but on Windows, which used it before %LOCALAPPDATA%), and on Windows with no
+/// HOME the folder the game was started in, `<install>/active/<game>/data/.local/share/openrac`.
 pub fn earlier_data_homes(install: &Path) -> Vec<PathBuf> {
-    let mut found: Vec<PathBuf> = unix_data_home().into_iter().collect();
+    let mut found: Vec<PathBuf> = vec![system_data_home()];
+    found.extend(unix_data_home().filter(|dir| !found.contains(dir)));
     if let Ok(games) = fs::read_dir(install.join("active")) {
         let mut games: Vec<PathBuf> =
             games.flatten().map(|game| game.path().join("data/.local/share/openrac")).filter(|d| d.is_dir()).collect();
@@ -752,6 +769,24 @@ mod tests {
         }
         out.extend_from_slice(&(-1i32).to_le_bytes());
         out
+    }
+
+    /// Windows keeps the data in %LOCALAPPDATA%\openrac, as the port's data_home does.
+    #[test]
+    fn windows_data_home_is_in_local_app_data() {
+        let local = PathBuf::from("C:/Users/player/AppData/Local");
+        let profile = PathBuf::from("C:/Users/other");
+        assert_eq!(windows_data_home(Some(local.clone().into_os_string()), Some(profile)), Some(local.join("openrac")));
+    }
+
+    /// With LOCALAPPDATA unset or empty, the same folder under the user's profile; none without one.
+    #[test]
+    fn windows_data_home_falls_back_to_the_profile() {
+        let profile = PathBuf::from("C:/Users/player");
+        let expected = Some(profile.join("AppData").join("Local").join("openrac"));
+        assert_eq!(windows_data_home(None, Some(profile.clone())), expected);
+        assert_eq!(windows_data_home(Some(OsString::new()), Some(profile)), expected);
+        assert_eq!(windows_data_home(None, None), None);
     }
 
     #[test]

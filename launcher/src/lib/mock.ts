@@ -2026,8 +2026,12 @@ export async function mockCall(command: string, args: Record<string, unknown> = 
     }
     case "enhanced_view":
     case "enhanced_set_enabled":
-    case "enhanced_set_setting": {
+    case "enhanced_set_setting":
+    case "enhanced_delete_bakes": {
       if (args.game !== "rac1") return delay(null);
+      if (command === "enhanced_delete_bakes") {
+        mockEnhanced.bake = { ...mockEnhanced.bake, ready: 0, partial: 0, failed: 0 };
+      }
       if (command === "enhanced_set_enabled") mockEnhanced.mod = { ...mockEnhanced.mod, enabled: !!args.enabled };
       if (command === "enhanced_set_setting") {
         mockEnhanced.mod = {

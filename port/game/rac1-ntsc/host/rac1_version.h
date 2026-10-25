@@ -90,6 +90,36 @@
  * forms these two). */
 #define RAC1_ADDR_0x001C7AC0u 0x001C7740u
 #define RAC1_ADDR_0x001C7C80u 0x001C7900u
+/* The game's options the port remembers (options.c): PAL memcard_RestoreGame func_00209CE8 is
+ * FUN_00209298 here and initialize_gameplay_sound_system func_0022DBE8 is FUN_0022c8d0 (the NTSC
+ * decomp's memcard_restore_game.c and initialize_gameplay_sound_system.c); the language, PAL
+ * D_0015EE88, and the playback mode, music and sound volumes, PAL D_0015EEE8..EEF0, are its
+ * game_language and playback_mode, music_volume, sound_volume (include/rnc/globals.h,
+ * gameplay/state/options.h). */
+#define func_00209CE8 game_FUN_00209298
+#define func_00209CE8__game game_FUN_00209298__game
+#define func_0022DBE8 game_FUN_0022c8d0
+#define func_0022DBE8__game game_FUN_0022c8d0__game
+#define RAC1_TYPE_func_00209CE8_save gaddr
+#define RAC1_ADDR_0x0015EE88u 0x0015ED88u
+#define RAC1_ADDR_0x0015EEE8u 0x0015EDE8u
+/* Gaspar's copy of AmbientStreamL07Update (variants.c): PAL 09:002F0B48 is 09:002EF7F8 here (the
+ * catalogue's places of FUN_L07_002f8058), draw_level09_textured_surfaces PAL func_L09_002F0AA0 is
+ * FUN_L09_002ef750 and its grid record PAL D_L09_001FCA00 is D_L09_001FC740 (the NTSC decomp's
+ * asteroid.c), ScaleTableIntoBuffer PAL func_L02_002A5238 is FUN_L02_002a4058
+ * (timed_activation_pads.c). */
+#define func_L09_002F0B48 func_L09_002EF7F8
+#define func_L02_002A5238 game_FUN_L02_002a4058
+#define RAC1_ADDR_L09_0x001FCA00u 0x001FC740u
+#define RAC1_ADDR_L09_0x002F0AA0u 0x002EF750u
+/* A flight out of a level (boot.c): PAL initialize_level_runtime func_00232278 is FUN_00230f60
+ * here, CalculateDmaTransferAddress PAL func_002348B8 keeps its name, and the display list's size,
+ * PAL D_0016100C, is current_vu_chain D_00160F0C (the NTSC decomp's initialize_level_runtime.c,
+ * calculate_dma_transfer_address.c, render_globals.h). */
+#define func_00232278 game_FUN_00230f60
+#define func_00232278__game game_FUN_00230f60__game
+#define func_002348B8 game_CalculateDmaTransferAddress
+#define RAC1_ADDR_0x0016100Cu 0x00160F0Cu
 
 /* ---- generated below ---- */
 

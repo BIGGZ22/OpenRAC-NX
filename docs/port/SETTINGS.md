@@ -19,7 +19,14 @@ modes, the context, the graphics card).
 The file is `<data home>/openrac/settings/<id>.ini` (`--settings FILE` names
 another), `key = value` a line, `#` for a comment. It is read at start and
 written whenever a setting changes. An unknown value is reported in the log
-and the default used; an unknown key is ignored.
+and the default used; an unknown key is ignored. `<data home>/openrac`, where
+the memory cards are too, is `$OPENRAC_DATA_HOME` when it is set (the launcher
+sets it to its install folder), else `%LOCALAPPDATA%\openrac` on Windows,
+`~/Library/Application Support/OpenRAC` on macOS and `$XDG_DATA_HOME/openrac`
+(or `~/.local/share/openrac`) elsewhere. On Windows, older builds kept it in
+`.local/share/openrac` under `HOME` or the folder the game started in; the
+game copies that folder's cards and settings over once and renames it
+`openrac.moved`.
 
 In Ratchet & Clank (PAL) every setting but the last two is a row of the title
 menu's **Options, Video** page. The page shows four rows at a time and moves
@@ -69,6 +76,7 @@ needs the game started again.
 | Touch controls: Camera speed | `touch_camera` | `100`, `25` to `300` (percent) | How short a push of the finger on the right of the screen, from where it landed, turns the camera at full speed: 200 halves the push |
 | Touch controls: Edit layout | `touch_layout` | empty, `GROUP DX DY, ...` | Where the player moved each group of the pad from its own place, in screen heights (`dpad 0.0200 -0.0500, face ...`; the groups are `stick`, `dpad`, `face`, `l1`, `l2`, `r1`, `r2`, `select`, `start`, `menu`). Empty: every control at its place. Written only when something was moved |
 | (the launcher's Detailed logs) | `verbose_log` | `0`, `1` | The detailed log, as `OPENRAC_LOG=verbose` ([DEBUGGING.md](DEBUGGING.md#logs-and-traces)). Written only when on |
+| (the game's own options) | `game_language`, `game_playback`, `game_music_volume`, `game_sound_volume` | the game's values | Options the game keeps in its own memory, which a console forgets at power off: Ratchet & Clank's language and its **Options, Sound** page (the playback mode, and the music and sound volumes, `0` to `1024`). Written as the game changes them, put back at the next start, and kept when a save is loaded ([rac1/host/options.c](../../port/game/rac1/host/options.c)). The language starts the game as the console's setting would (`1` English, `2` French, `3` Spanish, `4` German, `5` Italian). A file may hold any whole number from -1000000 to 1000000; a program without a window keeps none |
 
 **Old files.** A file from before these keys loads as it did: `fullscreen = 1`
 is `display_mode = borderless`; `frame_rate = 60` (and 120, 144, 240) is that

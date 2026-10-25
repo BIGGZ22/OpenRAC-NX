@@ -26,6 +26,7 @@ static int flight_frames;
  * the flight between planets has its own states (ShipTravelTo's 3, and those after it). */
 #define SHIP_STATE RAC1_ADDR(0x0013E150u)
 #define SHIP_TAKE_OFF 0
+#define SHIP_FLIGHT 4
 #define SHIP_LANDING 8
 
 static int in_level(void) {
@@ -122,9 +123,6 @@ void rac1_start_level(int level) {
  */
 static void direct_start(unsigned frame) {
     static int done = 0;
-    if (flight_frames > 0) {
-        --flight_frames;
-    }
     static unsigned title_from = 0;
     (void)frame;
     if (done) {
@@ -146,6 +144,16 @@ static void direct_start(unsigned frame) {
     }
     done = 1;
     rac1_start_level(openrac_game_start_level);
+}
+
+/* Once a frame (openrac_game_on_frame): the flight's frames counted down (skip), the options the
+ * port remembers (options.c), then the start straight into a level. */
+static void on_frame(unsigned frame) {
+    if (flight_frames > 0) {
+        --flight_frames;
+    }
+    rac1_options_frame();
+    direct_start(frame);
 }
 
 /* gBolts (include/names.h). */
@@ -215,6 +223,30 @@ static int hero(float position[3], float rotation[3], int32_t *state) {
     return 1;
 }
 
+/* The display list's size (D_0016100C, its copy of the loaded level's), and the largest the pause
+ * menu shrinks it to for its own buffers (seen in game code: CalculateDmaTransferAddress). */
+#define DISPLAY_LIST_SIZE OPENRAC_DATA(RAC1_ADDR(0x0016100Cu))
+#define PAUSE_LIST_SIZE 0x60000
+
+/*
+ * initialize_level_runtime: a flight out of a level starts. It cuts its scene's two chunk buffers
+ * from the ends of the display list's buffers: the list's size (D_0016100C, its copy of the loaded
+ * level) less 0x60000 is where they start, and the list keeps what is before. The pause menu shrinks
+ * the list to 0x60000 (or 0x30000) for its own buffers and its close puts the level's size back
+ * (CalculateDmaTransferAddress, state 0x14), but loading a save from the pause's Load page leaves
+ * through the load (it fades out and the flight starts) without that close. The size then gave
+ * the chunks no room of their own: they started where the list does, the list's packets were
+ * written over the scene's animation tables, and the flight read one as a pointer (a fault at
+ * 0x50000010, camera at 429 -11 95: loading in a level, players' crashes on Hoven). With the
+ * pause's size still there, the level's size is put back first, as the close would have.
+ */
+void func_00232278(void) {
+    if (GREF(int, DISPLAY_LIST_SIZE) <= PAUSE_LIST_SIZE) {
+        func_002348B8();
+    }
+    func_00232278__game();
+}
+
 /* The flight's update (func_00230A90), once a frame of the transition's flight loop (space.c). */
 void func_00230A90(void) {
     flight_frames = 2;
@@ -230,7 +262,11 @@ void func_00230A90(void) {
  * on), and Start presses Cross instead (skip_buttons), the game's own skip.
  */
 static void skip(void) {
-    if (flight_frames > 0 && !ship_scene()) {
+    /* Only the flight through space (state 4): the same update runs while the ship leaves a planet
+     * (states 3 and 7), where the write ended nothing and only stopped the frame's draw (the
+     * level's dispatch draws nothing while D_0015F6FC is set): with Start held the world was gone,
+     * and pressed again and again it flickered. */
+    if (flight_frames > 0 && !ship_scene() && GREF(int, SHIP_STATE) == SHIP_FLIGHT) {
         /* The flight's own end: its playing flag cleared (the loader waits on it before it unloads
          * the old banks: ReRAC's 0x15ee4a, PAL D_0015EF4A, set to 1 before the loop) and done. */
         GREF(short, RAC1_ADDR(0x0015EF4Au)) = 0;
@@ -244,7 +280,7 @@ __attribute__((constructor)) static void install_direct_start(void) {
      * port's library to keep them there too (lib/mc.c). */
     openrac_game_mc_state(RAC1_MC_COMMAND, RAC1_MC_RESULT);
 #endif
-    openrac_game_on_frame = direct_start;
+    openrac_game_on_frame = on_frame;
     openrac_game_bolts = bolts;
     openrac_game_skip_buttons = skip_buttons;
     openrac_game_skip = skip;

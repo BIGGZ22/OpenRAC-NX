@@ -391,6 +391,8 @@ gaddr openrac_folded_address(const uint32_t* places, int count, gaddr caller, ui
     std::uint32_t high[32] = {};
     bool known[32] = {};
     gaddr result = 0;
+    gaddr other = 0;      // a function's address the code forms that is none of the places
+    bool called = false;  // the code calls one of the places
     int seen = 0;
     for (std::uint32_t i = 0; i * 4 < size && result == 0; ++i) {
         std::uint32_t w;
@@ -398,6 +400,13 @@ gaddr openrac_folded_address(const uint32_t* places, int count, gaddr caller, ui
         const std::uint32_t op = w >> 26;
         const std::uint32_t rs = (w >> 21) & 31;
         const std::uint32_t rt = (w >> 16) & 31;
+        if (op == 0x03 && !called) {  // jal: a C calling through the address calls one of them
+            const gaddr target = (caller & 0xF0000000u) | ((w & 0x03FFFFFFu) << 2);
+            for (int p = 0; p < count && !called; ++p) {
+                called = (places[p] & 0x00FFFFFFu) == target;
+            }
+            continue;
+        }
         if (op == 0x0F) {  // lui
             high[rt] = (w & 0xFFFFu) << 16;
             known[rt] = true;
@@ -408,17 +417,36 @@ gaddr openrac_folded_address(const uint32_t* places, int count, gaddr caller, ui
         }
         const gaddr formed = op == 0x09 ? high[rs] + static_cast<std::uint32_t>(static_cast<std::int16_t>(w & 0xFFFFu))
                                         : high[rs] | (w & 0xFFFFu);
+        bool family = false;
         for (int p = 0; p < count; ++p) {
             const int o = static_cast<int>(places[p] >> 24) - 1;
             if ((places[p] & 0x00FFFFFFu) == formed && (o == overlay || o == OPENRAC_OVERLAY_EXE)) {
                 if (seen++ == k) {
                     result = formed;
                 }
+                family = true;
                 break;
             }
         }
+        if (!family && other == 0 && find(formed) != nullptr) {
+            other = formed;
+        }
     }
     if (result == 0) {
+        // The copy forms no address of the family but another function's: it takes a function
+        // of its own (Gaspar's lava draw was one), which the fallback is not. A place for
+        // split_places.tsv. (A C that calls through the address, where the code has a jal to one
+        // of them, gets a copy of the same function: nothing to say.)
+        if (other != 0 && !called) {
+            warn(
+                "the copy at {:#010x} (overlay {}) takes {:#010x}, not one its C names; it gets "
+                "{:#010x}",
+                caller,
+                overlay,
+                other,
+                fallback
+            );
+        }
         result = fallback;
     }
     found.emplace(key, result);

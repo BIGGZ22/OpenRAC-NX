@@ -12,4 +12,8 @@ available: boolean, why: string,
 /**
  * This computer gets no baker at all (an Intel Mac, NO_BAKER_HERE): no bake is ever offered.
  */
-noBakerHere: boolean, levels: number, ready: number, failed: number, };
+noBakerHere: boolean, levels: number, ready: number, failed: number, 
+/**
+ * Levels a stopped bake left part way: the next bake goes on from what they have.
+ */
+partial: number, };

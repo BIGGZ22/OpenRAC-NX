@@ -43,6 +43,7 @@
 #include "renderer/direct.h"
 #include "renderer/texture.h"
 #include "scene/moby_pose.h"
+#include "settings.h"
 #endif
 
 namespace openrac::program {
@@ -133,6 +134,31 @@ void openrac_game_moby_colour(gaddr object, unsigned colour) {
 extern "C" void game_openrac_game_moby_colour(unsigned object, unsigned colour) {
     c_boundary::call("game_openrac_game_moby_colour", [&] {
         openrac_game_moby_colour(object, colour);
+    });
+}
+
+// The options a game keeps itself are the settings file's (settings::game_option). A program
+// without a window has no settings file (settings.cpp is the window's): it remembers none, and
+// the game gets `fallback`.
+int openrac_game_option(const char* key, int fallback) {
+    return c_boundary::call("openrac_game_option", fallback, [&] {
+#ifdef OPENRAC_FRONTEND
+        return settings::game_option(key, fallback);
+#else
+        (void)key;
+        return fallback;
+#endif
+    });
+}
+
+void openrac_game_set_option(const char* key, int value) {
+    c_boundary::call("openrac_game_set_option", [&] {
+#ifdef OPENRAC_FRONTEND
+        settings::set_game_option(key, value);
+#else
+        (void)key;
+        (void)value;
+#endif
     });
 }
 

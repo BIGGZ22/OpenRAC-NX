@@ -45,8 +45,11 @@ struct Scene {
     // Normalising the authored suns once preserves the per-bounce arithmetic result.
     std::vector<Float3> to_suns;
 
-    // Build one acceleration structure; the source must outlive this scene.
-    explicit Scene(const BakeScene& source, const std::optional<Float3>& sunlight_direction = {});
+    // Build one acceleration structure; the source must outlive this scene. THREADS: Embree's own
+    // build threads (0: one per CPU thread, Embree's default); several bakes at once each take
+    // their share, not the whole CPU each.
+    explicit Scene(const BakeScene& source, const std::optional<Float3>& sunlight_direction = {},
+                   std::uint32_t threads = 0);
     // Release the Embree scene and device after all workers have joined.
     ~Scene();
     Scene(const Scene&) = delete;

@@ -109,8 +109,9 @@ Float3 sample_bake_environment(
 // independent output, random seeds, progress and worker lifetime.
 class ProbeBaker {
 public:
-    // Validate the source and build Embree acceleration once; invalid inputs throw.
-    ProbeBaker(const BakeScene& scene, const BakeSettings& settings);
+    // Validate the source and build Embree acceleration once; invalid inputs throw. THREADS: the
+    // acceleration build's threads (0: every CPU thread); bake() takes its own count.
+    ProbeBaker(const BakeScene& scene, const BakeSettings& settings, std::uint32_t threads = 0);
     ~ProbeBaker();
     ProbeBaker(const ProbeBaker&) = delete;
     ProbeBaker& operator=(const ProbeBaker&) = delete;

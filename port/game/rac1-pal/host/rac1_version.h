@@ -44,6 +44,8 @@
 #define RAC1_TYPE_func_00200CA0_tex0 long long
 /* UpdateWorldObjectAnimation's parameter (scene_actors.c): the chunk's slot, which it does not read. */
 #define RAC1_TYPE_func_00204FC0_params gaddr chunk __attribute__((unused))
+/* memcard_RestoreGame's save, read through its address (options.c). */
+#define RAC1_TYPE_func_00209CE8_save int
 
 /* Where UpdateWorldObjectAnimation keeps the model record's word at +8 in the transfer state
  * D_0018CC20 (scene_actors.c). */

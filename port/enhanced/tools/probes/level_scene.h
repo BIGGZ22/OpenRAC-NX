@@ -1,9 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include <stdexcept>
+
 #include "enhanced/lighting/bake.h"
 #include "scene/level.h"
 
 namespace openrac::lighting {
+
+// A level with nothing for light to bounce off (the flight between planets, level 98: only its
+// sky): no bake to make, not a failure. The tool exits with kNothingToBake for it.
+struct NothingToBake : std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
+inline constexpr int kNothingToBake = 3;
 
 struct BakeSceneExport {
     BakeScene scene;

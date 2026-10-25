@@ -165,6 +165,9 @@ snd_get_doppler_pitch_mod	989snd	snd_GetDopplerPitchMod	host	PAL func_0012F2E0
 FUN_0012d8f8	boot	ParseBin	wrap	copies a level's program in: from then on, level code addresses mean that level's functions; PAL func_0012DA38
 FUN_001f4280	draw	SetupGifPaging	wrap	sets the four draw flags at 0x18A3D0 retail has on before its first frame (nothing in the game's code stores them by name); PAL func_001F4630
 FUN_00209370	memcard	NewGameInit	wrap	a new game starts in level 0; with --level N it starts in level N instead (rac1/host/boot.c); PAL func_00209DC0, paired as near
+FUN_00209298	memcard	memcard_RestoreGame	wrap	a loaded save: the language and the Sound page stay the player's, which the port remembers between runs (rac1/host/options.c); PAL func_00209CE8
+FUN_00230f60	space	initialize_level_runtime	wrap	a flight out of a level: with the pause menu's display list size still set (a save loaded from the pause), the level's size is put back first, as the pause's close does (rac1/host/boot.c); PAL func_00232278	void (void)
+FUN_0022c8d0	sound	initialize_gameplay_sound_system	wrap	the sound's start: the Sound page the port remembers goes in first (rac1/host/options.c); PAL func_0022DBE8
 FUN_0012f208	wad	wad_GetSectors	game	PAL func_0012F348
 FUN_0012f2b8	wad	load_disc_sectors_into_global_buffer	game	PAL func_0012F3F8
 FUN_0012f368	wad	read_file_entry_with_retry	game	PAL func_0012F4A8
@@ -272,6 +275,7 @@ FUN_0022b690	draw	SkyDrawShell	wrap	the shell's matrix (D_001D96E0, built by the
 func_L00_002852C0	game	func_L00_002852C0	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L00_00286598	void (void)
 func_L03_002DC990	game	func_L03_002DC990	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L03_002DDD58	void (void)
 func_L07_002F8038	game	func_L07_002F8038	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L07_002F9418	void (void)
+func_L09_002EF7F8	game	func_L09_002EF7F8	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c): Gaspar's lava draw registration; PAL func_L09_002F0B48	void (unsigned int)
 func_L07_0030D420	game	func_L07_0030D420	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L07_0030E800	void (void)
 func_L08_002DA0D0	game	func_L08_002DA0D0	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L08_002DB448	void (void)
 func_L14_00303350	game	func_L14_00303350	host	a place the catalogue folds into another function although its code differs (split_places.tsv, rac1/host/variants.c); PAL func_L14_003047D8	void (void)

@@ -1345,22 +1345,25 @@ const std::vector<renderer::UiQuad>* keep_2d_path(
     return named_quads;
 }
 
-// Decides whether the last frame stands for this tick's (a page menu's gap, a list not finished).
-void choose_repeat_frame(bool debug) {
+// Decides how this tick's frames start (frontend/tick_picture.h): the last frame standing, the last
+// frame under the tick's 2D, or a cleared frame. `level`: the level program loaded.
+void choose_repeat_frame(int level, bool debug) {
     Kept& k = *g->kept;
-    const bool menu_gap = (k.draws & 0x1Fu) == 0 && k.before_world >= 0x40000;
-    g->menu_gap_ticks = menu_gap ? g->menu_gap_ticks + 1 : 0;
-    // A tick that draws its world with no 2D list at all (the first tick of the vendor's fly-in,
-    // the first after a scene) is one whose list the game has not finished: drawn, it showed the
-    // world unfaded between the black of a fade's ticks (the flicker on opening the vendor). The
-    // last frame stands for it, as the console's screen did.
-    const bool unfinished = k.has_camera && (k.draws & 0x1Fu) != 0 && k.packets.empty();
-    g->repeat_frame = ((menu_gap && g->menu_gap_ticks <= 3) || unfinished) && g->frame.id() != 0;
-    if (g->repeat_frame && debug) {
+    const TickPicture picture = g->tick_pictures.choose(
+        {k.draws,
+         k.has_camera,
+         level >= 0 && level < 19,
+         k.packets.size(),
+         k.before_world,
+         g->frame.id() != 0}
+    );
+    g->repeat_frame = picture == TickPicture::Repeat;
+    g->overdraw = picture == TickPicture::Overdraw;
+    if (picture != TickPicture::Draw && debug) {
         log::info(
-            "frame {}: {}; the last frame stands",
+            "frame {}: {}",
             g->index,
-            unfinished ? "a world without its 2D list" : "no world under a page menu's list"
+            g->repeat_frame ? "the last frame stands" : "the 2D goes over the last frame"
         );
     }
     if (debug && k.frame % 100 == 0 && !k.strips.empty()) {
@@ -1445,6 +1448,34 @@ void report_tick(std::span<const std::uint8_t> ram, int level) {
     );
 }
 
+// Whether a tick's 2D path sends the chip an image (an A+D write of TRXDIR 0, host to chip): the
+// texture exists in the window only when that frame is drawn, as the 2D path's interpreter keeps
+// the image it carries (GifInterpreter::image_data). The game sends many once (rac1: the Galactic
+// Map's and the mission page's planet picture), so left out, it was never seen and the picture
+// stayed empty or half drawn. A false match only keeps a frame that could have been left out.
+bool sends_image(std::span<const std::uint8_t> packets) {
+    // An A+D write is one GIF qword: the register's value in its low 8 bytes, the register's
+    // address in the byte after them (documented: the GS manual's A+D packing).
+    constexpr std::size_t kQwordBytes = 16;
+    constexpr std::size_t kAddressByte = 8;
+    // TRXDIR's XDIR field (bits 0-1) for a transfer from the host to the chip (documented).
+    constexpr std::uint32_t kHostToLocal = 0;
+
+    // Every qword is read as one: a GIF tag or image data read so is the false match above.
+    for (std::size_t at = 0; at + kQwordBytes <= packets.size(); at += kQwordBytes) {
+        std::uint64_t value = 0;
+        std::memcpy(&value, packets.data() + at, sizeof(value));
+
+        // A transfer to the chip: its image follows in the packets.
+        if (packets[at + kAddressByte] == renderer::gs::kTrxdir
+            && renderer::gs::bits(value, 0, 2) == kHostToLocal) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // Whether the tick's own frame is left out because the tick came late. Counts and warns.
 bool leave_late_frame() {
     // The tick's own frame (when frames are drawn between ticks, part way from the last tick's
@@ -1474,7 +1505,7 @@ bool leave_late_frame() {
         left_out = 0;
     }
     if (pacing.late > pacing.period && g->skipped < kMostSkipped && g->kept->has_camera
-        && g->index > 1) {
+        && g->index > 1 && !sends_image(g->kept->packets)) {
         ++g->skipped;
         ++left_out;
         return true;
@@ -1534,7 +1565,7 @@ bool finish_tick(
     int level,
     bool debug
 ) {
-    choose_repeat_frame(debug);
+    choose_repeat_frame(level, debug);
     keep_effects(ram, state, named_quads);
     report_tick(ram, level);
 
@@ -1550,6 +1581,12 @@ bool finish_tick(
 }  // namespace
 
 bool prepare_frame(std::span<const std::uint8_t> ram) try {
+    // A tick prepared on an earlier vsync whose frame() never ran (an undrawn tick keeps the last
+    // picture, program/undrawn_ticks.h) is that tick's, not this one's: drawn, the galactic map's
+    // first tick showed the level's mobys from the tick before.
+    if (g) {
+        g->prepared_tick.reset();
+    }
     // Synchronous frames have no previous job to overlap, and never allocate a preparation slot.
     if (!g || !render_pending()) {
         return true;

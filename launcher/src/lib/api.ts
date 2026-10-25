@@ -281,6 +281,9 @@ export const api = {
     call<EnhancedView | null>("enhanced_set_enabled", { game, version, enabled }),
   enhancedSetSetting: (game: string, version: string, key: string, value: unknown) =>
     call<EnhancedView | null>("enhanced_set_setting", { game, version, key, value }),
+  /** Deletes every lighting bake of a version; the entry as it is after. */
+  enhancedDeleteBakes: (game: string, version: string) =>
+    call<EnhancedView | null>("enhanced_delete_bakes", { game, version }),
   pluginsRemove: (game: string, version: string, id: string) =>
     call<PluginView[]>("plugins_remove", { game, version, id }),
   pluginsInstall: (game: string, version: string, path: string) =>

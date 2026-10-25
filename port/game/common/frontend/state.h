@@ -28,6 +28,7 @@
 #include "enhanced/game/scripted_moby_colour.h"
 #include "game/common/frontend/geometry.h"
 #include "game/common/frontend/render_worker.h"
+#include "game/common/frontend/tick_picture.h"
 #include "game/common/profile.h"
 #include "openrac/guest.h"
 #include "platform/input.h"
@@ -210,12 +211,12 @@ struct State {
     std::uint64_t last_world_tick = 0;
     bool last_tick_menu = false;
     bool hold_last_world = false;
-    // Ticks in a row on which the game drew no world while its 2D list was a page menu's (the
-    // picture read back, at least kSnapshotBytes): the ticks after the pause menu closes. The
-    // picture they would make is the menu without its framed models, then the dimmed picture
-    // alone; the console keeps showing its last frame meanwhile, and so does the port (frame).
-    int menu_gap_ticks = 0;
+    // How each tick's frames start (frontend/tick_picture.h): the last picture standing (the
+    // ticks after the pause menu closes, a list the game has not finished), or under the tick's 2D
+    // (a level's tick without a world: the vendor's darkening), else a cleared frame.
+    TickPictures tick_pictures;
     bool repeat_frame = false;
+    bool overdraw = false;
     // What the window is in now of the player's settings (apply_settings): the display mode, the
     // display and the fullscreen size; the picture's shape; the swap's wait as asked and as the
     // driver took it; whether the sound is held silent (the window lost the keyboard).
