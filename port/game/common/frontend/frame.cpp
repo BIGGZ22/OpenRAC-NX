@@ -938,9 +938,9 @@ TickMobys pose_mobys(
     for (std::size_t index = 0; index < state.mobys.size(); ++index) {
         const host::LiveMoby& m = state.mobys[index];
         const bool extra = index >= listed;
-        // Hidden (mode bit 0): MobyProc does not draw it (the parked ship while the landing one comes
-        // down, Clank's spare parts).
-        if (m.address + 0x36 <= ram.size() && (ram[m.address + 0x34] & 1) != 0) {
+        // Hidden (mode bits 0x81): MobyProc does not draw it (the parked ship while the landing one
+        // comes down, Clank's spare parts, Umbris's water plates, whose wave grid is drawn instead).
+        if (m.address + 0x36 <= ram.size() && (ram[m.address + 0x34] & 0x81) != 0) {
             continue;
         }
         // A draw distance (+0x32) of 0: MobyProc's distance test never passes, so the game never draws
