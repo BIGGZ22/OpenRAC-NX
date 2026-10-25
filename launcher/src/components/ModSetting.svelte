@@ -220,15 +220,19 @@
         {/each}
       </div>
     {:else if control === "select"}
-      <select
-        aria-labelledby={`${id}-name`}
-        value={s.value}
-        onchange={(e) => {
-          onchange(e.currentTarget.value, 0);
-        }}
-      >
-        {#each s.choices ?? [] as c (c.value)}<option value={c.value}>{c.name}</option>{/each}
-      </select>
+      <!-- A pill like the segmented choices beside it, with the launcher's chevron: the system's own
+           list opens on it. -->
+      <span class="select">
+        <select
+          aria-labelledby={`${id}-name`}
+          value={s.value}
+          onchange={(e) => {
+            onchange(e.currentTarget.value, 0);
+          }}
+        >
+          {#each s.choices ?? [] as c (c.value)}<option value={c.value}>{c.name}</option>{/each}
+        </select>
+      </span>
     {:else if control === "keybind"}
       <KeyBindSetting
         setting={s}
@@ -542,16 +546,47 @@
     font-size: 0.875rem;
   }
 
+  .select {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .select::after {
+    content: "";
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    margin-top: -6px;
+    border-right: 2px solid var(--soft);
+    border-bottom: 2px solid var(--soft);
+    transform: rotate(45deg);
+    pointer-events: none;
+  }
+
   select {
     min-width: 200px;
-    height: 38px;
+    min-height: 38px;
     font: inherit;
     font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gold);
+    background: var(--ink-deep);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 6px 44px 6px 18px;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  select option {
     color: var(--text);
     background: var(--ink-deep);
-    border: 1px solid var(--line-field);
-    border-radius: var(--radius-sm);
-    padding: 6px 12px;
+  }
+
+  :global(html[data-platform="android"]) select {
+    min-height: 52px;
   }
 
   select:focus-visible,
