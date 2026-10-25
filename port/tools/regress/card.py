@@ -160,9 +160,6 @@ def prepared(save: bytes, planet: int) -> bytes:
 
 
 def player_card(game: str) -> Path:
-    # The game's own data home (port/game/common/program/options.cpp): the launcher's, else the system's.
-    if os.environ.get("OPENRAC_DATA_HOME"):
-        return Path(os.environ["OPENRAC_DATA_HOME"]) / "memcard" / SERIALS[game]
     home = Path(os.environ.get("HOME", "."))
     base = (home / "Library/Application Support/OpenRAC" if os.uname().sysname == "Darwin"
             else Path(os.environ.get("XDG_DATA_HOME", home / ".local/share")) / "openrac")

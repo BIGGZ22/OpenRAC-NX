@@ -33,14 +33,9 @@ namespace {
     std::exit(64);
 }
 
-// OpenRAC's folder of the player's memory cards and settings, as the launcher finds it
-// (launcher/core/src/saves.rs, data_home): the one the launcher names (its install folder), else
-// the system's.
+// OpenRAC's folder in the player's data home, as the launcher finds it
+// (launcher/core/src/saves.rs, data_home).
 fs::path data_home() {
-    if (const std::optional<std::string_view> chosen = env::value(env::Var::DataHome);
-        chosen && !chosen->empty()) {
-        return fs::path(std::string(*chosen));
-    }
 #if defined(__APPLE__)
     const std::optional<std::string> home = env::system_variable("HOME");
     fs::path base = fs::path(home.value_or(".")) / "Library/Application Support/OpenRAC";

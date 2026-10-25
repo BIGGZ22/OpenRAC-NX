@@ -76,11 +76,12 @@ actions (rebuild, open the folder, the activity log, remove the set-up) are in
 the menu beside it. The list on the left switches games, and the Games tab
 opens on the one you used last.
 
-- **Saves**: the port's memory card (`memcard/<serial>/` in the install
-  folder) shows each slot's planet, bolts and save time, with backups you
-  can restore. **Edit** opens a slot in the save editor: planet, bolts, health
-  upgrades, weapons, gadgets, ammo, gold weapons, gold bolts, planets and
-  skill points. **Advanced save editing** adds every field and the raw bytes.
+- **Saves**: the port's memory card (`memcard/<serial>/` in
+  `%LOCALAPPDATA%\openrac` on Windows, `~/Library/Application Support/OpenRAC`
+  on macOS, `~/.local/share/openrac` on Linux) shows each slot's planet, bolts
+  and save time, with backups you can restore. **Edit** opens a slot in the
+  save editor: planet, bolts, health upgrades, weapons, gadgets, ammo, gold
+  weapons, gold bolts, planets and skill points. **Advanced save editing** adds every field and the raw bytes.
   The editor refuses to write while the game runs, backs the card up before
   every write, and offers Undo
   ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#the-save-editor)).

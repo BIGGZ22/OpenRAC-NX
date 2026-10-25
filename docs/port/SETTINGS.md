@@ -20,8 +20,7 @@ The file is `<data home>/openrac/settings/<id>.ini` (`--settings FILE` names
 another), `key = value` a line, `#` for a comment. It is read at start and
 written whenever a setting changes. An unknown value is reported in the log
 and the default used; an unknown key is ignored. `<data home>/openrac`, where
-the memory cards are too, is `$OPENRAC_DATA_HOME` when it is set (the launcher
-sets it to its install folder), else `%LOCALAPPDATA%\openrac` on Windows,
+the memory cards are too, is `%LOCALAPPDATA%\openrac` on Windows,
 `~/Library/Application Support/OpenRAC` on macOS and `$XDG_DATA_HOME/openrac`
 (or `~/.local/share/openrac`) elsewhere. On Windows, older builds kept it in
 `.local/share/openrac` under `HOME` or the folder the game started in; the

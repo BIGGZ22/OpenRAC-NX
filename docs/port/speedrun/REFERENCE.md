@@ -142,8 +142,7 @@ running (`port/game/common/debug_overlay.cpp:1138-1149`).
 ## 3. The settings file
 
 `<data home>/openrac/settings/<id>.ini` by default, or `--settings FILE`.
-`data home` is `$OPENRAC_DATA_HOME` (the launcher's install folder), else
-`$XDG_DATA_HOME/openrac` or `~/.local/share/openrac` on Linux,
+`data home` is `$XDG_DATA_HOME/openrac` or `~/.local/share/openrac` on Linux,
 `~/Library/Application Support/OpenRAC` on macOS and `%LOCALAPPDATA%\openrac`
 on Windows.
 

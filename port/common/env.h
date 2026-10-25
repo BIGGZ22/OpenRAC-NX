@@ -58,7 +58,6 @@ enum class Var : std::uint16_t {
     ControlFrames,
     CrashTest,
     Data,
-    DataHome,
     Debug,
     DebugDump,
     DebugMenu,

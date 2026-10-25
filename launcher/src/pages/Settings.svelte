@@ -169,14 +169,9 @@
   });
   const tool = (t: "python" | "godot" | "docker") => (path: string) => api.checkTool(t, path);
   const root = (path: string): Promise<Check> => api.checkRoot(path);
-  /** The install folder only has to be a place to write; the extractor makes what it needs inside,
-   *  and the games their saves and settings (core saves.rs). */
+  /** The install folder only has to be a place to write; the extractor makes what it needs inside. */
   const installFolder = (path: string): Promise<Check> =>
-    Promise.resolve({
-      ok: true,
-      version: null,
-      message: `Games in ${path}/active, saves in ${path}/memcard, settings in ${path}/settings`,
-    });
+    Promise.resolve({ ok: true, version: null, message: `Games are set up in ${path}/active/<game>/data` });
 
   /** The games folder is looked through when it is saved; what it holds shows on the Games page. */
   const gamesFolder = (path: string): Promise<Check> =>
@@ -285,7 +280,7 @@
         {#if !onAndroid}
           <PathField
             label="Install folder"
-            hint="Everything OpenRAC keeps for you: your games set up from your discs (a few GB each), your saves and your settings."
+            hint="Where your games are set up from your discs. A few GB per game."
             folder
             bind:value={draft.installDir}
             check={installFolder}
@@ -358,7 +353,7 @@
         />
         <PathField
           label="Install folder"
-          hint="Everything OpenRAC keeps for you: your games set up from your discs (a few GB each), your saves and your settings."
+          hint="Where your games are set up from your discs. A few GB per game."
           folder
           bind:value={draft.installDir}
           detail={draft.developer}

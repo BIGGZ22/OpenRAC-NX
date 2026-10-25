@@ -241,7 +241,6 @@ things.
 ### The prepared card
 
 `regress.py card --game G` copies a memory card (the player's,
-`$OPENRAC_DATA_HOME/memcard/<serial>`, else
 `~/Library/Application Support/OpenRAC/memcard/<serial>` on macOS, only
 read; `--from DIR` another) to `build/regress/cards/G/card` and rewrites the
 copy's five slots from the first saved game on it: every weapon and gadget

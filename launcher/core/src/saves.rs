@@ -3,13 +3,10 @@
 
 //! Save file management prototype for OpenRAC games.
 //!
-//! The PC runtime keeps its memory cards in `<data home>/memcard/<SERIAL>` and its settings in
-//! `<data home>/settings`. On a desktop the data home is the launcher's install folder, passed to
-//! the game as OPENRAC_DATA_HOME, so the games, saves and settings sit in one folder. Without the
-//! launcher, and on Android, it is [`system_data_home`]:
-//! - macOS: `~/Library/Application Support/OpenRAC`
-//! - Windows: `%LOCALAPPDATA%\openrac`
-//! - Linux/other: `~/.local/share/openrac` (or `$XDG_DATA_HOME/openrac`)
+//! The PC runtime answers memory card requests from a directory on the host:
+//! - macOS: `~/Library/Application Support/OpenRAC/memcard/<SERIAL>`
+//! - Windows: `%LOCALAPPDATA%\openrac\memcard\<SERIAL>`
+//! - Linux/other: `~/.local/share/openrac/memcard/<SERIAL>` (or `$XDG_DATA_HOME/openrac/memcard/<SERIAL>`)
 //!
 //! Inside each game's serial folder, the PS2 memory card folder (e.g. `BESCES-50916RATCHET`)
 //! holds `icon.sys`, `static.ico`, and save files `save0.bin` ... `save4.bin`.
@@ -19,7 +16,6 @@ use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::RwLock;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
@@ -89,59 +85,29 @@ pub fn with_data_home<T>(home: &Path, f: impl FnOnce() -> T) -> T {
     result
 }
 
-/// The variable the game reads its data home from (port/game/common/program/options.cpp).
-pub const DATA_HOME_ENV: &str = "OPENRAC_DATA_HOME";
-
-/// The folders of a data home that hold the player's files: memory cards (with their backups) and
-/// settings.
-const PLAYER_FOLDERS: [&str; 2] = ["memcard", "settings"];
-
-/// The data home set by [`set_data_home`].
-static CHOSEN: RwLock<Option<PathBuf>> = RwLock::new(None);
-
-/// Sets the data home for the rest of the run (a desktop's install folder); None for the system's.
-pub fn set_data_home(dir: Option<PathBuf>) {
-    *CHOSEN.write().unwrap_or_else(|e| e.into_inner()) = dir;
-}
-
 /// OpenRAC's data folder, where the games keep their memory cards (`memcard/`) and settings
-/// (`settings/`): the install folder once [`set_data_home`] names it, else the port's own
-/// `data_home()` (port/game/common/program/options.cpp), from the same variables.
+/// (`settings/`): the port's own `data_home()` (port/game/common/program/options.cpp), from the
+/// same variables.
 pub fn data_home() -> PathBuf {
     #[cfg(test)]
     if let Some(home) = TEST_DATA_HOME.with(|cell| cell.borrow().clone()) {
         return home;
     }
-    if let Some(dir) = CHOSEN.read().unwrap_or_else(|e| e.into_inner()).clone() {
-        return dir;
+    if cfg!(target_os = "macos") {
+        return dirs_home().join("Library/Application Support/OpenRAC");
     }
-    system_data_home()
-}
-
-/// The data home the game uses when OPENRAC_DATA_HOME is not set (the port's `data_home()`).
-pub fn system_data_home() -> PathBuf {
+    // Windows: %LOCALAPPDATA%\openrac, whatever folder the game was started in (at its start,
+    // the game moves there what it kept before in HOME's or that folder's .local/share/openrac).
     if cfg!(windows) {
-        // %LOCALAPPDATA%\openrac, whatever folder the game was started in (at its start, the game
-        // moves there what it kept before in HOME's or that folder's .local/share/openrac).
         if let Some(home) = windows_data_home(std::env::var_os("LOCALAPPDATA"), crate::detect::home_dir()) {
             return home;
         }
     }
-    unix_data_home().unwrap_or_else(|| PathBuf::from(".local/share/openrac"))
-}
-
-/// `~/Library/Application Support/OpenRAC` on macOS, else `$XDG_DATA_HOME/openrac` or
-/// `~/.local/share/openrac`; None without HOME.
-fn unix_data_home() -> Option<PathBuf> {
-    let home = std::env::var_os("HOME").filter(|h| !h.is_empty()).map(PathBuf::from);
-    if cfg!(target_os = "macos") {
-        return home.map(|home| home.join("Library/Application Support/OpenRAC"));
-    }
     std::env::var_os("XDG_DATA_HOME")
         .filter(|xdg| !xdg.is_empty())
         .map(PathBuf::from)
-        .or_else(|| home.map(|home| home.join(".local/share")))
-        .map(|base| base.join("openrac"))
+        .unwrap_or_else(|| dirs_home().join(".local/share"))
+        .join("openrac")
 }
 
 /// The Windows data folder from `%LOCALAPPDATA%` (`local_app_data`, unless empty), else from the
@@ -153,91 +119,8 @@ fn windows_data_home(local_app_data: Option<OsString>, profile: Option<PathBuf>)
     profile.map(|profile| profile.join("AppData").join("Local").join("openrac"))
 }
 
-/// Where earlier versions kept the saves and settings: [`system_data_home`] and [`unix_data_home`]
-/// (the same folder but on Windows, which used it before %LOCALAPPDATA%), and on Windows with no
-/// HOME the folder the game was started in, `<install>/active/<game>/data/.local/share/openrac`.
-pub fn earlier_data_homes(install: &Path) -> Vec<PathBuf> {
-    let mut found: Vec<PathBuf> = vec![system_data_home()];
-    found.extend(unix_data_home().filter(|dir| !found.contains(dir)));
-    if let Ok(games) = fs::read_dir(install.join("active")) {
-        let mut games: Vec<PathBuf> =
-            games.flatten().map(|game| game.path().join("data/.local/share/openrac")).filter(|d| d.is_dir()).collect();
-        games.sort();
-        found.extend(games);
-    }
-    found.retain(|dir| dir != install);
-    found
-}
-
-/// Copies the player's files from `from` into `to`, skipping any file `to` already has; nothing is
-/// overwritten or removed. Returns how many files were copied, or how many failed.
-pub fn adopt(from: &Path, to: &Path) -> Result<usize, usize> {
-    fn copy_missing(from: &Path, to: &Path, copied: &mut usize, failed: &mut usize) {
-        let Ok(entries) = fs::read_dir(from) else { return };
-        for entry in entries.flatten() {
-            let (src, dst) = (entry.path(), to.join(entry.file_name()));
-            if src.is_dir() {
-                copy_missing(&src, &dst, copied, failed);
-                continue;
-            }
-            if dst.exists() {
-                continue;
-            }
-            if fs::create_dir_all(to).and_then(|()| fs::copy(&src, &dst)).is_err() {
-                *failed += 1;
-                continue;
-            }
-            // Keep the save's time: the Saves page shows it.
-            if let Ok(time) = entry.metadata().and_then(|m| m.modified()) {
-                let _ = fs::File::options().write(true).open(&dst).and_then(|f| f.set_modified(time));
-            }
-            *copied += 1;
-        }
-    }
-    let (mut copied, mut failed) = (0, 0);
-    if from != to {
-        for folder in PLAYER_FOLDERS {
-            copy_missing(&from.join(folder), &to.join(folder), &mut copied, &mut failed);
-        }
-    }
-    if failed == 0 {
-        Ok(copied)
-    } else {
-        Err(failed)
-    }
-}
-
-/// The earlier data homes already copied into the install folder, one path a line. Each is copied
-/// once, so a save deleted later does not come back.
-const ADOPTED: &str = "settings/.adopted";
-
-/// Makes `install` the data home, first copying in the saves and settings of earlier versions
-/// ([`earlier_data_homes`]). Returns how many files were copied.
-pub fn settle_data_home(install: &Path) -> usize {
-    let copied = adopt_once(install, &earlier_data_homes(install));
-    set_data_home(Some(install.to_path_buf()));
-    copied
-}
-
-/// Copies each folder of `earlier` into `install` unless it is listed in ADOPTED, then lists it. A
-/// copy that failed is not listed, so it is tried again next time.
-fn adopt_once(install: &Path, earlier: &[PathBuf]) -> usize {
-    let list = install.join(ADOPTED);
-    let mut done: Vec<String> = fs::read_to_string(&list).unwrap_or_default().lines().map(str::to_string).collect();
-    let mut copied = 0;
-    for earlier in earlier {
-        let name = earlier.to_string_lossy().into_owned();
-        if done.contains(&name) || !earlier.is_dir() {
-            continue;
-        }
-        if let Ok(n) = adopt(earlier, install) {
-            copied += n;
-            done.push(name);
-            let _ = fs::create_dir_all(install.join("settings"));
-            let _ = fs::write(&list, done.join("\n") + "\n");
-        }
-    }
-    copied
+fn dirs_home() -> PathBuf {
+    std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("."))
 }
 
 /// Decode BCD (Binary Coded Decimal) byte: e.g. 0x26 -> 26.
@@ -715,48 +598,6 @@ fn decode_shift_jis_or_ascii(bytes: &[u8]) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn earlier_saves_move_into_the_install_folder_once() {
-        let dir = tempfile::tempdir().unwrap();
-        let (old, install) = (dir.path().join("old"), dir.path().join("OpenRAC"));
-        let card = old.join("memcard/SCES_509.16/BESCES-50916RATCHET");
-        fs::create_dir_all(&card).unwrap();
-        fs::write(card.join("save0.bin"), b"old slot 0").unwrap();
-        fs::write(card.join("save1.bin"), b"old slot 1").unwrap();
-        fs::create_dir_all(old.join("settings")).unwrap();
-        fs::write(old.join("settings/rac1-pal.ini"), b"fps = 60\n").unwrap();
-        fs::write(old.join("unrelated.txt"), b"not the player's").unwrap();
-        // A slot the install folder already has is kept as it is.
-        let new_card = install.join("memcard/SCES_509.16/BESCES-50916RATCHET");
-        fs::create_dir_all(&new_card).unwrap();
-        fs::write(new_card.join("save1.bin"), b"new slot 1").unwrap();
-
-        assert_eq!(adopt_once(&install, std::slice::from_ref(&old)), 2);
-        assert_eq!(fs::read(new_card.join("save0.bin")).unwrap(), b"old slot 0");
-        assert_eq!(fs::read(new_card.join("save1.bin")).unwrap(), b"new slot 1");
-        assert_eq!(fs::read(install.join("settings/rac1-pal.ini")).unwrap(), b"fps = 60\n");
-        assert!(!install.join("unrelated.txt").exists());
-        assert!(card.join("save0.bin").exists(), "the old files stay where they were");
-        let old_time = fs::metadata(card.join("save0.bin")).unwrap().modified().unwrap();
-        assert_eq!(fs::metadata(new_card.join("save0.bin")).unwrap().modified().unwrap(), old_time);
-
-        // Each place is copied once: a slot deleted afterwards does not come back.
-        fs::remove_file(new_card.join("save0.bin")).unwrap();
-        assert_eq!(adopt_once(&install, std::slice::from_ref(&old)), 0);
-        assert!(!new_card.join("save0.bin").exists());
-    }
-
-    #[test]
-    fn finds_the_saves_a_game_made_where_it_ran() {
-        let dir = tempfile::tempdir().unwrap();
-        let ran = dir.path().join("active/rac1/data/.local/share/openrac");
-        fs::create_dir_all(&ran).unwrap();
-        fs::create_dir_all(dir.path().join("active/rac2/data")).unwrap();
-        let found = earlier_data_homes(dir.path());
-        assert!(found.contains(&ran), "{found:?}");
-        assert!(!found.iter().any(|d| d.starts_with(dir.path().join("active/rac2"))));
-    }
 
     /// A save as the game writes it: the four size words, then records {id, size, data}.
     fn save(records: &[(i32, &[u8])]) -> Vec<u8> {

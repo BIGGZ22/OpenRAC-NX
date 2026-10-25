@@ -48,8 +48,9 @@ Players describe what they see, not what broke. Before reproducing, know:
   settles most questions; players can drop one in the repository root or
   send it.
 - **Their save.** A memory card takes other paths through the menus than
-  `--no-card`. Their cards are in `<install folder>/memcard/<serial>`:
-  copy the folder to a scratch place and pass `--cards <copy>/<serial>`.
+  `--no-card`. Their cards are in `<data home>/memcard/<serial>`
+  ([SETTINGS.md](SETTINGS.md) says where that is): copy the folder to a
+  scratch place and pass `--cards <copy>/<serial>`.
   Never run against the original.
 - **Whether the game does it too.** Some reports describe how the game
   always behaved. The HUD is one: in play it stays hidden and shows only

@@ -505,14 +505,6 @@ impl Action {
         // Developer tools on: the native port offers its developer features (a level select in the
         // front end's Options).
         let mut env = Vec::new();
-        // Where the player's saves and settings are (saves.rs): a desktop's install folder, for the
-        // game and any tool that reads them. Android's game finds its own (OpenracSetup.kt).
-        if ctx.platform != Platform::Android {
-            env.push((
-                crate::saves::DATA_HOME_ENV.to_string(),
-                crate::saves::data_home().to_string_lossy().into_owned(),
-            ));
-        }
         if self.kind == Kind::Play && ctx.config.developer {
             env.push(("OPENRAC_DEVELOPER".to_string(), "1".to_string()));
         }
