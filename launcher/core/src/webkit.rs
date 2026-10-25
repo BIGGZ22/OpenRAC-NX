@@ -4,7 +4,10 @@
 //! settings draw nothing on some systems:
 //!
 //! - The DMA-BUF renderer draws a blank or flickering window under Wayland
-//!   with NVIDIA's own driver. It is turned off there, and only there.
+//!   with NVIDIA's own driver. There its buffers go through shared memory
+//!   instead, and only there. Turning the renderer off
+//!   (`WEBKIT_DISABLE_DMABUF_RENDERER=1`) leaves WebKitGTK 2.50 without a
+//!   backing store, and it crashes on the first accelerated draw (a click).
 //! - The accelerated compositing mode draws nothing at all on a Steam Deck:
 //!   the window opens empty, and the launcher has to be started with
 //!   `WEBKIT_DISABLE_COMPOSITING_MODE=1` for anything to show. A Deck is
@@ -22,7 +25,7 @@ pub fn webkit_env() -> Vec<(&'static str, &'static str)> {
 fn env_for(wayland: bool, nvidia: bool, steamos: bool, gamescope: bool) -> Vec<(&'static str, &'static str)> {
     let mut vars = Vec::new();
     if wayland && nvidia {
-        vars.push(("WEBKIT_DISABLE_DMABUF_RENDERER", "1"));
+        vars.push(("WEBKIT_DMABUF_RENDERER_FORCE_SHM", "1"));
     }
     if steamos || gamescope {
         vars.push(("WEBKIT_DISABLE_COMPOSITING_MODE", "1"));
@@ -74,9 +77,9 @@ mod tests {
     }
 
     #[test]
-    fn the_dmabuf_renderer_goes_on_wayland_with_nvidia() {
+    fn the_dmabuf_renderer_uses_shared_memory_on_wayland_with_nvidia() {
         let vars = env_for(true, true, false, false);
-        assert_eq!(vars, vec![("WEBKIT_DISABLE_DMABUF_RENDERER", "1")]);
+        assert_eq!(vars, vec![("WEBKIT_DMABUF_RENDERER_FORCE_SHM", "1")]);
         assert!(env_for(false, true, false, false).is_empty());
     }
 
