@@ -113,6 +113,8 @@ openrac_add_test(ui_colors SOURCES tests/ui_colors_test.cpp game/common/ui_color
 openrac_add_test(scripted_moby_colour SOURCES enhanced/tests/scripted_moby_colour_test.cpp
                                       INCLUDES .)
 openrac_add_test(pause_options INCLUDES .)
+# Which undrawn ticks keep the window's last picture (game/common/program/undrawn_ticks.h).
+openrac_add_test(undrawn_ticks INCLUDES .)
 
 # The game fixes (game/common/fixes.h): rac1's list of differences, checked as the configure reads it
 # (cmake/Differences.cmake), and its fixes through the settings file. Needs no game.
