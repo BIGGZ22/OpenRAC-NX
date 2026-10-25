@@ -17,7 +17,7 @@ sources: libgcc from GCC, libm from newlib
 
 It is built like rac1/pal, by the same author, and compiles like rac3: SN GCC
 2.95.3 v1.36 with `-O2 -G8 -fopt-stack -mno-check-zero-division`
-([docs/toolchains](../../docs/toolchains/README.md)).
+([toolchains/README.md](../../toolchains/README.md)).
 
 Disc checksums are in [baserom/README.md](../../baserom/README.md); progress
 in [progress/](../../progress/README.md).

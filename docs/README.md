@@ -24,6 +24,7 @@ Where to find what. Start with the first table.
 | [port/](../port/README.md) | The code: how it fits together, building and testing it |
 | [port/docs/CODING_CONVENTIONS.md](../port/docs/CODING_CONVENTIONS.md) | How the port's C++ and C are written, and what CI checks |
 | [port/WORKFLOW.md](port/WORKFLOW.md) | From a player's report to a fix and a release |
+| [port/BACKFILL.md](port/BACKFILL.md) | Which functions to fill in with C for the port, and the check that says they are right |
 | [port/KNOWN_ISSUES.md](port/KNOWN_ISSUES.md) | Bugs that are understood and guarded but not properly fixed yet |
 | [port/SETTINGS.md](port/SETTINGS.md), [port/DEBUGGING.md](port/DEBUGGING.md) | The settings file and where it lives; options and variables for debugging |
 | [port/RENDERER.md](port/RENDERER.md), [port/VU_PROGRAMS.md](port/VU_PROGRAMS.md) | How the game builds a frame; its vector unit programs |
@@ -53,7 +54,5 @@ Each game version in `games/` documents itself: start with its README.
 
 Across the games: [games/](../games/README.md) (how the versions relate),
 [engine/](engine/README.md) (what is known about the engine),
-[workflow/](workflow/README.md) (how matching works in each game),
-[toolchains/](toolchains/README.md) (which compilers built what),
 [SOURCES.md](SOURCES.md) (where each game's code came from) and
 [progress/](../progress/README.md) (generated).

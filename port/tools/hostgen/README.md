@@ -358,7 +358,7 @@ with C). A level function is one named `func_Lnn_...` or `FUN_Lnn_...`.
 | `report.json` `results_widened` | the functions whose result was made 64-bit because they return a `returns_64` function's result as it is ([program.py](program.py) `widen_returns`) |
 | `report.json` `without_c_places` | each function with no C or with C from its assembly: where it sits, and the spelling with C its calls go to instead ([no_c.py](no_c.py) reads it) |
 | `report.md`, `report.json` | what was translated, what became a stub and why, and **the frontier**: the functions without C that the program reaches from its roots, nearest first. That list is where decompiling moves the port on. |
-| `report.json` `call_graph`, `call_site_mismatches` | what each translated function calls or takes the address of, and the direct calls whose site disagrees with the callee's definition (arity, kinds, result): [priority.py](priority.py) ranks the weak functions gameplay reaches from them ([BACKFILL.md](../../../docs/workflow/BACKFILL.md#picking-what-to-backfill-first)) |
+| `report.json` `call_graph`, `call_site_mismatches` | what each translated function calls or takes the address of, and the direct calls whose site disagrees with the callee's definition (arity, kinds, result): [priority.py](priority.py) ranks the weak functions gameplay reaches from them ([BACKFILL.md](../../../docs/port/BACKFILL.md#picking-what-to-backfill-first)) |
 
 Names other than `func_...` get a `game_` prefix in the generated C, so
 the game's own `memcpy` or `main` never meets the host's.

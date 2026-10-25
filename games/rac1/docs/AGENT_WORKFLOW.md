@@ -321,7 +321,7 @@ the linker-remnant list have since taken many of them out of the pool.
 ## When to stop, and the backfill
 
 A function that stopped is not owed another round at the same tier. OpenRAC's
-`docs/workflow/BACKFILL.md` has the whole procedure; what it says for this project:
+`docs/port/BACKFILL.md` has the whole procedure; what it says for this project:
 
 - **Not a function**: it reads a register it never sets, branches outside its own bytes, or has
   no `jr $31`. A piece of its neighbour: join it (`config/overlays/joined.tsv`), write no C. 120

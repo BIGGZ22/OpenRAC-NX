@@ -25,7 +25,7 @@ Its compiler research, 15 compilers against 8 flag sets, is in
 and the launcher's in [ntsc/docs/compiler_matrix_i5bootn.md](ntsc/docs/compiler_matrix_i5bootn.md)
 (library code from Sony's 2.9-ee, which emits sibling calls; SN 2.95.3 never
 does). It is the most systematic compiler study among the projects
-([docs/toolchains](../../docs/toolchains/README.md)).
+([toolchains/README.md](../../toolchains/README.md)).
 
 Disc checksums are in [baserom/README.md](../../baserom/README.md); progress
 in [progress/](../../progress/README.md). The project is licensed under the GNU

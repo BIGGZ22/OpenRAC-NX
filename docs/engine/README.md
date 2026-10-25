@@ -449,7 +449,7 @@ reference ([SOURCING.md](../policy/SOURCING.md)).
 ### Compilers differ, which limits reuse
 
 Identical C gives identical bytes only under the same code generation.
-What each project measured (details in [docs/toolchains](../toolchains/README.md)):
+What each project measured (each game's own docs have the details):
 
 | Key | Compiler matching retail | Callee-saved registers |
 |---|---|---|

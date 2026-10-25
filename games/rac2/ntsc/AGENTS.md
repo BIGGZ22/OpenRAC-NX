@@ -80,7 +80,7 @@ Say which in the commit. A function that is merely hard is a near miss, not hand
 ## When to stop on a function
 
 Some functions cannot be matched from C, and some have cost enough. Know which before another
-attempt; OpenRAC's `docs/workflow/BACKFILL.md` has the measurements and the full procedure.
+attempt; OpenRAC's `docs/port/BACKFILL.md` has the measurements and the full procedure.
 
 - **Not a function.** It reads a register it never sets, branches outside its own bytes, or has
   no `jr $ra`: a piece of its neighbour that the catalogue split off. Do not write C; report it,

@@ -3,8 +3,6 @@
 The PS2 compilers, assemblers and linkers the games were built with are
 proprietary. They are never committed (this directory is ignored by git,
 apart from this file); each game's docs say where its builders get them.
-[docs/toolchains](../docs/toolchains/README.md) collects what is known about
-which compiler built what.
 
 ## Ratchet & Clank, PAL (`games/rac1`)
 
@@ -51,8 +49,7 @@ assembly rebuild, passed with `--toolchain` (`--c-toolchain` supplies only the
 linker for the C step). The C compiler is a patched GNU EE-GCC 2.9 built under
 WSL, which `scripts/wsl_chain.py` runs; see
 [docs/COMPILER-NOTES.md](../games/rac2/ntsc/docs/COMPILER-NOTES.md). The
-project's README still names SN ProDG 3.01 for the C
-([docs/toolchains](../docs/toolchains/README.md#4-open-questions-and-contradictions)).
+project's README still names SN ProDG 3.01 for the C.
 
 ## Ratchet & Clank: Up Your Arsenal (`games/rac3/ntsc`)
 

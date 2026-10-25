@@ -1,4 +1,4 @@
-# fcheck verdicts for the rows of functional.tsv (tools/fcheck_gate.py writes this; docs/workflow/BACKFILL.md, "The gate"). Only status same is done.
+# fcheck verdicts for the rows of functional.tsv (tools/fcheck_gate.py writes this; docs/port/BACKFILL.md, "The gate"). Only status same is done.
 # name	status	date	fcheck	csum	note
 func_00125358	same	2026-10-18	2e43062c	e64aaad82247	3 calls
 func_001F9878	no-states	2026-10-18	2e43062c	52110aeef8bc	never called in the capture runs (title, menu and every level)

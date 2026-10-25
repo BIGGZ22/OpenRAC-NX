@@ -24,9 +24,7 @@ OpenRAC/
 │   ├── policy/             sourcing policy, open questions
 │   ├── port/               the native port: design, studies, order of work
 │   ├── restructure/        the restructure's progress: packages, owners, how to help
-│   ├── engine/             what is known about the engine, across games
-│   ├── toolchains/         which compilers built what
-│   └── workflow/           how matching works in each game
+│   └── engine/             what is known about the engine, across games
 ├── progress/               consolidated progress (generated)
 ├── shared/                 what the games have in common: the function map, the shared-files list
 ├── baserom/                your own disc images (ignored, except its README)
@@ -69,7 +67,7 @@ are what readers see.
 | Restructure work: claiming a package, reporting it | its row in [docs/restructure/PROGRESS.md](restructure/PROGRESS.md) |
 | Decompiled code, a symbol map, a game's build change | `games/<game>/<version>/`, following that project's layout |
 | A note about one game | that game's `docs/` |
-| Knowledge that holds across games (a format, a subsystem, a compiler) | `docs/engine/`, `docs/toolchains/` or `docs/workflow/`, linking the per-game evidence |
+| Knowledge that holds across games (a format, a subsystem) | `docs/engine/`, linking the per-game evidence |
 | A file a second game needs unchanged (a library source, a build helper) | a copy in that game, listed with the original in `shared/files.json` ([shared/](../shared/README.md)) |
 | A new game version | `games/<game>/<version>/`, plus its entry in `games/<game>/game.json` (the editor reads a disc's identity from it: boot executable, size, SHA-1, region, disc version) |
 

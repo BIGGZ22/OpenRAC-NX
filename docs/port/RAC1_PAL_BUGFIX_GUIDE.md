@@ -233,7 +233,7 @@ nothing:
 6. Rebuild, run the scenario that needed it, and check its neighbours
    still work.
 7. Run the gate: `python3 tools/fcheck_gate.py run --only <name>`
-   ([BACKFILL.md](../workflow/BACKFILL.md#the-gate-done-means-fcheck-says-same)).
+   ([BACKFILL.md](BACKFILL.md#the-gate-done-means-fcheck-says-same)).
    The function is done only when its row says `same`; `unchecked` (with its
    reason) is delivered as unchecked, and `differs` is fixed first. A game
    run that looks right is not a verdict: the two constants bugs that

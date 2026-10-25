@@ -14,7 +14,7 @@
  * slots (255 usable) but Drek's fleet (level 17), which ships 400.
  *
  * Busy effects fill 255: on Gaspar (level 9) the falling rocks' lava sparks come in bursts of 100
- * to 150, and fcheck (docs/workflow/BACKFILL.md) saw retail's pool reach 254 of 255 there. A full
+ * to 150, and fcheck (docs/port/BACKFILL.md) saw retail's pool reach 254 of 255 there. A full
  * pool makes CreateMoby answer 0, and a caller that does not check reads through the null moby: on
  * a console into low memory, in the port a crash (docs/port/KNOWN_ISSUES.md; scene_actors.c guards
  * the one call site seen).
