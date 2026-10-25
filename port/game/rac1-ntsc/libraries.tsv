@@ -993,3 +993,5 @@ FUN_L18_002fa728	moby	Moby_Class1584_Update	hook	The update of class 1584, each 
 FUN_L18_002fad28	moby	Moby_Class1799_Update	hook	The update of class 1799, each tick: a hook point for mods, rac1.moby.moby1799.update (docs/port/MODS.md); retail with none
 FUN_L18_002fbb98	moby	Moby_Gadgebot1906_Update	hook	The update of class gadgebot (1906), each tick: a hook point for mods, rac1.moby.moby1906.update (docs/port/MODS.md); retail with none
 # ---- end of the generated hook points ----
+FUN_L00_002995d0	mpeg	prepare_movie_playback	wrap	a movie in a level: the RAM the console's decoder needs is parked in the GS's memory, which the port's player has no use for; run with the image transfers off (rac1/host/movie.c); PAL func_L00_0029A940	void (int, int, int)
+FUN_L00_002997c8	mpeg	unpark_movie_memory	wrap	after a movie in a level: the parked RAM read back; run with the image transfers off (rac1/host/movie.c); PAL func_L00_0029AB38	void (void)

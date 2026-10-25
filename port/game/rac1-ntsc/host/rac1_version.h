@@ -112,6 +112,13 @@
 #define func_L02_002A5238 game_FUN_L02_002a4058
 #define RAC1_ADDR_L09_0x001FCA00u 0x001FC740u
 #define RAC1_ADDR_L09_0x002F0AA0u 0x002EF750u
+/* A movie in a level (movie.c): PAL prepare_movie_playback func_L00_0029A940 is FUN_L00_002995d0
+ * here, and what reads the parked RAM back, PAL func_L00_0029AB38, FUN_L00_002997c8 (the NTSC
+ * decomp's 00295100.c). */
+#define func_L00_0029A940 game_FUN_L00_002995d0
+#define func_L00_0029A940__game game_FUN_L00_002995d0__game
+#define func_L00_0029AB38 game_FUN_L00_002997c8
+#define func_L00_0029AB38__game game_FUN_L00_002997c8__game
 
 /* ---- generated below ---- */
 

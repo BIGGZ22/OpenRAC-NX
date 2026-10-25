@@ -177,8 +177,13 @@ int openrac_lib_sceGsSetDefStoreImage(
     return 7;
 }
 
+int openrac_lib_gs_images_parked;
+
 /* sceGsExecLoadImage(transfer, pixels): to the renderer's textures. */
 int openrac_lib_sceGsExecLoadImage(gaddr transfer, gaddr pixels) {
+    if (openrac_lib_gs_images_parked) {
+        return 0;
+    }
     const image_transfer* t = (const image_transfer*)G(transfer);
     openrac_game_image image;
     image.base = (int)((t->bitbltbuf >> 32) & 0x3FFF);
@@ -200,6 +205,9 @@ int openrac_lib_sceGsExecLoadImage(gaddr transfer, gaddr pixels) {
  * height rounded up in the packet (to 4 rows at 32 bits, 16 at 24, 8 below),
  * the console's extra rows being thrown away; the destination gets w x h. */
 int openrac_lib_sceGsExecStoreImage(gaddr transfer, gaddr destination) {
+    if (openrac_lib_gs_images_parked) {
+        return 0;
+    }
     image_readback* t = (image_readback*)G(transfer);
     openrac_game_image image;
     const int w = (int)(t->trxreg & 0xFFF), h = (int)((t->trxreg >> 32) & 0xFFF);

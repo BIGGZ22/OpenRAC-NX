@@ -148,6 +148,9 @@ void openrac_lib_sceGsSetDefLoadImage(gaddr, short, short, short, short, short, 
 int openrac_lib_sceGsSetDefStoreImage(gaddr, short, short, short, short, short, short, short);
 int openrac_lib_sceGsExecLoadImage(gaddr, gaddr);
 int openrac_lib_sceGsExecStoreImage(gaddr, gaddr);
+// While set, sceGsExecLoadImage and sceGsExecStoreImage move nothing: a game's host C sets it around
+// what parks main RAM in the GS's memory for the console's movie decoder, which the port's has no use for.
+extern int openrac_lib_gs_images_parked;
 gaddr openrac_lib_sceGsSyncVCallback(gaddr);
 void openrac_lib__GetGsDxDyOffset(int, gaddr, gaddr, gaddr, gaddr);
 /* dma */
