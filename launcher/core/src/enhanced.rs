@@ -200,7 +200,12 @@ fn baker_profile(baker: &Path, level: &Path) -> Option<String> {
     let key = (
         baker.to_path_buf(),
         level.to_path_buf(),
-        format!("{:?} {:?} {:?}", file(baker), file(&level.join("probe-bake.json")), file(&level.join("manifest.json"))),
+        format!(
+            "{:?} {:?} {:?}",
+            file(baker),
+            file(&level.join("probe-bake.json")),
+            file(&level.join("manifest.json"))
+        ),
     );
     if let Some(known) = CACHE.lock().unwrap().get_or_insert_with(HashMap::new).get(&key) {
         return known.clone();
@@ -230,7 +235,9 @@ fn made_by(stamp: &Value, baked: &Path, profile: &str) -> bool {
     }
     let (Ok(profile), Some(result)) = (
         serde_json::from_str::<Value>(profile),
-        std::fs::read_to_string(baked.join("bake-result.json")).ok().and_then(|t| serde_json::from_str::<Value>(&t).ok()),
+        std::fs::read_to_string(baked.join("bake-result.json"))
+            .ok()
+            .and_then(|t| serde_json::from_str::<Value>(&t).ok()),
     ) else {
         return false;
     };
@@ -541,7 +548,8 @@ mod tests {
         std::fs::remove_dir_all(probes.join(".level_99.failed")).unwrap();
         stamp("level_99", "level_99");
         std::fs::remove_file(probes.join("level_99").join("sparse.orpg")).unwrap();
-        std::fs::write(probes.join("level_99").join("bake-result.json"), r#"{"verified": true, "empty": true}"#).unwrap();
+        std::fs::write(probes.join("level_99").join("bake-result.json"), r#"{"verified": true, "empty": true}"#)
+            .unwrap();
         assert_eq!(status().ready, 2);
         std::fs::remove_dir_all(probes.join("level_99")).unwrap();
         std::fs::create_dir_all(probes.join(".level_99.failed")).unwrap();
