@@ -2,7 +2,7 @@
 
 ```
 OpenRAC/
-├── README.md, CONTRIBUTING.md, AGENTS.md, CLAUDE.md
+├── README.md, CONTRIBUTING.md
 ├── LICENSE.md, THIRD_PARTY_NOTICES.md, CREDITS.md
 ├── games/                  one directory per game, one per version inside it
 │   ├── rac1/               Ratchet & Clank (2002)
@@ -70,7 +70,7 @@ are what readers see.
 | The native port's code | `port/` ([its README](../port/README.md)): a game's own part in `port/game/<game>/`, following [its coding conventions](../port/docs/CODING_CONVENTIONS.md) |
 | Restructure work: claiming a package, reporting it | its row in [docs/restructure/PROGRESS.md](restructure/PROGRESS.md) |
 | Launcher code, or a game's actions in the launcher | `launcher/` (a game's actions: `launcher/actions.json`) |
-| A decision or rule for everyone | `docs/policy/`, and `AGENTS.md` and `CONTRIBUTING.md` if it changes how people work |
+| A decision or rule for everyone | `docs/policy/`, and `CONTRIBUTING.md` if it changes how people work |
 | A new game version | `games/<game>/<version>/`, plus its entry in `games/<game>/game.json` (the editor reads a disc's identity from it: boot executable, size, SHA-1, region, disc version) |
 
 ## Names

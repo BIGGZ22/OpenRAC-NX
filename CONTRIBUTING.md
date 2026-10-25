@@ -2,8 +2,7 @@
 
 Thanks for helping. OpenRAC holds a decompilation project for each version of
 each game, plus a few things they share. This page covers what applies
-everywhere; each game's own docs cover how work is done there. AI agents also
-read [AGENTS.md](AGENTS.md), which builds on this page.
+everywhere; each game's own docs cover how work is done there.
 
 ## Before you start
 
@@ -31,8 +30,17 @@ read [AGENTS.md](AGENTS.md), which builds on this page.
 - **Each game proves matches its own way**, and its docs are the authority:
   a byte-identical rebuild, a strict per-function check, or both. Do not
   land a function the game's checks reject.
-- **Keep a change inside one game version** unless it is shared work. A
-  game's build must not reach into another game's directory.
+- **Keep a change inside one game version** unless it is shared work. Run a
+  game's commands from its directory (`games/<game>/<version>/`, or the `dir`
+  in its `game.json`: rac1/pal's is `games/rac1/`). A game's build must not
+  reach into another game's directory.
+- **Matches are plain C.** Each game has its own matching rules. In rac1/pal:
+  no register pins, no inline assembly in a function, no artificial barriers,
+  no `#define` in a candidate, no expression aliases, and the build never edits
+  compiler output or gives one function flags of its own
+  ([BUILD_FIDELITY.md](games/rac1/docs/BUILD_FIDELITY.md)). When a function
+  will not match, [docs/workflow/BACKFILL.md](docs/workflow/BACKFILL.md) says
+  when to stop and what to write instead.
 - **Generated files are regenerated, never edited by hand**: `progress/`, the
   tables in `README.md`, `baserom/README.md` and `games/README.md`
   (`python3 tools/openrac.py progress`), and each game's own generated files
@@ -43,6 +51,17 @@ read [AGENTS.md](AGENTS.md), which builds on this page.
   when their copies differ ([shared/README.md](shared/README.md)).
 - **Credit what you reuse**: the project, the file or function, and its
   license, in the game's `THIRD_PARTY_NOTICES.md` and at the code.
+- **Respect removal requests.** Refer to the third-party NTSC decompilation
+  of Ratchet & Clank only as "the NTSC decomp", never by its author's name,
+  handle or address, and never bring back material a project removed at
+  someone's request. Check what came in before committing an import or a
+  port from a sister project: git history keeps what is committed.
+- **Leave other people's work alone.** Do not delete or overwrite files or
+  uncommitted changes you did not make. When several people work on rac1/pal
+  at once, claim functions first (`python3 tools/claims.py`, described in its
+  [docs/AGENT_WORKFLOW.md](games/rac1/docs/AGENT_WORKFLOW.md)).
+- **Do not rewrite pushed history**, and do not install a game's own git
+  hooks: `.git/hooks` serves all of OpenRAC.
 - **Open questions are decided together.** If your change depends on one
   ([docs/policy/OPEN_QUESTIONS.md](docs/policy/OPEN_QUESTIONS.md)), raise it
   rather than settling it in passing.
@@ -115,6 +134,21 @@ chore(import): rac1/ntsc from Lombyte at 1a2b3c4
 **Credit lines for AI assistants.** Commits made with an AI assistant end
 with a `Co-Authored-By:` trailer naming it, as OpenRAC's commits have so far.
 Whether to keep that rule is [open question 2](docs/policy/OPEN_QUESTIONS.md#2-credit-lines-for-ai-assistants-in-commits).
+
+## Working with an AI assistant
+
+The rules above apply the same way. On top of them, an assistant:
+
+- pushes, opens pull requests or publishes only when the person it works for
+  asks for that;
+- asks before automated game tests (scripted runs, screenshots, sweeps): they
+  open windows on the person's screen and take long to review;
+- reports what it checked as it is, failures included, before it calls
+  something done;
+- follows a game's own agent docs where there are some: rac1/pal's
+  [docs/AGENT_WORKFLOW.md](games/rac1/docs/AGENT_WORKFLOW.md) (its Claude Code
+  workers are defined in `games/rac1/.claude/`, so run them from
+  `games/rac1`), and the `AGENTS.md` of rac2, rac5 and rac6.
 
 ## Pull requests
 

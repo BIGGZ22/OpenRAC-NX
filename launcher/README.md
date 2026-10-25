@@ -43,8 +43,8 @@ after [openrac.dev](https://openrac.dev).
 | Know where the native port stands                              | [docs/port](../docs/port/README.md)          |
 | Build, package and publish a new launcher release              | [docs/RELEASING.md](docs/RELEASING.md)       |
 
-OpenRAC's own rules apply here too ([AGENTS.md](../AGENTS.md),
-[CONTRIBUTING.md](../CONTRIBUTING.md), [SOURCING.md](../docs/policy/SOURCING.md)):
+OpenRAC's own rules apply here too ([CONTRIBUTING.md](../CONTRIBUTING.md),
+[SOURCING.md](../docs/policy/SOURCING.md)):
 the launcher never downloads, uploads or bundles a game.
 
 ## Using the launcher

@@ -70,13 +70,31 @@ The PC port plays the packed levels with `--mods assets/packed/rac1/pal`.
 and each level's gameplay data. To change how things behave, use the mod SDK
 ([docs/port/MODS.md](port/MODS.md)).
 
+## Repository commands
+
+Run these from the top of the checkout. Each game's own build and check
+commands are in its README and in [workflow/](workflow/README.md).
+
+```sh
+python3 tools/openrac.py discs              # identify and check the images in baserom/
+python3 tools/openrac.py setup [GAME/VER]   # place each game's inputs
+python3 tools/openrac.py progress [--fetch] # consolidate progress, refresh the README tables
+python3 tools/openrac.py tables             # refresh the generated tables only
+python3 tools/sources.py status|sync GAME/VER   # follow the original repositories
+python3 tools/xmap.py scan|report|ports FROM TO # the function map across the games
+python3 tools/port.py FROM TO [--check]         # functions FROM matched that TO has unchanged
+python3 tools/shared.py check|find|sync PATH    # files several games share stay identical
+python3 tools/permuter run|base|queue PROFILE FUNC   # decomp-permuter for any game
+python3 -m unittest discover -s tools       # the tools' tests
+python3 -m unittest discover -s editor      # the editor's tests
+```
+
 ## Before you send a change
 
 - Read [CONTRIBUTING.md](../CONTRIBUTING.md) and the
   [sourcing policy](policy/SOURCING.md). Your own disc is the evidence.
   Leaked material and SDK source, samples or headers are never used.
 - Commits follow Conventional Commits, for example `feat(rac1/pal): ...`.
-- AI agents also follow [AGENTS.md](../AGENTS.md).
 - Decisions still to be made are in
   [policy/OPEN_QUESTIONS.md](policy/OPEN_QUESTIONS.md).
 - OpenRAC's own code is being restructured, package by package.

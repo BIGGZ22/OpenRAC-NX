@@ -9,8 +9,7 @@ the first table; go to a game's documents when you work on that game.
 |---|---|
 | [README.md](../README.md) | What OpenRAC is and how to play |
 | [DEVELOPING.md](DEVELOPING.md) | Working from a checkout: the launcher from source, setting up the decompilations, the port, the level editor by hand |
-| [CONTRIBUTING.md](../CONTRIBUTING.md) | Ground rules, the commit convention, pull requests, tests |
-| [AGENTS.md](../AGENTS.md) and [CLAUDE.md](../CLAUDE.md) | Rules for AI agents |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | Ground rules, the commit convention, working with an AI assistant, pull requests, tests |
 | [LAYOUT.md](LAYOUT.md) | How the repository is organised, and where a new file goes |
 | [policy/SOURCING.md](policy/SOURCING.md) | What may and may not be used or committed |
 | [policy/OPEN_QUESTIONS.md](policy/OPEN_QUESTIONS.md) | Decisions the group still has to make |

@@ -239,7 +239,7 @@ commit.
   version bumped in four files, a `launcher-vX.Y.Z` tag, the CI's draft
   checked, then published with notes written for players.
 - **Before a sync or merge from another project**, run the removal-request
-  check ([AGENTS.md](../../AGENTS.md), rule 2) on what came in.
+  check ([CONTRIBUTING.md](../../CONTRIBUTING.md#ground-rules)) on what came in.
 
 ## 8. Working with several people or agents
 

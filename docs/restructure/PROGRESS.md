@@ -13,7 +13,7 @@ commit series as its work. Phase R (render cost) runs beside phases 2 and 3: it 
 the same picture costs, and changes no pixel.
 
 The rules every package follows are [port/docs/CODING_CONVENTIONS.md](../../port/docs/CODING_CONVENTIONS.md)
-(decided), [AGENTS.md](../../AGENTS.md) and [CONTRIBUTING.md](../../CONTRIBUTING.md).
+(decided) and [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 **Status:** `todo` (free to claim once what it depends on is done), `in progress` (claimed: see the
 owner), `done` (landed on master and verified).

@@ -32,8 +32,8 @@ build output ([docs/policy/SOURCING.md](../policy/SOURCING.md)).
 
 ## 2. OpenRAC-wide rules
 
-The full rules are in [CONTRIBUTING.md](../../CONTRIBUTING.md#commits) and, for
-agents, [AGENTS.md](../../AGENTS.md). In short:
+The full rules are in [CONTRIBUTING.md](../../CONTRIBUTING.md#commits). In
+short:
 
 **Commits** follow Conventional Commits, `type(scope): summary`.
 
@@ -64,7 +64,7 @@ Some imported tools and docs still write or enforce the old styles:
 | rac1/ntsc [scripts/commit-msg.py](../../games/rac1/ntsc/scripts/commit-msg.py) | An optional `commit-msg` hook. It accepts only `<type>: <summary>` with Lombyte's six types, removes `Co-Authored-By:` trailers, and rejects anthropic.com and openai.com identities | Do not install it: it rejects every `type(scope):` subject and strips the trailer CONTRIBUTING.md asks for. Its install line (`ln -sf ../../scripts/commit-msg.py .git/hooks/commit-msg`) also assumes `games/rac1/ntsc` is a repository of its own |
 | rac1/pal `tools/wave.py land` without `--batch` | Commits each match itself; inside OpenRAC as `feat(rac1/pal/<unit>): ...` or `feat(rac1/pal/overlays): ...` | Fine for single matches; use `land --batch` and commit yourself for a batch |
 | rac3 [localdecomp/server.py](../../games/rac3/ntsc/localdecomp/server.py) | On Save, commits every perfect match as `localdecomp: match func_X`, and offers a Push button, when its project is the top of its own git work tree | Nothing: inside OpenRAC both stay off. `--no-git-sync` turns them off in a standalone checkout |
-| rac1/pal LLM_DECOMP_INSTRUCTIONS.md, step 8 | One function per commit as `<unit>: <FunctionName> (func_XXXXXXXX) exact match`, then `git push origin main` | Its step 8 now carries a note: use the OpenRAC subject, keep the report in the commit, push only when asked ([AGENTS.md](../../AGENTS.md), rule 7) |
+| rac1/pal LLM_DECOMP_INSTRUCTIONS.md, step 8 | One function per commit as `<unit>: <FunctionName> (func_XXXXXXXX) exact match`, then `git push origin main` | Its step 8 now carries a note: use the OpenRAC subject, keep the report in the commit, push only when asked ([CONTRIBUTING.md](../../CONTRIBUTING.md#working-with-an-ai-assistant)) |
 
 **Progress.** Each game keeps its own report (section 3). The consolidated
 [progress/](../../progress/README.md) is regenerated, never edited, with

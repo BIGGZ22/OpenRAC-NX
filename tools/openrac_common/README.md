@@ -35,7 +35,7 @@ inside rac1-decomp's container, from rac1-decomp's root, where neither OpenRAC n
 
 | Module | What it gives |
 |---|---|
-| `paths` | `repo_root(start=None)`: the top of OpenRAC, the nearest directory above START holding `games/` and `AGENTS.md` (a checkout) or `STANDALONE` (the launcher's bundled copy) |
+| `paths` | `repo_root(start=None)`: the top of OpenRAC, the nearest directory above START holding `games/` and `CONTRIBUTING.md` (a checkout) or `STANDALONE` (the launcher's bundled copy) |
 | `games` | `load(game)`, `load_all()`, `versions()`, `games_dir()`, `manifest_path(game)`, `version_dir(game, name)`: `games/<game>/game.json`; `source_checkout(game_id, version_name)`, `source_variable(game_id, version_name)`: where a version's sister project is checked out |
 | `tables` | `read_tsv(path, columns=None, strip=False, required=False)`, `header(path)`, `is_data(line)`, `split_row(line)`: the `.tsv` tables and their comment and header conventions |
 | `digest` | `sha1(path)`, `sha256(path)`, `file_digest(path, algorithm)`: hex digests read in 1 MiB blocks |
@@ -44,9 +44,9 @@ inside rac1-decomp's container, from rac1-decomp's root, where neither OpenRAC n
 | `iso9660` | `boot_serial(image)`, `parse_boot2(text)`, `files(image)`, `read(image, path)`, `find(f, path)`, `walk`, `records`, `root_directory`, `IsoError` |
 
 `repo_root` accepts two kinds of top directory, and both are meant: a checkout, marked by
-`AGENTS.md`, and the copy of the tools the launcher carries for players
-(`tools/bundle_standalone.py`), which has no `AGENTS.md` and is marked by the `STANDALONE` note that
-script writes. The launcher recognises that copy by the same file (`launcher/core/src/detect.rs`), and
+`CONTRIBUTING.md`, and the copy of the tools the launcher carries for players
+(`tools/bundle_standalone.py`), which has no `CONTRIBUTING.md` and is marked by the `STANDALONE`
+note that script writes. The launcher recognises that copy by the same file (`launcher/core/src/detect.rs`), and
 the copy's tools find their root through `repo_root`. The copy carries this package beside
 `openrac.py` and `extractor.py`, which import it.
 
@@ -96,9 +96,9 @@ The rule, decided in P2-10:
   one against `paths.BOOTSTRAP`. A script that only imports its own folder's modules writes no
   `sys.path` line at all: Python and `unittest discover` already put that folder on the path.
 - **Found by the folder that holds it.** The line walks up to the nearest folder holding
-  `tools/openrac_common`, not to `AGENTS.md`: the launcher's bundled copy (`tools/bundle_standalone.py`)
-  carries the package and the probe tools, but no `AGENTS.md`. Once the package is imported,
-  `paths.repo_root(__file__)` finds the top of either kind of root, by `AGENTS.md` or `STANDALONE`.
+  `tools/openrac_common`, not to `CONTRIBUTING.md`: the launcher's bundled copy (`tools/bundle_standalone.py`)
+  carries the package and the probe tools, but no `CONTRIBUTING.md`. Once the package is imported,
+  `paths.repo_root(__file__)` finds the top of either kind of root, by `CONTRIBUTING.md` or `STANDALONE`.
 - **Second on the path.** `tools/` goes after the script's own folder, so a module of the script's
   keeps its name when `tools/` holds one of the same (`editor/port.py` beside `tools/port.py`), and
   before the installed packages, so a module of `tools/` (`tools/mips.py`, which
@@ -151,7 +151,7 @@ directories and a root directory longer than one sector), never read from a disc
   checkout's own `port/game/*/libraries.tsv` are read too, for their headers. When a copy is
   removed by the package that moves its callers, its comparison goes with it.
 - the bootstrap: `paths.BOOTSTRAP` run from a script in a synthetic checkout and in a synthetic
-  bundled copy (no `AGENTS.md`), and every script outside `tools/` that imports the package
+  bundled copy (no `CONTRIBUTING.md`), and every script outside `tools/` that imports the package
   checked for the line.
 
 The tools that use the package have their own tests beside it (`test_openrac.py`,
