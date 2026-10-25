@@ -34,6 +34,10 @@ launcher (`launcher/`); the decompilations the port is built from live in
   `.git/hooks` serves all of OpenRAC.
 - **Open questions are decided together.** If your change depends on one
   ([docs/policy/OPEN_QUESTIONS.md](docs/policy/OPEN_QUESTIONS.md)), raise it.
+- **Keep docs short and plain.** Write for a person reading: plain English,
+  short sentences, lists and tables where they help. Cut repetition and
+  filler, never facts: when you shorten a doc, keep every number, path,
+  command, decision and link, and check the links still work.
 - **Decompilation work follows its game's rules** and
   [docs/decomp](docs/decomp/README.md): work from the game's directory, and
   let its checks have the last word.
