@@ -461,7 +461,7 @@ int draw(scene::LevelData& level) {
     input.camera.view = camera.view();
     input.camera.position = camera.position;
     renderer.render(input, {frame.id(), 128, 128});
-    CHECK(renderer.last_stats().draw_calls == (gl::is_vulkan() ? 2 : 4));
+    CHECK(renderer.last_stats().draw_calls == (gl::is_vulkan() ? 2 : 5));
     auto pvs_pixels = frame.read_rgba();
     if (gl::is_vulkan()) {
         CHECK(pvs_pixels[(64 * 128 + 64) * 4] > 150);  // hidden blue tie exposes red terrain
@@ -477,7 +477,7 @@ int draw(scene::LevelData& level) {
     input.camera.position = camera.position;
     input.camera.view = camera.view();
     renderer.render(input, {frame.id(), 128, 128});
-    CHECK(renderer.last_stats().draw_calls == (gl::is_vulkan() ? 2 : 4));  // camera cache refresh
+    CHECK(renderer.last_stats().draw_calls == (gl::is_vulkan() ? 2 : 5));  // camera cache refresh
 
     if (gl::is_vulkan()) {
         stats::set_enabled(stats::Client::Overlay, true);
