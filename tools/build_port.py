@@ -145,6 +145,18 @@ class BuildError(Exception):
     """Why the build cannot start, worded for whoever reads the launcher's Tasks."""
 
 
+def build_jobs() -> int:
+    """How many compiles run at once: all but a few of the CPU's threads (background.cpu_budget),
+    so the computer stays usable, unless OPENRAC_BUILD_JOBS says otherwise: a number, or "all"
+    for every thread (a CI runner, where nobody is waiting on the desktop)."""
+    wanted = os.environ.get("OPENRAC_BUILD_JOBS", "").strip().lower()
+    if wanted == "all":
+        return os.cpu_count() or 1
+    if wanted.isdigit() and int(wanted) > 0:
+        return int(wanted)
+    return background.cpu_budget()
+
+
 def say(text: str) -> None:
     print(text, flush=True)
 
@@ -263,7 +275,7 @@ def build_embree(cmake: str, env: dict[str, str], compilers: tuple[str, str, str
                  f"-DCMAKE_INSTALL_PREFIX={install.as_posix()}",
                  *(f"-D{key}={value}" for key, value in tools.items() if value),
                  *(f"-D{key}={value}" for key, value in embree_options().items())]
-    build = [cmake, "--build", str(work), "--parallel", str(background.cpu_budget())]
+    build = [cmake, "--build", str(work), "--parallel", str(build_jobs())]
     for command in (configure, build, [cmake, "--install", str(work)]):
         say("> " + " ".join(f'"{part}"' if " " in part else part for part in command))
         if subprocess.run(command, cwd=EMBREE_DIR, env=env).returncode != 0:
@@ -469,8 +481,8 @@ def commands(
         changed = [f"-D{key}={value}" for key, value in wanted.items() if not same_path(cache.get(key, ""), value)]
         out = [[cmake, "-S", str(PORT), "-B", str(build), *changed]] if changed else []
     # All but a few of the CPU's threads (Ninja's own default is every one, and two more): the
-    # computer stays usable while the port builds.
-    out.append([cmake, "--build", "--preset", preset, "--parallel", str(background.cpu_budget()),
+    # computer stays usable while the port builds (build_jobs).
+    out.append([cmake, "--build", "--preset", preset, "--parallel", str(build_jobs()),
                 "--target", *targets(names, more)])
     return out
 

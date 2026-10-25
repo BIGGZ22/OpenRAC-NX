@@ -8,6 +8,7 @@ import {
   cancel,
   copyingDisc,
   gameWindow,
+  guard,
   installGame,
   jobs,
   refresh,
@@ -33,6 +34,7 @@ export type PlayerKind =
   | "play"
   | "build"
   | "levels" // built, but the levels the game draws are not read from the disc yet
+  | "rebuild" // not built, and Rebuild can make it again (rebuildSteps)
   | "blocked"; // a port exists but something it needs is missing
 
 export interface PlayerState {
@@ -103,7 +105,7 @@ export async function chooseGamesFolder(): Promise<number | null> {
   if (onAndroid) {
     // Android's picker gives files, not folders: the player picks a disc image, which is copied
     // into the app's own games folder (the Rust side's default there); its games are set up below.
-    if (!(await copyingDisc((progress) => pickIso("Select your legitimately obtained disc image", progress))))
+    if (!(await copyingDisc((progress) => guard(pickIso("Select your legitimately obtained disc image", progress)))))
       return null;
   } else {
     const dir = await pickFolder("Choose the folder with your PlayStation 2 games");
@@ -143,9 +145,25 @@ export function playerVersion(game: GameView): VersionView | null {
   });
 }
 
-/** The game is built for this computer. */
+/** The game is built for this computer: its program is there (on Android, the APK's), whether or
+ *  not its levels are ready yet. */
 export function isBuilt(game: GameView, v: VersionView): boolean {
-  return !!game.install?.compiled || !!action(v, "play")?.runnable;
+  return !!game.install?.compiled || !!action(v, "play")?.done;
+}
+
+/**
+ * What Rebuild runs: the build from scratch where this platform builds, else (Android, which plays
+ * the game its APK carries) the levels read from the disc again and checked. Null when it cannot run.
+ */
+export function rebuildSteps(v: VersionView): ActionView[] | null {
+  const builds = [action(v, "port-rebuild"), action(v, "port-build")].filter((a) => a !== null);
+  if (builds.length) {
+    const build = builds.find((a) => a.runnable);
+    return build ? [build] : null;
+  }
+  const levels = action(v, "port-levels");
+  const check = action(v, "port-levels-check");
+  return levels?.runnable ? [levels, ...(check ? [check] : [])] : null;
 }
 
 export function playerState(game: GameView, v: VersionView): PlayerState {
@@ -295,6 +313,18 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
       tone: "warn",
     };
   }
+  if (!isBuilt(game, v) && rebuildSteps(v)) {
+    return {
+      ...base,
+      kind: "rebuild",
+      label: "Rebuild",
+      icon: "build",
+      hint: "Makes the game again from the start, so it can be played. Your saves are kept.",
+      primary: true,
+      status: "Needs rebuilding",
+      tone: "warn",
+    };
+  }
   const needs = play.blockers.map((b) => b.replace(/^needs /, "")).join(", ");
   return {
     ...base,
@@ -428,9 +458,22 @@ async function act(v: VersionView, state: PlayerState): Promise<void> {
     if (await prepare(v)) await play(v);
     return;
   }
+  if (state.kind === "rebuild") {
+    await rebuild(v);
+    return;
+  }
   if (state.kind !== "play") return;
   await addVisibility(v);
   await play(v);
+}
+
+/** Rebuilds the version (rebuildSteps), on demand or when it is not built. True when every step ran. */
+export async function rebuild(v: VersionView): Promise<boolean> {
+  const steps = rebuildSteps(v);
+  if (!steps) return false;
+  const ok = await runChain({ kind: "version", key: v.key }, steps);
+  await refresh();
+  return ok;
 }
 
 /** Starts the version, its disc spinning meanwhile on Android (showLaunch). */

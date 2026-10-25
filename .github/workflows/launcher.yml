@@ -20,8 +20,9 @@
 # A new system is a row, with `if: matrix.name == ...` only on the steps that
 # are its own. What a run would redo is kept between runs: the game's C as
 # hostgen writes it (skipped when its inputs are the same), CMake's
-# configuration, every compile (ccache), the Rust dependencies (rust-cache)
-# and Gradle's. The Linux games are carried without their debug info.
+# configuration, every compile (ccache), the link's ThinLTO cache, the Rust
+# dependencies (rust-cache) and Gradle's. Every thread of the runner compiles.
+# The Linux games are carried without their debug info.
 #
 # Every action is pinned to a commit (Dependabot, .github/dependabot.yml,
 # moves the pins), and every download is checked against its SHA-256.
@@ -76,6 +77,9 @@ jobs:
       # Every compile through ccache (CMake reads these on its first configure).
       CMAKE_C_COMPILER_LAUNCHER: ccache
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      # Every thread of the runner compiles (tools/build_port.py build_jobs): on a desktop the
+      # build leaves a few free: two of a runner's 4, and two of macOS's 3.
+      OPENRAC_BUILD_JOBS: all
       # Where the copy goes: the installer's resources, or on Android its project.
       COPY: launcher/src-tauri/resources/openrac
     strategy:
@@ -181,7 +185,8 @@ jobs:
       # are the same. And CMake's configuration without the objects (its cache, which holds the
       # answers of SDL's hundreds of checks, and the dependencies' sources): the configure step
       # was a minute on Linux and two on Windows. Any version of either is a good start: a stale
-      # translation is made again, a changed CMakeLists.txt configured again.
+      # translation is made again, a changed CMakeLists.txt configured again. And the ThinLTO
+      # link's cache (port/cmake/Optimize.cmake): the link of each game was minutes of the build.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -191,6 +196,7 @@ jobs:
             port/build/*/CMakeFiles
             port/build/*/_deps/*-src
             port/build/*/_deps/*-subbuild
+            port/build/*/thinlto-cache
             port/build/embree/install
             port/build/embree/openrac-embree.json
             !port/build/**/*.o

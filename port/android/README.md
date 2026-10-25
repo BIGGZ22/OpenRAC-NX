@@ -73,7 +73,7 @@ game's log.
    preparing its tools; logcat says "unpacked OpenRAC's tools" and how long it
    took.
 2. **Add the disc.** "Choose disc image" opens the picker. Pick your image
-   (.iso, or a .chd from `chdman createdvd`).
+   (.iso, or a .chd from `chdman createdvd` or `chdman createcd`).
    - Toasts count the copy in quarters, then the set-up runs: the extractor,
      the levels (four at a time), the level check.
    - Press Home meanwhile: a notification shows the step and goes on, and

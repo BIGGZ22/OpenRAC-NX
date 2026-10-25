@@ -351,7 +351,8 @@ function handleExit(job: Job) {
   }
   // The game stopping on its own is not a failed task: the Play page says what happened.
   if (job.state === "failed" && played) void gameStopped(job);
-  else if (job.state === "failed") toast(`${job.title} failed`, "error");
+  // Setting a game up says why it stopped itself (installFromDisc).
+  else if (job.state === "failed" && !job.actionId.startsWith("install:")) toast(`${job.title} failed`, "error");
   // Played to the end since: the notice folds to a line (CrashNotice), the report still a click away.
   if (job.state === "succeeded" && played && app.stopped && version.startsWith(`${app.stopped.game}/`)) {
     app.stopped = { ...app.stopped, playedSince: true };
@@ -769,7 +770,9 @@ async function installFromDisc(game: string, title: string, found?: string): Pro
   // An image the games folder holds needs no picking.
   const picked =
     found ??
-    (await copyingDisc((progress) => pickIso(`Select your legitimately obtained disc image of ${title}`, progress)));
+    (await copyingDisc((progress) =>
+      guard(pickIso(`Select your legitimately obtained disc image of ${title}`, progress)),
+    ));
   if (!picked) return false;
   // A .chd is unpacked into a plain image first (on Android the picker already did).
   let image = picked;
@@ -793,11 +796,20 @@ async function installFromDisc(game: string, title: string, found?: string): Pro
   });
   pump();
   const ok = await ended;
+  const why = ok ? undefined : extractorError(jobs.list.find((j) => j.key === job.key)?.lines ?? []);
   toast(
-    ok ? `${title} is set up from your disc.` : `Setting ${title} up stopped: Activity has what it printed.`,
+    ok
+      ? `${title} is set up from your disc.`
+      : `Setting ${title} up stopped: ${why ?? "Activity has what it printed."}`,
     ok ? "info" : "error",
   );
   return ok;
+}
+
+/** The extractor's reason for refusing a disc: its last "error NNNN: ..." line (tools/extractor.py). */
+export function extractorError(lines: { line: string }[]): string | undefined {
+  const line = lines.findLast((l) => /^error \d{4}: /.test(l.line))?.line;
+  return line?.replace(/^error \d{4}: /, "").replace(/^./, (c) => c.toUpperCase());
 }
 
 /** Runs a disc image's copy into the Android app's storage, or a .chd's unpacking, with its

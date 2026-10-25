@@ -395,6 +395,22 @@ mod tests {
         }
     }
 
+    /// Android plays from the game its APK carries and gets the levels ready with the Python it
+    /// carries: those steps name it, building does not. (They once named no platform, which hid
+    /// them there, so a game set up from its disc could never be played.)
+    #[test]
+    fn android_gets_the_levels_ready_but_builds_nothing() {
+        let file = actions::load(&checkout()).unwrap();
+        for key in ["rac1/pal", "rac1/ntsc"] {
+            let scope = Scope::Version(key.into());
+            for id in ["port-levels", "port-levels-check", "probe-bake"] {
+                let action = file.find(&scope, id).unwrap_or_else(|| panic!("{key} has no {id}"));
+                assert!(action.platforms.contains(&Platform::Android), "{key} {id} does not run on Android");
+            }
+            assert!(file.find(&scope, "port-build").unwrap().platforms.is_empty());
+        }
+    }
+
     /// Play draws from the levels `port-levels` writes, so it names them and waits for them.
     /// (It once started without: menus with no world behind them.)
     #[test]

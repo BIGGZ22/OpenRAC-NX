@@ -16,6 +16,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # tools/build_port.py compiles on every thread of the runner (build_jobs), not all but two.
+  OPENRAC_BUILD_JOBS: all
+
 # A newer push to a pull request stops the older run; master's runs all finish.
 concurrency:
   group: checks-${{ github.ref }}
@@ -224,9 +228,11 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
+      # Each key's prefix is no other job's: "checks-port" was the start of every other port
+      # job's key, and restored their objects, built with other options, when it had none.
       - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
         with:
-          key: checks-port
+          key: checks-port-release
           max-size: 1G
       - name: Compilers and SDL's system libraries
         run: |
@@ -334,16 +340,25 @@ jobs:
     runs-on: ubuntu-26.04
     container: registry.fedoraproject.org/fedora:44
     timeout-minutes: 60
+    env:
+      # Every compile through ccache, kept between runs as the other port jobs keep theirs.
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
     steps:
       - name: Compilers and SDL3
         run: |
-          dnf install -y --setopt=install_weak_deps=False git clang cmake ninja-build python3 \
+          dnf install -y --setopt=install_weak_deps=False git clang cmake ninja-build python3 ccache \
             SDL3-devel mesa-libGL-devel mesa-libEGL-devel mesa-dri-drivers \
             libX11-devel libXext-devel libXrandr-devel libXcursor-devel libXi-devel libXScrnSaver-devel \
             wayland-devel libxkbcommon-devel alsa-lib-devel pulseaudio-libs-devel mesa-vulkan-drivers
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        with:
+          key: checks-port-fedora
+          max-size: 500M
 
       - name: Build openrac-rac1-pal as the launcher builds it
         run: python3 tools/build_port.py rac1-pal

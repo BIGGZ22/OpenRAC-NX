@@ -52,8 +52,9 @@ the launcher never downloads, uploads or bundles a game.
 
 1. Start the launcher and choose the folder with your PlayStation 2 disc
    images. It looks two folders deep. It knows a disc by the boot program its
-   `SYSTEM.CNF` names, whatever the file is called. A `.chd` works too; it is
-   unpacked once into the install folder
+   `SYSTEM.CNF` names, whatever the file is called. A `.chd` works too, made
+   with `chdman createdvd` or `createcd`; it is unpacked once into the install
+   folder
    ([core/src/discs.rs](core/src/discs.rs), [core/src/chd.rs](core/src/chd.rs)).
 2. The launcher sets the game up from the disc with
    [tools/extractor.py](../tools/extractor.py). Then it prepares the levels

@@ -29,7 +29,23 @@ if(OPENRAC_PORT_LTO)
       set(CMAKE_RANLIB "${OPENRAC_LLVM_RANLIB}")
       add_compile_options(-flto=thin)
       add_link_options(-flto=thin)
-      message(STATUS "ThinLTO: on (archiver ${CMAKE_AR})")
+      # What the link optimises is kept, a module at a time, beside the build (CI keeps it
+      # between runs): a link where little changed redoes only that, not minutes of the whole
+      # game. lld's option, checked with the linker FastBuild.cmake chose (check_linker_flag
+      # does not use it by itself); another linker builds as before.
+      include(CheckLinkerFlag)
+      set(thinlto_cache "${CMAKE_BINARY_DIR}/thinlto-cache")
+      get_directory_property(chosen_link_options LINK_OPTIONS)
+      list(JOIN chosen_link_options " " CMAKE_REQUIRED_FLAGS)
+      check_linker_flag(CXX "-Wl,--thinlto-cache-dir=${thinlto_cache}" OPENRAC_HAS_THINLTO_CACHE)
+      unset(CMAKE_REQUIRED_FLAGS)
+      if(OPENRAC_HAS_THINLTO_CACHE)
+        add_link_options("-Wl,--thinlto-cache-dir=${thinlto_cache}"
+                         "-Wl,--thinlto-cache-policy=cache_size_bytes=2g")
+        message(STATUS "ThinLTO: on (archiver ${CMAKE_AR}, cache ${thinlto_cache})")
+      else()
+        message(STATUS "ThinLTO: on (archiver ${CMAKE_AR})")
+      endif()
     else()
       message(STATUS "ThinLTO: requested but skipped (no llvm-ar beside the compiler)")
     endif()

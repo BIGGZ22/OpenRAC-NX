@@ -174,8 +174,11 @@ fn kept_ones(dir: &Path, game: &str) -> Vec<PathBuf> {
 /// The install folder on a system that keeps it in one place of its own (Android: the folder
 /// the Files app shows, OPENRAC_GAMES_DIR). A set-up made before in another folder (`earlier`:
 /// the install folder the settings name, the launcher's data folder) is moved there when it can
-/// be renamed, on one file system; one that cannot stays where it is, and that folder is the
-/// install folder. Nothing is moved over a set-up already in `wanted`.
+/// be renamed, on one file system. One that cannot (shared storage's `OpenRAC`, another file
+/// system, where the app may not even rename its own folders) stays where it is, unused: the
+/// install folder is `wanted` all the same, and the game is set up again from its disc. (It once
+/// stayed the install folder, and reading the levels again failed there.) Nothing is moved over a
+/// set-up already in `wanted`.
 pub fn settle_games_dir(wanted: &Path, earlier: &[PathBuf]) -> PathBuf {
     let active = wanted.join("active");
     if active.exists() {
@@ -186,8 +189,9 @@ pub fn settle_games_dir(wanted: &Path, earlier: &[PathBuf]) -> PathBuf {
         if !from.is_dir() {
             continue;
         }
-        let moved = std::fs::create_dir_all(wanted).and_then(|()| std::fs::rename(&from, &active));
-        return if moved.is_ok() { wanted.to_path_buf() } else { old.clone() };
+        if std::fs::create_dir_all(wanted).and_then(|()| std::fs::rename(&from, &active)).is_ok() {
+            break;
+        }
     }
     wanted.to_path_buf()
 }
@@ -489,5 +493,25 @@ mod tests {
         assert_eq!(settle_games_dir(&wanted, &[old.clone(), wanted.clone()]), wanted);
         assert!(old.join("active/rac2").is_dir() && !wanted.join("active/rac2").exists());
         std::fs::remove_dir_all(&tmp).unwrap();
+    }
+
+    /// A set-up that cannot be moved (shared storage, where the app cannot rename its folders) is
+    /// left where it is, and the install folder is the wanted one all the same.
+    #[cfg(unix)]
+    #[test]
+    fn a_set_up_that_cannot_move_is_left_behind() {
+        use std::os::unix::fs::PermissionsExt;
+        let tmp = tempfile::tempdir().unwrap();
+        let (wanted, old) = (tmp.path().join("files/games"), tmp.path().join("shared/OpenRAC"));
+        std::fs::create_dir_all(old.join("active/rac1/data")).unwrap();
+        std::fs::set_permissions(&old, std::fs::Permissions::from_mode(0o555)).unwrap();
+        let stuck = std::fs::rename(old.join("active"), old.join("probe")).is_err();
+        let settled = settle_games_dir(&wanted, std::slice::from_ref(&old));
+        std::fs::set_permissions(&old, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert_eq!(settled, wanted);
+        if stuck {
+            // (Root renames whatever its permissions say.)
+            assert!(old.join("active/rac1/data").is_dir() && !wanted.join("active").exists());
+        }
     }
 }

@@ -112,22 +112,29 @@ The app keeps everything in its own storage (`files/`): the games
   Settings has an Open Files button.
 - `hasFragileUserData` makes uninstalling ask whether to keep the data; it
   comes back when the same app, signed with the same key, is reinstalled.
-- An older install (shared storage's `OpenRAC`, or the app's data folder) is
-  moved into `files/games` at the first start (`install::settle_games_dir`),
-  and the first-run folder screen is skipped.
+- An older install in the app's data folder is moved into `files/games` at the
+  first start (`install::settle_games_dir`), and the first-run folder screen
+  is skipped. One in shared storage's `OpenRAC` cannot be moved (another file
+  system) and the app may not rename folders there, so it is left as it is and
+  the game is set up again from its disc; the old folder can be deleted.
 
 ## Setting up a game
 
 **The disc.** Android's picker hands over an open file, not a path, and the
 game reads the disc for as long as it runs, so the image is copied once into
 `files/discs/`, after a free-space check and with progress shown. A `.chd`
-image (from `chdman createdvd`) is unpacked to `.iso` instead
-(`launcher/core/src/chd.rs`).
+image (from `chdman createdvd` or `createcd`) is unpacked to `.iso` instead
+(`launcher/core/src/chd.rs`). A CHD is known by its first bytes too, as a
+picker may drop the name's extension, and one the picker streams rather than
+opens is copied first and unpacked from the copy. A failure is shown with its
+reason, as is the extractor's when it refuses a disc.
 
 **The setup** is the desktop's: `tools/extractor.py`, `editor/extract.py port`
 for the levels, then the game's `--check-levels`, with their output in the
-launcher. Android runs programs only from an app's native library folder, so
-the APK carries them as libraries:
+launcher. These steps name Android in `launcher/actions.json`; building the
+game does not, as the APK carries it. Rebuild, in the game's menu, reads the
+levels again and checks them. Android runs programs only from an app's native
+library folder, so the APK carries them as libraries:
 
 | Library | What it is |
 |---|---|

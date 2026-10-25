@@ -13,6 +13,18 @@ pub fn disc_file_name(name: &str) -> String {
     }
 }
 
+/// The name a picked plain image is kept under: its own, with `.iso` added when the picker gave
+/// it without (the games folder and the extractor know an image by that extension).
+pub fn iso_file_name(name: &str) -> String {
+    let iso =
+        name.len().checked_sub(4).is_some_and(|n| name.is_char_boundary(n) && name[n..].eq_ignore_ascii_case(".iso"));
+    if iso {
+        name.to_string()
+    } else {
+        format!("{name}.iso")
+    }
+}
+
 /// Copies `from` into `dest` through a file beside it, reporting every 64 MB; an image already
 /// there with the same size, and the same first and last MB, is kept as it is (another dump of the
 /// same name and size is copied). File to file, so that the kernel copies (copy_file_range or
@@ -57,6 +69,50 @@ pub fn copy_disc(
     })();
     if result.is_err() {
         let _ = std::fs::remove_file(&partial);
+    }
+    result
+}
+
+/// Unpacks a picked CHD (`from`, `size` bytes, `free` bytes left on the device, -1 when unknown) into
+/// the plain image `dest`, reporting (written, total). A CHD is read out of order, which a picker's
+/// file allows only when it is a file on the device: one that is not (a pipe from a cloud or a
+/// file manager's provider) is copied beside `dest` first, unpacked from there, and removed.
+pub fn unpack_chd(
+    from: std::fs::File,
+    size: u64,
+    free: i64,
+    dest: &std::path::Path,
+    progress: impl Fn(u64, u64),
+) -> Result<(), String> {
+    use std::io::{Seek, SeekFrom};
+    let seekable = from.metadata().is_ok_and(|m| m.is_file()) && (&from).seek(SeekFrom::Start(0)).is_ok();
+    let copy = dest.with_extension("chd");
+    let image = if seekable {
+        from
+    } else {
+        // Room for the copy too, which goes once the image is unpacked.
+        if free >= 0 && size + (256 << 20) > free as u64 {
+            return Err(format!(
+                "it needs {} MB and the device has {} MB free",
+                (size + (256 << 20)) >> 20,
+                free >> 20
+            ));
+        }
+        copy_disc(from, size, &copy, |done| progress(done, size)).map_err(|e| format!("cannot copy it: {e}"))?;
+        std::fs::File::open(&copy).map_err(|e| format!("{}: {e}", copy.display()))?
+    };
+    let free = if seekable || free < 0 { free } else { free - size as i64 };
+    let result = (|| {
+        let mut image = crate::chd::ChdImage::new(image)?;
+        // As the Kotlin side checks a plain image: room for it and the levels written next.
+        let need = image.len() + (256 << 20);
+        if free >= 0 && need > free as u64 {
+            return Err(format!("it needs {} MB and the device has {} MB free", need >> 20, free >> 20));
+        }
+        image.save_iso(dest, progress)
+    })();
+    if !seekable {
+        let _ = std::fs::remove_file(&copy);
     }
     result
 }
@@ -135,6 +191,45 @@ mod tests {
         let other = dir.path().join("discs/other.iso");
         assert!(copy_disc(open(), data.len() as u64 + 1, &other, |_| ()).is_err());
         assert!(!other.exists() && !other.with_extension("partial").exists());
+    }
+
+    /// A CHD the picker gives as a file on the device is unpacked from it; one it streams (a pipe)
+    /// is copied beside the image first, and that copy goes once the image is there.
+    #[cfg(unix)]
+    #[test]
+    fn a_picked_chd_is_unpacked_whether_or_not_it_can_be_seeked() {
+        use std::io::Write;
+        let dir = tempfile::tempdir().unwrap();
+        let plain: Vec<u8> = (0..5 * 4096 + 2048).map(|i| (i * 7 % 251) as u8).collect();
+        let packed = crate::chd::tests::chd_of(&plain, 4096);
+        let picked = dir.path().join("picked");
+        std::fs::write(&picked, &packed).unwrap();
+        let dest = dir.path().join("discs/game.iso");
+        unpack_chd(std::fs::File::open(&picked).unwrap(), packed.len() as u64, -1, &dest, |_, _| ()).unwrap();
+        assert_eq!(std::fs::read(&dest).unwrap(), plain);
+
+        let (reader, mut writer) = std::io::pipe().unwrap();
+        let feed = std::thread::spawn(move || writer.write_all(&packed));
+        let piped = std::fs::File::from(std::os::fd::OwnedFd::from(reader));
+        let other = dir.path().join("discs/other.iso");
+        let size = std::fs::metadata(&picked).unwrap().len();
+        unpack_chd(piped, size, -1, &other, |_, _| ()).unwrap();
+        feed.join().unwrap().unwrap();
+        assert_eq!(std::fs::read(&other).unwrap(), plain);
+        assert!(!other.with_extension("chd").exists());
+        // Too little room for the copy and the image: refused before anything is written.
+        let (reader, _writer) = std::io::pipe().unwrap();
+        let piped = std::fs::File::from(std::os::fd::OwnedFd::from(reader));
+        let third = dir.path().join("discs/third.iso");
+        assert!(unpack_chd(piped, 1 << 30, 1 << 20, &third, |_, _| ()).is_err());
+        assert!(!third.exists() && !third.with_extension("chd").exists());
+    }
+
+    #[test]
+    fn a_plain_image_is_kept_as_an_iso() {
+        assert_eq!(iso_file_name("Ratchet & Clank.ISO"), "Ratchet & Clank.ISO");
+        assert_eq!(iso_file_name("Ratchet & Clank"), "Ratchet & Clank.iso");
+        assert_eq!(iso_file_name("disc.bin"), "disc.bin.iso");
     }
 
     #[test]

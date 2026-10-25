@@ -403,8 +403,9 @@ impl Action {
     }
 
     /// Whether the action is for `platform`: one of its `platforms`, or any when it lists none.
-    /// Android has neither a shell nor Python, Godot or a compiler: only a play action, which
-    /// starts the game's activity (src-tauri/src/android.rs), runs there unless it names Android.
+    /// Android has no shell, Godot or compiler: only a play action, which starts the game's
+    /// activity (src-tauri/src/android.rs), runs there unless it names Android, as the steps that
+    /// get the levels ready do (they run on the Python the APK carries).
     fn runs_on(&self, platform: Platform) -> bool {
         if self.platforms.is_empty() {
             platform != Platform::Android || self.kind == Kind::Play

@@ -38,7 +38,14 @@
   import { tick } from "svelte";
   import { fly } from "svelte/transition";
   import { place, when } from "$lib/reports";
-  import { isBuilt, playerAct, playerState, playerVersion } from "$lib/player.svelte";
+  import {
+    isBuilt,
+    playerAct,
+    playerState,
+    playerVersion,
+    rebuild as rebuildGame,
+    rebuildSteps,
+  } from "$lib/player.svelte";
   import { themeStyle } from "$lib/themes";
 
   // One game, whatever the region: the page plays the version your disc is (playerVersion),
@@ -52,7 +59,6 @@
   const choice = $derived(developer && game ? choiceFor(app.discChoices, game.id) : null);
   const action = (id: string): ActionView | null => v?.actions.find((a) => a.id === id && a.thisPlatform) ?? null;
 
-  const build = $derived(action("port-build"));
   const rebuild = $derived(action("port-rebuild"));
   const levels = $derived(action("port-levels"));
   const levelsCheck = $derived(action("port-levels-check"));
@@ -160,10 +166,10 @@
     if (next?.kind === "return") {
       items.push({ label: "Stop the game", icon: "x", danger: true, run: () => void gameWindow(true) });
     }
-    // From scratch: everything built before is deleted first (tools/build_port.py --clean).
-    const again = rebuild?.runnable ? rebuild : build;
-    if (again?.runnable && built && next?.kind === "play") {
-      items.push({ label: "Rebuild the game", icon: "build", run: () => void run(scope, again) });
+    // From scratch: everything built before is deleted first (tools/build_port.py --clean); on
+    // Android, the levels are read from the disc again (rebuildSteps).
+    if (built && (next?.kind === "play" || next?.kind === "levels") && rebuildSteps(v)) {
+      items.push({ label: "Rebuild the game", icon: "build", run: () => void rebuildGame(v) });
     }
     if (playGodot?.runnable) {
       items.push({ label: "Preview a level in Godot", icon: "play", run: () => void run(scope, playGodot) });
@@ -263,7 +269,8 @@
               >
                 {#if next.job}<span class="spinner"></span>{:else}<Icon name={next.icon} size={22} />{/if}{next.label}
               </button>
-              <Menu items={menu} />
+              <!-- An empty menu is not shown, but keeps its place: the button does not move when it fills. -->
+              {#if menu.length}<Menu items={menu} />{:else}<span class="menu-slot" aria-hidden="true"></span>{/if}
             </div>
             {#if choice}<DiscSwitch {game} {choice} busy={!!next.job} />{/if}
             {#if next.hint && !next.job}<p class="line">{next.hint}</p>{/if}
@@ -491,7 +498,9 @@
       linear-gradient(180deg, rgba(14, 16, 22, 0.3) 0%, rgba(14, 16, 22, 0.65) 100%);
   }
 
-  .hero > :not(.hero-backdrop) {
+  /* :global: a component's root (JobProgress) carries no class of this page's, and would stay
+     under the picture and its shade. */
+  .hero > :global(:not(.hero-backdrop)) {
     position: relative;
     z-index: 1;
   }
@@ -535,7 +544,17 @@
     gap: 10px;
   }
 
+  /* The menu's place while it has nothing in it (Menu.svelte's trigger is 44 px). */
+  .menu-slot {
+    flex: none;
+    width: 44px;
+    height: 44px;
+  }
+
   .big {
+    /* Play, Rebuild and Stop are one width: the button keeps its place from one to the next. */
+    min-width: 13.5rem;
+    justify-content: center;
     white-space: nowrap;
     font-size: 1.375rem;
     font-weight: 700;

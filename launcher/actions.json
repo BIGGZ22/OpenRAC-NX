@@ -332,6 +332,12 @@
         ],
         "output": "assets/port/rac1/pal",
         "cwd": ".",
+        "platforms": [
+          "linux",
+          "macos",
+          "windows",
+          "android"
+        ],
         "requires": [
           "disc",
           "python"
@@ -384,6 +390,12 @@
           "--check-levels"
         ],
         "cwd": ".",
+        "platforms": [
+          "linux",
+          "macos",
+          "windows",
+          "android"
+        ],
         "requires": [
           "artifact"
         ],
@@ -422,6 +434,12 @@
         ],
         "output": "{data}/probes/pal",
         "cwd": ".",
+        "platforms": [
+          "linux",
+          "macos",
+          "windows",
+          "android"
+        ],
         "requires": [
           "artifact",
           "python",
@@ -948,6 +966,12 @@
         ],
         "output": "assets/port/rac1/ntsc",
         "cwd": ".",
+        "platforms": [
+          "linux",
+          "macos",
+          "windows",
+          "android"
+        ],
         "requires": [
           "disc",
           "python"
@@ -1000,6 +1024,12 @@
           "--check-levels"
         ],
         "cwd": ".",
+        "platforms": [
+          "linux",
+          "macos",
+          "windows",
+          "android"
+        ],
         "requires": [
           "artifact"
         ],
@@ -1038,6 +1068,12 @@
         ],
         "output": "{data}/probes/ntsc",
         "cwd": ".",
+        "platforms": [
+          "linux",
+          "macos",
+          "windows",
+          "android"
+        ],
         "requires": [
           "artifact",
           "python",
@@ -1448,6 +1484,12 @@
         ],
         "output": "assets/port/rac2/ntsc",
         "cwd": ".",
+        "platforms": [
+          "linux",
+          "macos",
+          "windows",
+          "android"
+        ],
         "requires": [
           "disc",
           "python"
@@ -1732,6 +1774,12 @@
         ],
         "output": "assets/port/rac3/ntsc",
         "cwd": ".",
+        "platforms": [
+          "linux",
+          "macos",
+          "windows",
+          "android"
+        ],
         "requires": [
           "disc",
           "python"
@@ -2066,6 +2114,12 @@
         ],
         "output": "assets/port/rac4/ntsc",
         "cwd": ".",
+        "platforms": [
+          "linux",
+          "macos",
+          "windows",
+          "android"
+        ],
         "requires": [
           "disc",
           "python"

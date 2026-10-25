@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use openrac_launcher_core::actions::Plan;
 use openrac_launcher_core::android::game_library;
 #[cfg(target_os = "android")]
-use openrac_launcher_core::android::{copy_disc, disc_file_name};
+use openrac_launcher_core::android::{copy_disc, disc_file_name, iso_file_name, unpack_chd};
 #[cfg(target_os = "android")]
 use openrac_launcher_core::chd;
 use openrac_launcher_core::jobs::Started;
@@ -133,27 +133,20 @@ pub async fn pick_disc<R: Runtime>(app: AppHandle<R>) -> Result<Option<PathBuf>,
         let file = unsafe { <std::fs::File as std::os::fd::FromRawFd>::from_raw_fd(fd) };
         let dir = discs_dir().ok_or("OPENRAC_DISCS_DIR is not set")?;
         let name = disc_file_name(&name);
-        let (packed, plain) = (chd::is_chd(std::path::Path::new(&name)), dir.join(chd::iso_name(&name)));
-        let dest = if packed { plain } else { dir.join(&name) };
+        // A CHD by its name or, when the picker dropped the extension, by its first bytes.
+        let packed = chd::is_chd(std::path::Path::new(&name)) || chd::starts_as_chd(&file);
+        let dest = if packed { dir.join(chd::iso_name(&name)) } else { dir.join(iso_file_name(&name)) };
         let emitter = app.clone();
         let emit = move |copied, total| {
             let _ = emitter.emit("disc-copy", DiscCopy { name: name.clone(), copied, total });
         };
         if packed {
             let unpacked = dest.clone();
-            let free = picked.free.unwrap_or(-1);
-            tauri::async_runtime::spawn_blocking(move || {
-                let mut image = chd::ChdImage::new(file)?;
-                // As the Kotlin side checks a plain image: room for it and the levels written next.
-                let need = image.len() + (256 << 20);
-                if free >= 0 && need > free as u64 {
-                    return Err(format!("it needs {} MB and the device has {} MB free", need >> 20, free >> 20));
-                }
-                image.save_iso(&unpacked, emit)
-            })
-            .await
-            .map_err(|e| e.to_string())?
-            .map_err(|e| format!("cannot unpack the CHD image: {e}"))?;
+            let (size, free) = (picked.size.unwrap_or(-1).max(0) as u64, picked.free.unwrap_or(-1));
+            tauri::async_runtime::spawn_blocking(move || unpack_chd(file, size, free, &unpacked, emit))
+                .await
+                .map_err(|e| e.to_string())?
+                .map_err(|e| format!("cannot unpack the CHD image: {e}"))?;
             return Ok(Some(dest));
         }
         let total = picked.size.unwrap_or(-1).max(0) as u64;

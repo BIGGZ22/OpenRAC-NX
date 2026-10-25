@@ -107,6 +107,37 @@ describe("Android launcher", () => {
     expect(await page.locator(".hero-bg").evaluate((e) => getComputedStyle(e).animationName)).toBe("none");
   });
 
+  it("offers Rebuild for a game that is not built, and in the menu for one that is", async () => {
+    await open("version=rac1/pal");
+    await expect(page.locator(".go .big").textContent()).resolves.toContain("Rebuild");
+    await open("built&version=rac1/pal");
+    await expect(page.locator(".go .big").textContent()).resolves.toContain("Play");
+    await page.locator(".go-row").getByRole("button", { name: "More actions" }).click();
+    await expect(page.getByRole("menuitem", { name: "Rebuild the game" }).count()).resolves.toBe(1);
+  });
+
+  it("draws a running step's strip over the band's picture, not under its shade", async () => {
+    await open("version=rac1/pal");
+    await page.locator(".go .big").click();
+    const strip = page.locator(".hero > .job");
+    await strip.waitFor();
+    expect(await strip.evaluate((e) => getComputedStyle(e).zIndex)).toBe("1");
+  });
+
+  it("shows no empty menu beside Set up, and keeps the main button in its place after it", async () => {
+    const centre = async () => {
+      const box = await page.locator(".go .big").boundingBox();
+      return Math.round((box?.x ?? 0) + (box?.width ?? 0) / 2);
+    };
+    await open("fresh&version=rac1/pal");
+    await page.locator(".go .big").waitFor();
+    expect(await page.locator(".go-row").getByRole("button", { name: "More actions" }).count()).toBe(0);
+    const setUp = await centre();
+    await open("built&version=rac1/pal");
+    await page.locator(".go .big").waitFor();
+    expect(Math.abs((await centre()) - setUp)).toBeLessThanOrEqual(1);
+  });
+
   it("spins the disc while a game starts", async () => {
     await open("launch&version=rac1/pal");
     await page.locator(".launch .disc").waitFor();

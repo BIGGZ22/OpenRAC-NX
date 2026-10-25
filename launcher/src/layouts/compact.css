@@ -32,11 +32,14 @@
   grid-area: go;
   justify-self: end;
   margin-top: 0;
-  max-width: 340px;
+  /* One width whatever the button says and the line under it, so nothing moves from Set up to
+     Play. */
+  width: 340px;
+  max-width: 100%;
   /* The main button and the menu beside it; what is said under the button is centred under the
      button, not under the two. */
   display: grid;
-  grid-template-columns: auto auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   column-gap: 10px;
   justify-items: center;
 }
@@ -48,7 +51,7 @@
 }
 :root[data-layout="compact"] .hero .big {
   font-size: 1.1875rem;
-  padding: 13px 38px;
+  padding: 13px 30px;
 }
 :root[data-layout="compact"] .hero .line {
   font-size: 0.8125rem;
