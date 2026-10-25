@@ -291,6 +291,8 @@ export async function start() {
       }
     }
     app.info = await api.appInfo();
+    // Android: the config names the carried tools' Python only once they are unpacked.
+    if (onAndroid) await prepareTools();
     app.config = await firstRun(await api.getConfig());
   } catch (e) {
     // The launcher could not read what it needs to start: it says so, and the player may
@@ -298,7 +300,6 @@ export async function start() {
     app.startError = errorText(e);
     return;
   }
-  if (onAndroid) await prepareTools();
   // The version the launcher showed last; a version named in the address (the browser
   // preview's ?version=) is kept.
   if (!app.version && app.config.lastVersion) app.version = app.config.lastVersion;

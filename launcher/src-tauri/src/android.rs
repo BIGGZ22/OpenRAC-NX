@@ -332,7 +332,9 @@ pub fn show_files<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
 
 /// Waits until the tools the launcher carries are unpacked (OpenracSetup.kt does that on a thread
 /// of its own, once per install or update); an error says why they could not be. Nothing to wait
-/// for on a desktop.
+/// for on a desktop. The launcher's start settled the folder and Python before they were there
+/// (after an update the old Python's link names the old APK's libraries): they are settled again,
+/// else setting a game up says "Python is not set" until the next start.
 #[tauri::command]
 pub async fn tools_ready<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
     #[cfg(target_os = "android")]
@@ -342,7 +344,12 @@ pub async fn tools_ready<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
             error: Option<String>,
         }
         let ready: Ready = kotlin(&app, "toolsReady", ()).await?;
-        ready.error.map_or(Ok(()), Err)
+        if let Some(error) = ready.error {
+            return Err(error);
+        }
+        let state = app.state::<crate::AppState>();
+        crate::settle_root(&mut state.config.lock().unwrap(), state.bundled.as_deref());
+        Ok(())
     }
     #[cfg(not(target_os = "android"))]
     {
