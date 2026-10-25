@@ -6,8 +6,8 @@ versioned C interface; a **data mod** is a pack of textures, models or level
 edits, which the level editor and the overrides packs already cover
 ([editor/MODDING.md](../../editor/MODDING.md)). The launcher installs both,
 switches them on and off, orders them and shows why one was not loaded. A
-player who wants the game as the console plays it switches **Purist mode** on
-and nothing is loaded.
+player who wants the game as the console plays it leaves the **Mods** switch
+under Play off (the default) and nothing is loaded (Purist mode).
 
 Mods live outside OpenRAC: [OpenRAC/rac1-mods](https://github.com/OpenRAC/rac1-mods)
 holds Ratchet & Clank's, starting with the lock-strafe that was an option of
@@ -66,8 +66,8 @@ Status words as in [DESIGN.md](DESIGN.md): **decided**, **proposed**, **open**.
 7. **A crash names the mods.** The session log's header lists the mods
    loaded, and a crash report lists them and names the one whose code was
    running where the address lets the port tell (section 7).
-8. **Purist mode loads no mods**: `--no-mods`, which the launcher's switch
-   passes.
+8. **Purist mode loads no mods**: `--no-mods`, which the launcher passes while
+   the Mods switch under Play is off.
 
 ## 2. Where things are
 
@@ -521,8 +521,9 @@ level editor's steps and the packs:
   replaced, its settings kept); a format-1 one is a data pack and goes to the
   packs below. A mod for another game is refused;
 - **Remove**, in the row's menu, set apart in `--err`;
-- **Purist mode** (one switch for the launcher, in Settings and on the Mods
-  tab): Play passes `--no-mods`.
+- **The Mods switch** under Play on the game's page (off by default): off, Play
+  passes `--no-mods` (Purist mode); on, Play puts the packs together and passes
+  `--plugins` and `--mods`. The Mods tab says when it is off.
 
 Play passes nothing more: the port reads `plugins.json` from the data folder
 it is given. The Rust side is `core/src/plugins.rs`, with tests on mods made

@@ -219,8 +219,8 @@ let config: Config = {
   renderer: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("vulkan")
     ? "vulkan"
     : "opengl",
-  // ?purist: Purist mode is on.
-  purist: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("purist"),
+  // ?mods: the Mods switch under Play is on.
+  playWithMods: new URLSearchParams(typeof location === "undefined" ? "" : location.search).has("mods"),
   crashesSeen: {},
   discChoice: {},
 };
@@ -1543,7 +1543,7 @@ function mockPluginStatus(): PluginStatus | null {
   return {
     time: new Date().toISOString(),
     version: "pal",
-    purist: config.purist,
+    purist: !config.playWithMods,
     mods: mockPlugins
       .filter((p) => p.enabled)
       .map((p) => ({

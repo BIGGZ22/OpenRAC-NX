@@ -34,8 +34,8 @@ In the OpenRAC launcher's **Mods** tab: **Add from a link**, and paste
 the download against the release's `SHA256SUMS`, and installs the build for
 your platform. Switch `live-splits` on, choose its settings, and play.
 
-The launcher has a **Purist mode** in its settings that starts the game with
-no mods at all. A run submitted for verification should be made in Purist mode
+The launcher's **Mods** switch under Play, off (its default), starts the game
+with no mods at all (Purist mode). A run submitted for verification should be made in Purist mode
 (see [RULES.md](RULES.md)).
 
 ### 2.2 Start LiveSplit's server

@@ -92,10 +92,11 @@ detailedGameLog: boolean,
  */
 renderer: "opengl" | "vulkan", 
 /**
- * Purist mode: the game loads no native mods (`--no-mods`, docs/port/MODS.md), whatever the
- * Mods tab has switched on. Off by default.
+ * The Mods switch under Play on the game's page: the game loads the mods the Mods tab switched on (the
+ * gameplay mods, the packs and the packed levels). Off by default: Play starts the game with no
+ * mods at all (`--no-mods`, docs/port/MODS.md). It took the place of Settings' Purist mode.
  */
-purist: boolean, 
+playWithMods: boolean, 
 /**
  * For each game, the time (seconds since 1970) of the newest crash report the player has
  * dismissed: crashes up to then are seen, and no notice, button or mark is shown for them.

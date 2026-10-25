@@ -27,12 +27,14 @@
     jobs,
     openDevelop,
     run,
+    saveConfig,
     toast,
     uninstallGame,
   } from "$lib/app.svelte";
   import { choiceFor, programOf } from "$lib/discChoice";
   import { pct } from "$lib/format";
   import { SITE_URL } from "$lib/links";
+  import { WITH_MODS } from "$lib/modsText";
   import { gameArt, hideMissing } from "$lib/media";
   import { arrive } from "$lib/motion";
   import { tick } from "svelte";
@@ -137,6 +139,34 @@
     logs?.scrollIntoView({ behavior: "smooth", block: "start" });
     logs?.focus({ preventScroll: true });
   }
+
+  /** The Mods switch under Play, kept in the settings (config.playWithMods): off, Play starts the game
+   *  without mods; on, with what the Mods tab switched on (player.svelte.ts, play). */
+  const withMods = $derived(app.config?.playWithMods ?? false);
+  const startsGame = $derived(next?.kind === "play" || next?.kind === "build" || next?.kind === "levels");
+
+  async function setWithMods(on: boolean) {
+    if (app.config) await saveConfig({ ...app.config, playWithMods: on });
+  }
+
+  /** How many mods the Mods tab has switched on for this game: its gameplay mods and its packs.
+   *  Read again when the game shown changes; null until read (or where they cannot be). */
+  let modsOn = $state<number | null>(null);
+  $effect(() => {
+    const shown = v;
+    modsOn = null;
+    if (!shown || !setUp) return;
+    let current = true;
+    void Promise.all([
+      api.pluginsList(shown.game, shown.name).catch(() => []),
+      api.overridesList(shown.game).catch(() => []),
+    ]).then(([mods, packs]) => {
+      if (current) modsOn = mods.filter((m) => m.enabled).length + packs.filter((p) => p.enabled).length;
+    });
+    return () => {
+      current = false;
+    };
+  });
 
   /** The game's saves from a PCSX2 memory card onto OpenRAC's card, after a backup of it. */
   async function importPcsx2(serial: string) {
@@ -273,6 +303,27 @@
               {#if menu.length}<Menu items={menu} />{:else}<span class="menu-slot" aria-hidden="true"></span>{/if}
             </div>
             {#if choice}<DiscSwitch {game} {choice} busy={!!next.job} />{/if}
+            {#if startsGame && !next.job}
+              <!-- Whether Play brings the mods: a switch, and what it means, the count a way to them. -->
+              <div class="with-mods">
+                <label title={WITH_MODS.hint}
+                  >{WITH_MODS.label}<input
+                    type="checkbox"
+                    role="switch"
+                    class="switch"
+                    checked={withMods}
+                    onchange={(e) => void setWithMods(e.currentTarget.checked)}
+                  /></label
+                >
+                {#if withMods}
+                  <button class="link" onclick={() => (app.page = "mods")}
+                    >{WITH_MODS.count(modsOn)}<Icon name="next" size={12} /></button
+                  >
+                {:else}
+                  <span class="dim">{WITH_MODS.original}</span>
+                {/if}
+              </div>
+            {/if}
             {#if next.hint && !next.job}<p class="line">{next.hint}</p>{/if}
             {#if lastPlayed && next.kind === "play"}<p class="line last">{lastPlayed}</p>{/if}
             {#if stopped}
@@ -549,6 +600,32 @@
     flex: none;
     width: 44px;
     height: 44px;
+  }
+
+  /* Mods under Play: a quiet pill, its switch, then the count or "original game". */
+  .with-mods {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.05);
+    font-size: 0.875rem;
+    color: var(--soft);
+  }
+
+  .with-mods label {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .with-mods .link {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
   }
 
   .big {

@@ -7,7 +7,8 @@ import type { PluginSetting, PluginView } from "./api";
 import { hasRange } from "./settingValues";
 import { BADGE, GROUP_TITLE, KIND_HINT, KIND_LABEL, STATE_LABEL, rangeText, sharesWith, type Label } from "./modsText";
 
-/** A mod's state, as a dot and a few words. Purist mode loads none, whatever is switched on. */
+/** A mod's state, as a dot and a few words. With the Mods switch under Play off (purist), the game
+ *  loads none, whatever is switched on. */
 export function pluginState(mod: PluginView, purist: boolean): Label {
   if (!mod.enabled) return STATE_LABEL.off;
   if (purist) return STATE_LABEL.purist;

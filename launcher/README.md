@@ -119,7 +119,8 @@ the game you used last.
 sandbox). Add a `.zip` or a folder, or drop one on the page, to install it
 into `<data>/plugins/<id>`. Each mod has a switch, a place in the load order,
 its settings and Remove. When a mod cannot load, it says why. Changes apply
-from the game's next start. **Purist mode** starts the game with no mods.
+from the game's next start. Play brings them only with the **Mods** switch under
+it on (off by default: the game as the console plays it).
 Android loads no native mods. Its Mods tab shows the script mods, Enhanced
 graphics and the packs on one page, without the level editor.
 
@@ -171,8 +172,8 @@ the folders and commands behind the buttons
 **Models and textures** exports a level's models (glTF, with skeletons) and
 textures (PNG), and imports edited folders back as overrides. It also manages
 the packs: on or off, order, remove, add a `.zip` or folder, or drop one on
-the page. **Play with your mods** first combines the packed levels with the
-packs that are on ([editor/MODDING.md](../editor/MODDING.md)).
+the page. With the **Mods** switch under Play on, Play first combines the packed
+levels with the packs that are on ([editor/MODDING.md](../editor/MODDING.md)).
 
 Going Commando, Up Your Arsenal and Deadlocked (NTSC-U) are early access.
 Their levels open in Godot and **Models and textures** works, but edits are

@@ -7,7 +7,7 @@ import {
   PACKS,
   PAGE,
   PANEL,
-  PURIST,
+  WITH_MODS,
   MOD_PAGE,
   SAVE,
   SETTING,
@@ -40,7 +40,7 @@ describe("the label maps", () => {
 
   it("keep the words players already see", () => {
     expect(STATE_LABEL.on).toEqual({ text: "On", tone: "ok" });
-    expect(STATE_LABEL.purist.text).toBe("Not in purist mode");
+    expect(STATE_LABEL.purist.text).toBe("Mods off at Play");
     expect(STATE_LABEL.refused).toEqual({ text: "Cannot load", tone: "err" });
     expect(KIND_LABEL.native.tone).toBe("warn");
     expect(KIND_LABEL.script.text).toBe("Sandboxed script");
@@ -50,7 +50,7 @@ describe("the label maps", () => {
 
 describe("the page's words", () => {
   it("stay short: a line each, the longer why in a tooltip", () => {
-    for (const group of [ADD, ASSETS, EDITOR, PACKS, PAGE, PANEL, PURIST, MOD_PAGE, SAVE, SETTING]) {
+    for (const group of [ADD, ASSETS, EDITOR, PACKS, PAGE, PANEL, WITH_MODS, MOD_PAGE, SAVE, SETTING]) {
       for (const [key, text] of Object.entries(group)) {
         if (typeof text !== "string" || key.endsWith("Url") || key.endsWith("Title")) continue;
         expect(text.length, `${key}: ${text}`).toBeLessThanOrEqual(120);

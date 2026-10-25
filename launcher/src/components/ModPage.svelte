@@ -226,7 +226,7 @@
     </div>
 
     {#if purist && mod.enabled}
-      <p class="notice"><Icon name="info" size={16} /><span>{T.PURIST.onNotice}</span></p>
+      <p class="notice"><Icon name="info" size={16} /><span>{T.WITH_MODS.offNotice}</span></p>
     {/if}
     {#if cannotLoad}
       <div class="notice err"><Icon name="warn" size={16} /><Reason text={mod.reason} tone="err" /></div>

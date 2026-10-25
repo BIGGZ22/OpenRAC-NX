@@ -476,10 +476,21 @@ export async function rebuild(v: VersionView): Promise<boolean> {
   return ok;
 }
 
-/** Starts the version, its disc spinning meanwhile on Android (showLaunch). */
+/** Starts the version, its disc spinning meanwhile on Android (showLaunch). With the Mods switch under
+ *  Play on (config.playWithMods), the mods the Mods tab switched on come too: the packed levels
+ *  and the packs that are on are put together first (overrides-stack), then the game starts with
+ *  them and its gameplay mods (play-edited). A version without those actions plays as it is, its
+ *  gameplay mods following the switch (actions.rs). */
 async function play(v: VersionView): Promise<void> {
-  const start = action(freshVersion(v), "play");
+  const fresh = freshVersion(v);
+  const start = action(fresh, "play");
   if (!start?.runnable) return;
   showLaunch(v.game, v.title);
+  const modded = app.config?.playWithMods ? action(fresh, "play-edited") : undefined;
+  if (modded?.runnable) {
+    const stack = action(fresh, "overrides-stack");
+    await runChain({ kind: "version", key: v.key }, stack ? [stack, modded] : [modded]);
+    return;
+  }
   await run({ kind: "version", key: v.key }, start);
 }

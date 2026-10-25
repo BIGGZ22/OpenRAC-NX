@@ -107,7 +107,7 @@ rules must be rewritten for the platform.
 
 | Rule | Why |
 |---|---|
-| **"From a fresh game, with no mods loaded."** | The port has mods that change the game: `difficulty` (enemy count, damage, speeds, prices), `item-randomizer` (shuffles the game's contents), `lock-strafe` (changes the movement model), `keyboard-mouse` (input only, safe). The port's **Purist mode** (`--no-mods`, or the launcher's Purist mode) starts the game with no mods at all — that is the clean way to express this rule. |
+| **"From a fresh game, with no mods loaded."** | The port has mods that change the game: `difficulty` (enemy count, damage, speeds, prices), `item-randomizer` (shuffles the game's contents), `lock-strafe` (changes the movement model), `keyboard-mouse` (input only, safe). The port's **Purist mode** (`--no-mods`, or the launcher's Mods switch under Play, off) starts the game with no mods at all — that is the clean way to express this rule. |
 | **"Mods that only observe the game, such as an auto-splitter, are allowed."** | This mirrors the site's existing carve-out for autosplitters. The `live-splits` mod only observes. |
 | **"The run is timed from the video."** | The site's own rule. Stating it removes any argument about the timer. |
 | **"No save states, no re-recording, no frame advance."** | The site's rule, and it means the port's practice tooling is not a run tool. |
@@ -155,7 +155,7 @@ track time without loads".
 | **Pause / step / slow motion** | **No** | Tool-assisted frame advance. |
 | **`OPENRAC_UNCAPPED=1`** | **No** | It makes the game run faster than real time; a recorded run's time is real time. |
 
-**The port's own Purist mode** (`--no-mods`, or the launcher's Purist mode)
+**The port's own Purist mode** (`--no-mods`, or the launcher's Mods switch under Play, off)
 starts the game with no mods at all
 (`port/game/common/main.cpp:240-241`, `:385`, and
 `port/game/common/mods.cpp:545-548`). That is the cleanest way to satisfy a

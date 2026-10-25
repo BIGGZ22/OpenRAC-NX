@@ -30,7 +30,7 @@
   const when = $derived(new Date(notice.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }));
 
   /** The gameplay mods the game loaded at its last start (status.json, docs/port/MODS.md): a mod
-   *  may be what crashed, and purist mode plays without them. */
+   *  may be what crashed, and the Mods switch under Play plays without them. */
   let modsLoaded = $state<string[]>([]);
   $effect(() => {
     if (!crash || onAndroid) return;

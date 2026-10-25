@@ -1,5 +1,5 @@
 // Every word the Mods tab shows (Mods.svelte, AddMod.svelte, PluginsPanel.svelte, PacksPanel.svelte,
-// AssetsPanel.svelte), with CrashNotice.svelte's mods line, Settings' Purist mode, lib/plugins.ts and
+// AssetsPanel.svelte), with CrashNotice.svelte's mods line, the game page's Mods switch, lib/plugins.ts and
 // lib/addMods.ts, in one place (launcher/docs/MODS_TAB.md lists where each shows). Written for
 // players: short, plain, one idea per line; the longer "why" goes in a tooltip.
 // Plain constants, maps from a state to its words, and small functions where a name or a number goes
@@ -17,7 +17,7 @@ export interface Label {
 export const STATE_LABEL = {
   on: { text: "On", tone: "ok" },
   off: { text: "Off", tone: "off" },
-  purist: { text: "Not in purist mode", tone: "off" },
+  purist: { text: "Mods off at Play", tone: "off" },
   failed: { text: "Not loaded", tone: "err" },
   refused: { text: "Cannot load", tone: "err" },
 } as const satisfies Record<string, Label>;
@@ -62,11 +62,6 @@ export const PAGE = {
   tabMine: "My mods",
   tabEditor: "Level editor",
   tabAssets: "Models and textures",
-  play: "Play with mods",
-  /** Under Play with mods when it cannot start. */
-  playEarly: "Not playable yet",
-  playMissing: "Not on this computer yet",
-  playBuild: "Build the game first ›",
   earlyTitle: "Early access",
   earlyLine:
     "Its levels open in Godot and you can make texture and model packs. Packing level edits and playing come later.",
@@ -242,13 +237,17 @@ export const PREVIEW = {
   reinstall: "Reinstall",
 } as const;
 
-/** Purist mode, on the panel and in Settings. */
-export const PURIST = {
-  title: "Purist mode",
-  panelLine: "Play exactly as on the PS2: no gameplay mod loads.",
-  settingsLine: "Play as the PS2 plays: the game loads none of your gameplay mods (Mods).",
-  onNotice: "Purist mode is on: gameplay mods are skipped.",
-  turnOff: "Turn off",
+/** Mods, the switch under Play on the game's page (GamePlayer.svelte): off,
+ *  the default, the game starts with no mods at all; the Mods tab says so above its list. */
+export const WITH_MODS = {
+  label: "Mods",
+  hint: "Play with your gameplay mods, packs and packed levels from the Mods tab.",
+  /** Beside the switch when it is on: how many are switched on, a way to the Mods tab. */
+  count: (n: number | null) => (n === null ? "Mods tab" : n === 0 ? "none on yet" : `${n} on`),
+  /** Beside the switch when it is off. */
+  original: "original game",
+  offNotice: "Play starts the game without mods. Turn on Mods under Play to use them.",
+  turnOn: "Turn on",
 } as const;
 
 /** The level editor's tab (Mods.svelte). */
@@ -280,7 +279,7 @@ export const EDITOR = {
   packStopped: "Packing stopped. The activity log says why.",
   packed: "Packed.",
   packedSome: (edits: number, levels: number) =>
-    `Packed ${edits} changed object${edits === 1 ? "" : "s"} in ${levels} level${levels === 1 ? "" : "s"}. Play with mods to try them.`,
+    `Packed ${edits} changed object${edits === 1 ? "" : "s"} in ${levels} level${levels === 1 ? "" : "s"}. Turn on Mods under Play to try them.`,
   packedNone: "Nothing to pack: your levels are as on the disc.",
   docs: "Editor documentation",
   projects: "Level projects",
@@ -352,7 +351,7 @@ export function rangeText(min?: number, max?: number): string {
 
 /** The crash notice, when gameplay mods were on at the start that crashed (CrashNotice.svelte). */
 export const crashModsLine = (ids: string[]) =>
-  `Gameplay mods were on (${ids.join(", ")}). If it crashes again, try Purist mode on the Mods tab, and tell us which mods you had.`;
+  `Gameplay mods were on (${ids.join(", ")}). If it crashes again, turn off Mods under Play, and tell us which mods you had.`;
 
 /** Models and textures (AssetsPanel.svelte). */
 export const ASSETS = {

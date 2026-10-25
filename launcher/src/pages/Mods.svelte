@@ -1,9 +1,9 @@
 <script lang="ts">
   // Mods, one game at a time, with the game list on the left as in Games: every game gets the
-  // same page. Its head: the game's name and Play with mods, the page's one main button, in the
-  // same place on every tab. Then three tabs, so that each of the player's jobs has a place of
+  // same page. Its head: the game's name (the game starts
+  // with its mods from the game's page: the Mods switch under Play). Then three tabs, so that each of the player's jobs has a place of
   // its own that can be seen from the top: My mods (AddMod: a link, a file or a folder; the
-  // gameplay mods with Purist mode, PluginsPanel; the texture, model and level packs,
+  // gameplay mods, PluginsPanel; the texture, model and level packs,
   // PacksPanel), Level editor (open a level in Godot, pack the changes) and Models and textures
   // (AssetsPanel). A game the editor cannot open but that plays has My mods alone; one the editor
   // cannot open yet says so, and where to follow it. A game it reads in early access (Going
@@ -22,7 +22,7 @@
   import PacksPanel from "$components/PacksPanel.svelte";
   import PluginsPanel from "$components/PluginsPanel.svelte";
   import { api, onAndroid, pickFile, type ActionView, type GameView, type VersionView } from "$lib/api";
-  import { app, guardShown, jobs, openVersion, run, runChain, saveConfig, toast } from "$lib/app.svelte";
+  import { app, guardShown, jobs, run, runChain, saveConfig, toast } from "$lib/app.svelte";
   import { levelName, levelsOf, type EntryState } from "$lib/labels";
   import { GODOT_URL, SITE_URL } from "$lib/links";
   import { EDITOR, GAME_LIST, PAGE } from "$lib/modsText";
@@ -178,17 +178,6 @@
   /** The level the editor opens, per game. Each level is a Godot project of its own. */
   const level = $state<Record<string, number>>({});
 
-  /** Play with mods, the page's main action. */
-  const play = $derived(v ? action(v, "play-edited") : null);
-
-  /** Puts the packed levels and the packs that are on together, then starts the game with them. */
-  async function playModded(v: VersionView) {
-    const play = action(v, "play-edited");
-    const stack = action(v, "overrides-stack");
-    if (!play) return;
-    await runChain({ kind: "version", key: v.key }, stack ? [stack, play] : [play]);
-  }
-
   /** The picker is open: a second press opens no other. */
   let pickingGodot = false;
 
@@ -263,25 +252,6 @@
           </div>
           {#if onAndroid}
             <GameChip title={shown.title} what="mods" />
-          {/if}
-          {#if v}
-            <!-- The page's one main action, in the same place on every tab. -->
-            <div class="play">
-              <button class="primary" disabled={!play?.runnable} onclick={() => void playModded(v)}
-                ><Icon name="play" size={16} />{PAGE.play}</button
-              >
-              {#if play && !play.runnable}
-                <!-- Built on the game's page: the way there. -->
-                <button
-                  class="link why-not"
-                  onclick={() => {
-                    openVersion(v.key);
-                  }}>{PAGE.playBuild}</button
-                >
-              {:else if !play}
-                <span class="dim why-not">{early(v) ? PAGE.playEarly : PAGE.playMissing}</span>
-              {/if}
-            </div>
           {/if}
         </div>
 
@@ -533,29 +503,6 @@
     font-family: var(--font-head);
     font-weight: 600;
     color: var(--text);
-  }
-
-  /* The button, and under it, centred on it, why it cannot play yet. */
-  .play {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    text-align: center;
-  }
-
-  .play button {
-    min-width: 200px;
-    padding: 10px 22px;
-    justify-content: center;
-  }
-
-  .why-not {
-    font-size: 0.8125rem;
-  }
-
-  button.why-not {
-    align-self: center;
   }
 
   .none {

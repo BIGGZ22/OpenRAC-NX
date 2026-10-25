@@ -20,7 +20,6 @@
   } from "$lib/api";
   import { app, guardShown, lookForUpdate, saveConfig } from "$lib/app.svelte";
   import { DISCORD_URL, PYTHON_URL, REPO_URL, SITE_URL } from "$lib/links";
-  import { PURIST } from "$lib/modsText";
   import { applyPalette, PALETTES } from "$lib/palettes";
   import { devBranches } from "$lib/updates";
   import { tablist } from "$lib/tabs";
@@ -45,7 +44,6 @@
     "layout",
     "theme",
     "discordRpc",
-    "purist",
     "checkUpdates",
     "updateChannel",
     "updateBranch",
@@ -425,14 +423,6 @@
           <input type="checkbox" role="switch" class="switch" bind:checked={draft.discordRpc} />
         </label>
       {/if}
-      <!-- Android too: its script mods load there (docs/port/MODS.md), native ones do not. -->
-      <label class="setting">
-        <span class="text">
-          <strong>{PURIST.title}</strong>
-          <small>{PURIST.settingsLine}</small>
-        </span>
-        <input type="checkbox" role="switch" class="switch" bind:checked={draft.purist} />
-      </label>
     </section>
 
     <section class="panel">

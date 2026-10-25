@@ -3,8 +3,8 @@
   // My mods for a game with a port. The list is an overview: a row per mod in load order with its
   // switch, its name and a line, one badge (it cannot load, an update, what it runs) and the way
   // into its own page, where its settings are (ModPage.svelte, opened through lib/modNav so Back
-  // and Escape return here). Up, down and Remove are in its menu. Adding is AddMod's. Purist mode,
-  // the launcher's one switch, starts the game with none. Every change is written at once to the
+  // and Escape return here). Up, down and Remove are in its menu. Adding is AddMod's. The Mods switch under Play
+  // on the game's page starts the game with them or with none; off, a notice here says so. Every change is written at once to the
   // list the game reads at its next start (plugins.json). A mod installed from a link keeps its
   // source, offers its updates (checked once a day here) and can be kept at its version. No folder
   // shows here: a mod's is in its page's folded About. Above the mods, for a version that has it,
@@ -45,7 +45,8 @@
   } = $props();
 
   const developer = $derived(app.config?.developer ?? false);
-  const purist = $derived(app.config?.purist ?? false);
+  /** The Mods switch under Play is off (the default): Play starts the game without these. */
+  const purist = $derived(!(app.config?.playWithMods ?? false));
 
   let mods = $state<PluginView[]>([]);
   let listError = $state<string | null>(null);
@@ -277,8 +278,8 @@
     void guardShown(api.openOutput(mod.path));
   }
 
-  async function setPurist(on: boolean) {
-    if (app.config) await saveConfig({ ...app.config, purist: on });
+  async function playWithMods() {
+    if (app.config) await saveConfig({ ...app.config, playWithMods: true });
   }
 </script>
 
@@ -325,8 +326,8 @@
 
     {#if purist && mods.length}
       <div class="notice" role="status">
-        <Icon name="info" size={16} /><span class="grow">{T.PURIST.onNotice}</span>
-        <button class="small" onclick={() => void setPurist(false)}>{T.PURIST.turnOff}</button>
+        <Icon name="info" size={16} /><span class="grow">{T.WITH_MODS.offNotice}</span>
+        <button class="small" onclick={() => void playWithMods()}>{T.WITH_MODS.turnOn}</button>
       </div>
     {/if}
 
@@ -373,7 +374,7 @@
         {#each mods as mod, i (mod.id)}
           {@const update = sources[mod.id]?.pin ? null : (updates[mod.id]?.available ?? null)}
           {@const badge = modBadge(mod, update, purist)}
-          <li class="mod" class:off={!mod.enabled || purist}>
+          <li class="mod" class:off={!mod.enabled}>
             <input
               type="checkbox"
               role="switch"
@@ -458,20 +459,6 @@
       </ul>
       {#if mods.length > 1}<p class="order" title={T.PANEL.orderTitle}>{T.PANEL.orderTitle}</p>{/if}
     {/if}
-
-    <label class="setting purist">
-      <span class="text">
-        <strong>{T.PURIST.title}</strong>
-        <small>{T.PURIST.panelLine}</small>
-      </span>
-      <input
-        type="checkbox"
-        role="switch"
-        class="switch"
-        checked={purist}
-        onchange={(e) => void setPurist(e.currentTarget.checked)}
-      />
-    </label>
   </section>
 {/if}
 
@@ -498,7 +485,7 @@
     font-size: 1rem;
   }
 
-  /* Purist mode on: says so above the list, with the way back. */
+  /* The Mods switch off: says so above the list, with the way to turn it on. */
   .notice {
     display: flex;
     align-items: center;
@@ -672,11 +659,5 @@
     padding: 4px 0;
     font-size: 0.875rem;
     color: var(--soft);
-  }
-
-  /* Purist mode: the panel's last row, under the list's rule. */
-  .purist {
-    padding-bottom: 0;
-    border-top: 1px solid var(--line);
   }
 </style>
