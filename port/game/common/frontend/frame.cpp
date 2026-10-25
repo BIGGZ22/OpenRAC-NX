@@ -1578,6 +1578,12 @@ bool finish_tick(
 }  // namespace
 
 bool prepare_frame(std::span<const std::uint8_t> ram) try {
+    // A tick prepared on an earlier vsync whose frame() never ran (an undrawn tick keeps the last
+    // picture, program/undrawn_ticks.h) is that tick's, not this one's: drawn, the galactic map's
+    // first tick showed the level's mobys from the tick before.
+    if (g) {
+        g->prepared_tick.reset();
+    }
     // Synchronous frames have no previous job to overlap, and never allocate a preparation slot.
     if (!g || !render_pending()) {
         return true;
