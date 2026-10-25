@@ -373,7 +373,7 @@
     {#each groups as g (g.id)}
       {#if g.id === "advanced"}
         <!-- Settings few need: folded, closed at first. -->
-        <details class="panel group advanced">
+        <details class="panel group advanced more">
           <summary><h3 id={`${mod.id}-g-${g.id}`}>{T.ENHANCED.advanced}</h3></summary>
           <div class="rows">
             {#each g.settings as s (s.key)}
@@ -860,13 +860,10 @@
     }
   }
 
+  /* Its heading where the other groups have theirs, the fold's chevron at the right (app.css). */
   .advanced > summary {
-    list-style-position: outside;
-    cursor: pointer;
-  }
-
-  .advanced > summary h3 {
-    display: inline;
+    min-height: 44px;
+    margin: -10px 0;
   }
 
   .advanced[open] > summary {

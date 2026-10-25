@@ -1,7 +1,7 @@
 # The launcher's look
 
 The launcher looks like [openrac.dev](https://openrac.dev): the same dark ink
-background, orange header bar, wrench, type and per-game cards. Everything
+background, orange header bar, type and per-game cards. Everything
 here comes from [OpenRAC/openrac-site](https://github.com/OpenRAC/openrac-site)
 at commit `2964d72`; when the site changes, change the files in the last
 section to match.
@@ -11,22 +11,22 @@ section to match.
 `src/app.css`, on `:root`, with the site's names (its `@theme` in
 `src/app/globals.css`):
 
-| Token                         | Value                             | Use                                                |
-| ----------------------------- | --------------------------------- | -------------------------------------------------- |
-| `--ink`                       | `#181820`                         | the page                                           |
-| `--ink-deep`                  | `#12121a`                         | inputs, job output                                 |
-| `--panel`                     | `#1d1d28`                         | panels                                             |
-| `--panel-hi`                  | `#22222f`                         | cards inside panels, buttons                       |
-| `--brand`                     | `#d58a00`                         | section numbers, the selected job                  |
-| `--amber`                     | `#ffb443`                         | links, focus rings, blockers ("needs …"), warnings |
-| `--gold`                      | `#ffd08a`                         | headings                                           |
-| `--lav`, `--soft`, `--dim`    | `#c8d2ff`, `#aab6dc`, `#8f9ac4`   | secondary text, from most to least prominent       |
-| `--line`, `--line-strong`     | `rgb(156 161 212 / .22)`, `/ .35` | borders                                            |
-| `--text`, `--body`            | `#e8f0ff`, `#c3cdea`              | text (the site's body and prose colours)           |
-| `--bar-top`, `--bar-bottom`   | `#e5a013`, `#cd8300`              | the header bar's gradient, primary buttons         |
-| `--bar-ink`, `--bar-ink-deep` | `#2a1800`, `#1b1206`              | text on the bar; the selected tab                  |
-| `--bar-name`, `--bar-button`  | `#000`, `#fff`                    | the name on the bar; the white Discord button      |
-| `--on-game`                   | `#fff`                            | text on a game's colours or picture                |
+| Token                         | Value                             | Use                                                       |
+| ----------------------------- | --------------------------------- | --------------------------------------------------------- |
+| `--ink`                       | `#181820`                         | the page                                                  |
+| `--ink-deep`                  | `#12121a`                         | inputs, job output                                        |
+| `--panel`                     | `#1d1d28`                         | panels                                                    |
+| `--panel-hi`                  | `#22222f`                         | cards inside panels, buttons                              |
+| `--brand`                     | `#d58a00`                         | section numbers, the selected job                         |
+| `--amber`                     | `#ffb443`                         | links, focus rings, blockers ("needs …"), warnings        |
+| `--gold`                      | `#ffd08a`                         | headings                                                  |
+| `--lav`, `--soft`, `--dim`    | `#c8d2ff`, `#aab6dc`, `#8f9ac4`   | secondary text, from most to least prominent              |
+| `--line`, `--line-strong`     | `rgb(156 161 212 / .22)`, `/ .35` | borders                                                   |
+| `--text`, `--body`            | `#e8f0ff`, `#c3cdea`              | text (the site's body and prose colours)                  |
+| `--bar-top`, `--bar-bottom`   | `#e5a013`, `#cd8300`              | the header bar's gradient, primary buttons                |
+| `--bar-ink`, `--bar-ink-deep` | `#2a1800`, `#1b1206`              | text on the bar; the selected tab (desktop: `--ink-deep`) |
+| `--bar-name`                  | `#000`                            | the logo on the bar (desktop: `--ink-deep`)               |
+| `--on-game`                   | `#fff`                            | text on a game's colours or picture                       |
 
 The site has no status colours; the launcher adds `--ok` (`#8fd694`), `--warn`
 (amber) and `--err` (`#ff8a7a`), used only in pills and messages. The theme is
@@ -46,6 +46,19 @@ The game's options drawer wears the same colours: Play passes them in
 `palettes.json` repeats app.css's own colours under `base`, and a test keeps
 the two equal.
 
+## Logo
+
+`src/assets/openrac-logo.svg` is the logo. `src/components/Logo.svelte` draws
+its paths as they are, in the current colour, either whole or as the mark
+alone (the "O" with the lombax's head) where the name does not fit. Its box is
+centred on the capitals of "RAC", so it lines up with text beside it; the
+ears stick out above.
+
+- Header bar: the whole logo in `--bar-name`, the version beside it.
+- Header bar under 560 px: the mark.
+- Android's rail and the first run's welcome: the mark in `--amber`, so it
+  follows the picked game's accent.
+
 ## Type
 
 | Token          | Font                   | Use                                                |
@@ -63,7 +76,7 @@ The fonts are bundled from npm (`@fontsource/audiowide`,
 
 | Site                                                                                                                                                                                                                                         | Launcher                                                                                                                                           |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Header.tsx`: the sticky orange bar, the wrench that tilts on hover, "Open**RAC**" in Audiowide, round tabs (selected: dark brown with amber text), the white Discord button                                                                 | `src/components/Header.svelte`                                                                                                                     |
+| `Header.tsx`: the sticky orange bar, the logo, round tabs (selected: dark brown with amber text), the site and Discord links                                                                                                                 | `src/components/Header.svelte`                                                                                                                     |
 | `Progress.tsx`: a game's card, a gradient from its `from` to its `to` colour, boxes with a thick border in its `border` colour, the "Progress / 59,32 %" pair, the bar with a light sweeping across it, the "… of … code bytes matched" line | `src/components/GameTile.svelte` (smaller), the band in `src/pages/GamePlayer.svelte`, `src/components/ProgressBar.svelte` and `.bar` in `app.css` |
 | `globals.css`: section numbers that count up (`01`, `02`, …), the `rise` and `sweep` animations, reduced motion                                                                                                                              | `.sec-num`, `.sections`, `.rise`, `.bar` in `app.css`                                                                                              |
 | Numbers: two decimals with a decimal comma (`59,32 %`), bytes grouped with narrow spaces                                                                                                                                                     | `src/lib/format.ts`                                                                                                                                |
@@ -78,14 +91,14 @@ is planned but not there yet.
 `src/lib/themes.ts` holds each game's `theme` from the site's
 `src/lib/projects.ts`, under OpenRAC's ids:
 
-| OpenRAC | Site         | Title font       |
-| ------- | ------------ | ---------------- |
-| `rac1`  | `rac1`       | Audiowide        |
-| `rac2`  | `gc`         | Orbitron 600     |
-| `rac3`  | `uya`        | Orbitron 600     |
-| `rac4`  | `deadlocked` | Orbitron 700     |
-| `rac5`  | `sm`         | Chakra Petch 600 |
-| `rac6`  | `sac`        | Orbitron 600     |
+| OpenRAC | Site         | Title font   |
+| ------- | ------------ | ------------ |
+| `rac1`  | `rac1`       | Audiowide    |
+| `rac2`  | `gc`         | Orbitron 600 |
+| `rac3`  | `uya`        | Orbitron 600 |
+| `rac4`  | `deadlocked` | Orbitron 700 |
+| `rac5`  | `sm`         | Orbitron 600 |
+| `rac6`  | `sac`        | Orbitron 600 |
 
 `themeStyle(id)` turns a theme into the custom properties the cards use
 (`--box`, `--bd`, `--tx`, `--tx2`, `--from`, `--to`, `--title-font`,
@@ -102,11 +115,14 @@ band and faintly behind its page. A file that is not there is left out: the
 game's colours show, as on the site.
 
 The site serves its backdrops from its server, not its repository, so a new
-one is copied from there.
+one is copied from there, and scaled to 1920 wide when it is wider: the band
+is never wider than that on screen, and a 3840 picture took long enough to
+decode that the page slid in without it and showed it a moment later.
 The game list shows each picture 64 × 44 from a thumbnail,
 `<name>-thumb.webp` (192 × 132, a few KB), so that it does not decode every
-game's full picture: `python3 scripts/media.py thumbs` makes them again after
-a picture is added or replaced. `python3 scripts/media.py still RECORDING GAME
+game's full picture; Android's game tiles show `<name>-tile.webp`, the picture
+1280 wide, for the same reason. `python3 scripts/media.py thumbs` makes both
+again after a picture is added or replaced. `python3 scripts/media.py still RECORDING GAME
 --at S` writes a picture and its thumbnail from a frame of a recording of
 your own play.
 
@@ -194,10 +210,10 @@ release, and a new file adds its line there when it is added.
 
 ## Keeping in step with the site
 
-| When the site changes                                      | Change                                                                                                                            |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `src/app/globals.css` `@theme` colours or fonts            | `src/app.css` `:root`, the tables above                                                                                           |
-| `src/lib/projects.ts` themes                               | `src/lib/themes.ts`                                                                                                               |
-| `src/components/Header.tsx`, `Progress.tsx`                | `Header.svelte`, `SideList.svelte`, `GamePlayer.svelte`                                                                           |
-| `public/wrench.webp`, `src/app/icon.png`, `apple-icon.png` | `public/`, and `npx tauri icon <1024 px png> -o src-tauri/icons` (then delete the `android/`, `ios/` and `Square*` files it adds) |
-| `DISCORD_URL`                                              | `src/lib/links.ts`                                                                                                                |
+| When the site changes                           | Change                                                                  |
+| ----------------------------------------------- | ----------------------------------------------------------------------- |
+| `src/app/globals.css` `@theme` colours or fonts | `src/app.css` `:root`, the tables above                                 |
+| `src/lib/projects.ts` themes                    | `src/lib/themes.ts`                                                     |
+| `src/components/Header.tsx`, `Progress.tsx`     | `Header.svelte`, `SideList.svelte`, `GamePlayer.svelte`                 |
+| `src/app/icon.png`, `apple-icon.png`            | nothing: the app icons are the logo's mark (see THIRD_PARTY_NOTICES.md) |
+| `DISCORD_URL`                                   | `src/lib/links.ts`                                                      |

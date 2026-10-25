@@ -181,12 +181,12 @@ class PathsTests(TempDir):
         # still written by hand.
         self.assertEqual(paths.repo_root(gen_binding.__file__), gen_binding.ROOT)
 
-    def test_a_checkout_needs_games_and_agents_md(self):
+    def test_a_checkout_needs_games_and_contributing_md(self):
         (self.dir / "a/games").mkdir(parents=True)
         (self.dir / "a/b/c").mkdir(parents=True)
         with self.assertRaises(FileNotFoundError):
             paths.repo_root(self.dir / "a/b/c")
-        (self.dir / "a/AGENTS.md").write_text("")
+        (self.dir / "a/CONTRIBUTING.md").write_text("")
         self.assertEqual(paths.repo_root(self.dir / "a/b/c"), (self.dir / "a").resolve())
 
     def test_the_launchers_bundled_copy_is_a_root(self):
@@ -195,9 +195,9 @@ class PathsTests(TempDir):
         (self.dir / "bundle/STANDALONE").write_text("")
         self.assertEqual(paths.repo_root(self.dir / "bundle/tools/openrac.py"), (self.dir / "bundle").resolve())
 
-    def test_agents_md_without_games_is_not_a_root(self):
+    def test_contributing_md_without_games_is_not_a_root(self):
         (self.dir / "x/y").mkdir(parents=True)
-        (self.dir / "x/AGENTS.md").write_text("")
+        (self.dir / "x/CONTRIBUTING.md").write_text("")
         with self.assertRaises(FileNotFoundError):
             paths.repo_root(self.dir / "x/y")
 
@@ -241,14 +241,14 @@ class BootstrapTests(TempDir):
         self.assertEqual(self.run_script(top), [top / paths.PACKAGE_DIR, top])
 
     def test_finds_the_package_in_the_launchers_bundled_copy(self):
-        # The copy has no AGENTS.md: the bootstrap finds it by the package, repo_root by STANDALONE.
+        # The copy has no CONTRIBUTING.md: the bootstrap finds it by the package, repo_root by STANDALONE.
         top = self.layout("bundle", paths.STANDALONE_MARKER).resolve()
         self.assertFalse((top / paths.CHECKOUT_MARKER).exists())
         self.assertEqual(self.run_script(top), [top / paths.PACKAGE_DIR, top])
 
     def test_the_editor_runs_from_the_launchers_bundled_copy(self):
         # The copy carries editor/ beside tools/ (openrac_common and port.py among them) and
-        # games/*/game.json, without AGENTS.md (tools/bundle_standalone.py). Every module of the
+        # games/*/game.json, without CONTRIBUTING.md (tools/bundle_standalone.py). Every module of the
         # editor imports there, takes the package from the copy, and its own port.py comes first.
         top = self.layout("bundle", paths.STANDALONE_MARKER).resolve()
         shutil.copytree(ROOT / "editor", top / "editor", ignore=shutil.ignore_patterns("__pycache__"))
@@ -307,7 +307,7 @@ RAC9 = {"id": "rac9", "title": "Nine", "versions": {
 class GamesTests(TempDir):
     def setUp(self):
         super().setUp()
-        (self.dir / "AGENTS.md").write_text("")
+        (self.dir / "CONTRIBUTING.md").write_text("")
         # rac9 is written first: the order comes from the names, not from the file system.
         for game in (RAC9, RAC8):
             self.write(f"games/{game['id']}/game.json", json.dumps(game))

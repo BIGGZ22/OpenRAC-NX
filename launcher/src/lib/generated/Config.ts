@@ -61,6 +61,11 @@ checkUpdates: boolean,
  */
 updateChannel: UpdateChannel | null, 
 /**
+ * A fork's launcher only: the branch whose development builds the development channel follows
+ * (update::UpdateSource::chosen). Unset: the one it was built from, or the default branch.
+ */
+updateBranch: string | null, 
+/**
  * Custom Discord application ID (optional).
  */
 discordClientId: string | null, 

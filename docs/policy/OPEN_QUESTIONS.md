@@ -80,7 +80,7 @@ ported functions ([games/rac1/docs/SIBLING_DECOMPS.md](../../games/rac1/docs/SIB
 maps 99.7% of the US code to PAL). Merging them into one tree that builds
 both regions needs one answer first: which compiler built the game code. The
 PAL project matches it with SN GCC 2.95.3; the US project with a patched GNU
-EE-GCC 2.9 ([docs/toolchains](../toolchains/README.md)).
+EE-GCC 2.9 ([docs/decomp/TOOLCHAINS.md](../decomp/TOOLCHAINS.md)).
 
 ## 5. Continuous integration and decomp.dev
 

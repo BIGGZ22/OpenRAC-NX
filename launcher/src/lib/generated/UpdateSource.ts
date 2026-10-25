@@ -3,13 +3,18 @@
 /**
  * Where a launcher looks for its updates, read from its manifest's address (tauri.conf.json's
  * `plugins.updater.endpoints`, set by the build to the repository that built it: a fork's
- * launcher reads the fork's releases). Shown on the Settings page, which cannot change it.
+ * launcher reads the fork's releases). Shown on the Settings page; a fork's launcher can pick
+ * another branch for its development builds there ([`UpdateSource::chosen`]).
  */
 export type UpdateSource = { 
 /**
  * `owner/name` of the GitHub repository; the address itself when it is not one.
  */
 repository: string, 
+/**
+ * A GitHub repository other than [`UPSTREAM`].
+ */
+fork: boolean, 
 /**
  * The release it reads: None for the repository's latest, else that release's tag (a
  * branch's rolling `launcher-dev-<branch>`).

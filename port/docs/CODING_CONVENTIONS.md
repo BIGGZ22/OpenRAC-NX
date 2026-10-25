@@ -13,7 +13,7 @@ this page is the foundation that conversion builds on: one layout, one way to do
 own a resource, report an error and cross into C.
 
 Anyone who touches the port follows this page: people, and any agent. It builds on
-[CONTRIBUTING.md](../../CONTRIBUTING.md), [AGENTS.md](../../AGENTS.md), the
+[CONTRIBUTING.md](../../CONTRIBUTING.md), the
 [port README](../README.md) and the port's design ([DESIGN.md](../../docs/port/DESIGN.md)), and none
 of them is loosened here. After a context compaction, read this page again from the top instead of
 working from a summary of it.
@@ -1408,7 +1408,7 @@ measurement in their comment; "faster" without a number is not a reason.
 
 ## 23. The project's constraints
 
-These come from [AGENTS.md](../../AGENTS.md), [SOURCING.md](../../docs/policy/SOURCING.md) and the
+These come from [CONTRIBUTING.md](../../CONTRIBUTING.md), [SOURCING.md](../../docs/policy/SOURCING.md) and the
 [port README](../README.md), gathered so that a review can check them in one place.
 
 1. **Licence lines.** A C++ file starts with `// SPDX-License-Identifier: GPL-3.0-or-later` and

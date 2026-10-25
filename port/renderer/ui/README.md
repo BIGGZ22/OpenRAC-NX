@@ -2,7 +2,7 @@
 
 What the game programs draw over the game's picture with the renderer's GL (`renderer/gl.h`): Dear
 ImGui's draw lists on a window whose GL is the Vulkan renderer's, the on-screen pad, the frame-rate
-counter, and the CPU-made picture of the developer level menu. Library `openrac_renderer_ui`,
+counter, the CPU-made picture of the developer level menu, and the logo these show. Library `openrac_renderer_ui`,
 namespace `openrac::renderer::ui`. It holds the GL half of these overlays only: what they show and
 when (the debug overlay's panels, the pad's layout, the menu's levels and keys) stays with the
 program in `game/common` and `platform/`. The files came from `game/common` (restructure package
@@ -14,6 +14,7 @@ P2-06), which keeps no GL call of these overlays.
 |---|---|
 | [`imgui_gl.h`](imgui_gl.h) | `imgui_gl::init`, `render`, `shutdown`: ImGui's draw data drawn through the renderer's GL, for the window where ImGui's own OpenGL backend cannot load a system GL (the Vulkan renderer's) |
 | [`touch_overlay.h`](touch_overlay.h) | `touch_overlay::draw`, `release`: the on-screen pad of `platform/touch_pad.h` drawn over the window, one glass per control |
+| [`logo.h`](logo.h) | `logo::draw`, `Mask`: the OpenRAC logo (the launcher's paths) as a coverage mask made on the CPU, the mark alone or with the name, for the pad's options button and the drawer's header |
 | [`fps_counter.h`](fps_counter.h) | `fps_counter::frame_drawn`, `draw`, `release`: the player's `show_fps` counter, counted over the frames shown, drawn in the picture's top left corner |
 | [`picture_blit.h`](picture_blit.h) | `PictureBlit`, `PictureView`, `PictureRect`: an RGBA8 picture made on the CPU, uploaded and blitted with nearest filtering into a rectangle of a framebuffer (the debug menu's level list, `game/common/debug_menu.cpp`) |
 

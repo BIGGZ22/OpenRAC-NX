@@ -1,3 +1,9 @@
+<script module lang="ts">
+  /** The entries come in one after the other only the first time a list shows: switching tabs
+   *  keeps the list where it is (app.css's slide), so it would only seem to blink. */
+  const lists = { introduced: false };
+</script>
+
 <script lang="ts">
   // The list on the left of the Games, Mods and Develop tabs: one entry per place, all the same
   // size, the open one marked (the header's selected-tab colours on the list's dark ground).
@@ -7,6 +13,7 @@
   import { onAndroid } from "$lib/api";
   import { shortTitle, type SideEntry } from "$lib/labels";
   import { hideMissing } from "$lib/media";
+  import { untrack } from "svelte";
   import Icon from "./Icon.svelte";
 
   let {
@@ -15,14 +22,53 @@
     onpick,
     label,
   }: { entries: SideEntry[]; selected: string | null; onpick: (key: string) => void; label: string } = $props();
+
+  const intro = !lists.introduced;
+  lists.introduced = true;
+
+  // The open entry's highlight slides to the entry picked, as the bar's does from tab to tab. Placed
+  // without a transition the first time, so that it does not fly in from the top.
+  let list = $state<HTMLElement | null>(null);
+  let marker = $state({ top: 0, height: 0, shown: false, moving: false });
+  let placed = false;
+  function place(key: string | null) {
+    const on = key === null ? null : list?.querySelector<HTMLElement>(`.entry[data-key="${CSS.escape(key)}"]`);
+    marker = on
+      ? { top: on.offsetTop, height: on.offsetHeight, shown: true, moving: placed }
+      : { top: 0, height: 0, shown: false, moving: false };
+    placed = !!on;
+  }
+  $effect(() => {
+    place(selected);
+  });
+  $effect(() => {
+    if (!list) return;
+    // A narrow window, or the fonts arriving, changes the entries' sizes.
+    const resized = new ResizeObserver(() => {
+      place(untrack(() => selected));
+    });
+    resized.observe(list);
+    return () => {
+      resized.disconnect();
+    };
+  });
 </script>
 
-<nav class="list" aria-label={label}>
+<nav class="list" aria-label={label} bind:this={list}>
+  <span
+    class="marker"
+    class:shown={marker.shown}
+    class:moving={marker.moving}
+    style={`transform: translateY(${marker.top}px); height: ${marker.height}px`}
+    aria-hidden="true"
+  ></span>
   {#each entries as e, i (e.key)}
     {#if e.group}<span class="group">{e.group}</span>{/if}
     <button
       class="entry"
+      class:intro
       class:on={selected === e.key}
+      data-key={e.key}
       aria-current={selected === e.key ? "page" : undefined}
       title={e.state ? `${e.name}: ${e.state.text}` : e.name}
       style={`${e.style ?? ""}; --i: ${i}`}
@@ -52,6 +98,7 @@
 
 <style>
   .list {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -73,7 +120,31 @@
     padding-top: 0;
   }
 
+  /* The open entry's ground, under the entries. */
+  .marker {
+    position: absolute;
+    top: 0;
+    left: 10px;
+    right: 10px;
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    background: var(--panel-hi);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .marker.shown {
+    opacity: 1;
+  }
+
+  .marker.moving {
+    transition:
+      transform var(--medium) var(--ease),
+      height var(--medium) var(--ease);
+  }
+
   .entry {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -89,7 +160,9 @@
       background-color 0.18s ease,
       border-color 0.18s ease,
       transform 0.18s ease;
-    /* The entries come in one after the other when the list shows. */
+  }
+
+  .entry.intro {
     animation: list-in 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
     animation-delay: calc(var(--i, 0) * 35ms);
   }
@@ -110,11 +183,6 @@
 
   .entry:active {
     transform: scale(0.98);
-  }
-
-  .entry.on {
-    background: var(--panel-hi);
-    border-color: var(--line-strong);
   }
 
   .entry.on .name {
@@ -190,6 +258,7 @@
     font-weight: 600;
     line-height: 1.3;
     color: var(--text);
+    transition: color var(--medium) var(--ease);
   }
 
   .state {
@@ -220,6 +289,11 @@
   @media (max-width: 1000px) {
     .list {
       padding: 16px 8px;
+    }
+
+    .marker {
+      left: 8px;
+      right: 8px;
     }
 
     .group {
@@ -256,7 +330,7 @@
     border-right: none;
   }
 
-  :global(html[data-platform="android"]) .group {
+  :global(html[data-platform="android"]) :is(.group, .marker) {
     display: none;
   }
 

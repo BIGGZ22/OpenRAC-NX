@@ -14,9 +14,8 @@ export interface Theme {
   /** The card's gradient, top to bottom. */
   from: string;
   to: string;
-  /** The title's typeface: the site's Audiowide for RAC1, Chakra Petch for Size Matters,
-   *  Orbitron for the others. */
-  font: "brand" | "head" | "chakra";
+  /** The title's typeface: the site's Audiowide for RAC1, Orbitron for the others. */
+  font: "brand" | "head";
   weight: number;
 }
 
@@ -69,7 +68,7 @@ export const THEMES: Record<string, Theme> = {
     text2: "#facc15",
     from: "#223342",
     to: "#131d26",
-    font: "chakra",
+    font: "head",
     weight: 600,
   },
   rac6: {
@@ -103,7 +102,7 @@ export function theme(game: string): Theme {
 /** The theme as CSS custom properties, for a style attribute (the site's names: --box, --bd, --tx, --tx2). */
 export function themeStyle(game: string): string {
   const t = theme(game);
-  const font = { brand: "var(--font-brand)", head: "var(--font-head)", chakra: "var(--font-chakra)" }[t.font];
+  const font = { brand: "var(--font-brand)", head: "var(--font-head)" }[t.font];
   return [
     `--box: ${t.box}`,
     `--bd: ${t.border}`,

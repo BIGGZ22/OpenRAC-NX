@@ -23,12 +23,17 @@
     position: sticky;
     top: 0;
     align-self: start;
-    height: calc(100vh - 60px);
+    height: calc(100vh - var(--nav-top));
     overflow-y: auto;
   }
 
   .content {
     min-width: 0;
+  }
+
+  /* The list stays put while the page beside it slides (app.css). */
+  :global(html:not([data-platform="android"])) aside {
+    view-transition-name: side;
   }
 
   @media (max-width: 1000px) {

@@ -170,6 +170,23 @@ class ProgressTests(unittest.TestCase):
         self.assertIn("label=Code&measure=matched_code_percent&version=SCUS_976.15", table)
         self.assertIn("| – | – |", table)
 
+    def test_progress_box_names_each_version_shortly(self):
+        rac1 = {"id": "rac1", "title": "Ratchet & Clank", "versions": {"pal": {}, "ntsc": {}}}
+        rac2 = {"id": "rac2", "title": "Ratchet & Clank: Going Commando", "versions": {"ntsc": {}}}
+        rac6 = {"id": "rac6", "title": "Ratchet & Clank: Secret Agent Clank", "versions": {"ntsc": {}}}
+        box = openrac.progress_box([
+            (rac1, "pal", {"serial": "SCES_509.16", "bytematch": "OpenRAC/rac1-decomp"}),
+            (rac2, "ntsc", {"serial": "SCUS_972.68", "bytematch": "OpenRAC/rac2-decomp",
+                            "source": {"name": "rac2-decomp", "repo": "https://github.com/OpenRAC/rac2-gc-decomp"}}),
+            (rac2, "ntsc", {"serial": "SCUS_000.00"}),
+            (rac6, "ntsc", {"serial": "SCUS_976.23", "bytematch": "OpenRAC/rac-sac-decomp"}),
+        ])
+        self.assertIn("<td>Ratchet &amp; Clank (PAL)</td>", box)
+        self.assertIn("<td>Going Commando</td>", box)
+        self.assertIn('href="https://bytematch.dev/OpenRAC/rac2-decomp/SCUS_972.68"', box)
+        self.assertIn('<td><a href="https://github.com/OpenRAC/rac2-gc-decomp">rac2-decomp</a></td>', box)
+        self.assertIn("color=ffb443", box)
+        self.assertEqual(box.count("<img "), 2)
 
 if __name__ == "__main__":
     unittest.main()

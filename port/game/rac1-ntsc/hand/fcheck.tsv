@@ -1,4 +1,4 @@
-# fcheck verdicts for the rows of hand.tsv (tools/fcheck_gate.py writes this; docs/workflow/BACKFILL.md, "The gate"). Only status same is done.
+# fcheck verdicts for the rows of hand.tsv (tools/fcheck_gate.py writes this; docs/port/BACKFILL.md, "The gate"). Only status same is done.
 # name	status	date	fcheck	csum	note
 FUN_001f9a10	unchecked	2026-10-18		5503ead576c6	no US oracle (fcheck has no interpreter build for the NTSC-U disc)
 FUN_001f9a28	unchecked	2026-10-18		5503ead576c6	no US oracle (fcheck has no interpreter build for the NTSC-U disc)

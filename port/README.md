@@ -195,7 +195,7 @@ with the player position to distinguish device input from game-state bugs.
 
 ## Rules
 
-OpenRAC's rules hold here ([AGENTS.md](../AGENTS.md),
+OpenRAC's rules hold here ([CONTRIBUTING.md](../CONTRIBUTING.md),
 [SOURCING.md](../docs/policy/SOURCING.md)): nothing from a disc is ever
 committed (no data, code bytes, microcode or media), and the library
 replacements are written from what the game's own code shows and what is

@@ -4,12 +4,15 @@
   // that saves them stays in view at the bottom of the window. With `setup`,
   // the first-run screen: one question (the games folder), and what was found by itself, folded.
   import GpuDrivers from "$components/GpuDrivers.svelte";
+  import Logo from "$components/Logo.svelte";
   import PathField from "$components/PathField.svelte";
   import {
     api,
     errorText,
     onAndroid,
+    updateBranchOf,
     updateChannelOf,
+    updateSourceOf,
     type Check,
     type Config,
     type Detected,
@@ -19,6 +22,7 @@
   import { DISCORD_URL, PYTHON_URL, REPO_URL, SITE_URL } from "$lib/links";
   import { PURIST } from "$lib/modsText";
   import { applyPalette, PALETTES } from "$lib/palettes";
+  import { devBranches } from "$lib/updates";
   import { tablist } from "$lib/tabs";
 
   let { setup = false }: { setup?: boolean } = $props();
@@ -44,6 +48,7 @@
     "purist",
     "checkUpdates",
     "updateChannel",
+    "updateBranch",
     "detailedGameLog",
     "renderer",
     "saveEditorAdvanced",
@@ -79,14 +84,24 @@
 
   /** The update channel as this page has it, saved or not. */
   const channel = $derived<UpdateChannel>(app.info ? updateChannelOf(app.info, draft) : "stable");
+  /** Where the launcher looks for updates as this page has it: the channel, and a fork's branch. */
+  const source = $derived(app.info ? updateSourceOf(app.info, draft) : null);
   /** The branch the development builds come from, as the release's tag names it. */
-  const devBranch = $derived(app.info?.updateChannels.dev.channel?.replace(/^launcher-dev-/, "") ?? "master");
+  const devBranch = $derived(source?.channel?.replace(/^launcher-dev-/, "") ?? "master");
+  /** The branch the fork's development builds follow when none is named: the one it was built from. */
+  const builtBranch = $derived(app.info?.updateChannels.dev.channel?.replace(/^launcher-dev-/, "") ?? "master");
+  /** A fork's branches with development builds, offered beside the field (asked once, when it shows). */
+  let branches = $state<string[]>([]);
+  $effect(() => {
+    const dev = app.info?.updateChannels.dev;
+    if (channel === "dev" && dev?.fork && !branches.length) void devBranches(dev).then((b) => (branches = b));
+  });
 
   async function checkNow() {
     looked = "looking";
     try {
-      // The channel chosen here, before it is saved too.
-      looked = (await lookForUpdate(channel)) ? "found" : "none";
+      // The channel and branch chosen here, before they are saved too.
+      looked = (await lookForUpdate(draft)) ? "found" : "none";
     } catch (e) {
       lookError = errorText(e);
       looked = "failed";
@@ -166,11 +181,12 @@
     saving = true;
     let customId: string | null = draft.discordClientId?.trim() ?? null;
     if (customId === "") customId = null;
-    const before = app.info ? updateChannelOf(app.info, app.config) : null;
+    const before = app.info ? updateSourceOf(app.info, app.config).manifest : null;
     const written = await saveConfig({
       ...saved(),
       ...edited(draft),
       discordClientId: customId,
+      updateBranch: updateBranchOf(draft),
       setupComplete: (app.config?.setupComplete ?? false) || finish,
     });
     if (!written) {
@@ -180,8 +196,8 @@
       return;
     }
     draft = saved();
-    // Another channel: what was found on the last one is not what this one offers.
-    if (app.info && before !== updateChannelOf(app.info, app.config)) {
+    // Another channel or branch: what was found on the last one is not what this one offers.
+    if (app.info && before !== updateSourceOf(app.info, app.config).manifest) {
       app.update = null;
       looked = "idle";
       if (app.config?.checkUpdates) lookForUpdate().catch(() => undefined);
@@ -194,7 +210,7 @@
 <div class="page">
   {#if setup}
     <section class="welcome rise">
-      <img src="/wrench.webp" alt="" width="72" height="72" />
+      <Logo mark height={72} label="" />
       <div>
         <h1>Welcome to OpenRAC</h1>
         <p class="muted">Play the Ratchet &amp; Clank games natively, with your own discs.</p>
@@ -449,6 +465,30 @@
             >
           </div>
         </div>
+        <!-- A fork's launcher may follow any branch of the fork that CI builds (launcher.yml publishes
+             each one's rolling launcher-dev-<branch> release); OpenRAC's own follows master. -->
+        {#if channel === "dev" && app.info.updateChannels.dev.fork}
+          <div class="field">
+            <label for="update-branch">Branch</label>
+            <input
+              id="update-branch"
+              type="text"
+              class="mono"
+              list="update-branches"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder={`Empty: ${builtBranch}`}
+              bind:value={draft.updateBranch}
+            />
+            <datalist id="update-branches">
+              {#each branches as branch (branch)}<option value={branch}></option>{/each}
+            </datalist>
+            <p class="dim note">
+              Development builds of this branch of <span class="mono">{app.info.updateChannels.dev.repository}</span>;
+              only a build newer than yours installs.
+            </p>
+          </div>
+        {/if}
       {/if}
       <p class="dim note status">
         <button class="link" disabled={looked === "looking"} onclick={() => void checkNow()}>Check now</button>
@@ -456,8 +496,7 @@
             "A new version"} is out.
           <button class="link" onclick={() => (app.showUpdateModal = true)}>Update</button>{:else if looked === "none"}·
           You have the latest ({app.info?.version ?? ""}).{:else if looked === "failed"}· Could not check: {lookError}.{/if}
-        {#if app.info?.updateChannels}
-          {@const source = app.info.updateChannels[channel]}
+        {#if source}
           · <button class="link" onclick={() => void api.openUrl(source.page)}>Releases</button>
           {#if draft.developer}
             · <span class="mono">github.com/{source.repository} · {source.channel ?? "latest release"}</span>
@@ -644,8 +683,15 @@
     align-items: center;
     padding: 24px;
     border-radius: 30px;
-    background: radial-gradient(80% 90% at 80% 0, rgb(213 138 0 / 0.28), transparent 70%), var(--panel);
+    background:
+      radial-gradient(80% 90% at 80% 0, color-mix(in srgb, var(--brand) 28%, transparent), transparent 70%),
+      var(--panel);
     border: 1px solid var(--line);
+  }
+
+  /* The logo's mark in the accent, beside the welcome that names it. */
+  .welcome :global(.logo) {
+    color: var(--amber);
   }
 
   .welcome h1 {

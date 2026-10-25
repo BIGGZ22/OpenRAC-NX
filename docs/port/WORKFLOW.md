@@ -48,8 +48,9 @@ Players describe what they see, not what broke. Before reproducing, know:
   settles most questions; players can drop one in the repository root or
   send it.
 - **Their save.** A memory card takes other paths through the menus than
-  `--no-card`. Their cards are in `<data home>/OpenRAC/memcard/<serial>`:
-  copy the folder to a scratch place and pass `--cards <copy>/<serial>`.
+  `--no-card`. Their cards are in `<data home>/memcard/<serial>`
+  ([SETTINGS.md](SETTINGS.md) says where that is): copy the folder to a
+  scratch place and pass `--cards <copy>/<serial>`.
   Never run against the original.
 - **Whether the game does it too.** Some reports describe how the game
   always behaved. The HUD is one: in play it stays hidden and shows only
@@ -239,7 +240,7 @@ commit.
   version bumped in four files, a `launcher-vX.Y.Z` tag, the CI's draft
   checked, then published with notes written for players.
 - **Before a sync or merge from another project**, run the removal-request
-  check ([AGENTS.md](../../AGENTS.md), rule 2) on what came in.
+  check ([CONTRIBUTING.md](../../CONTRIBUTING.md#ground-rules)) on what came in.
 
 ## 8. Working with several people or agents
 

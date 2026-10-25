@@ -6,12 +6,14 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <string>
 #include <vector>
 
 #include "common/log.h"
 #include "renderer/gl.h"
 #include "renderer/shader.h"
+#include "renderer/ui/logo.h"
 
 namespace openrac::renderer::ui::touch_overlay {
 namespace {
@@ -21,8 +23,9 @@ using platform::Button;
 using platform::TouchControl;
 
 // One quad per control, its shape and symbol drawn by the fragment shader from signed distances
-// in the quad's own coordinates (antialiased by the pixel's size), so there is no texture to make.
-// The d-pad's arms sit on one plate, drawn first.
+// in the quad's own coordinates (antialiased by the pixel's size). The options button's symbol is
+// the one picture: the logo's mark (logo.h), made at the button's size. The d-pad's arms sit on
+// one plate, drawn first.
 constexpr const char* kVertex = R"glsl(#version 410 core
 uniform vec4 box;     // the control's box in device coordinates: centre x, y, half width, half height
 uniform vec2 extent;  // its half width and height in radii
@@ -44,6 +47,8 @@ uniform vec2 knob;     // a stick's knob, -1..1 of the circle
 uniform float angle;   // an arrow's direction, in radians clockwise from up
 uniform int label0;    // two letters (letter()), -1 for none
 uniform int label1;
+uniform sampler2D tex_T0;  // the logo's mark, its coverage in alpha
+uniform vec2 logo_half;    // the mark's half width and height in radii
 out vec4 colour;
 
 // smoothstep() is undefined with equal edges: where d is flat across a pixel (fwidth 0, far from
@@ -173,9 +178,13 @@ void main() {
             vec2 t = vec2(q.y, -q.x) + vec2(0.0, -0.04);
             s = max(abs(t.x) * 0.9 - t.y * 0.45, t.y - 0.16) - 0.20;
             ink.rgb = vec3(0.92);
-        } else if (symbol == 10) { // the port's options: three bars
-            vec2 r = vec2(q.x, q.y - clamp(floor(q.y / 0.26 + 0.5), -1.0, 1.0) * 0.26);
-            s = pill(r, 0.24, 0.055);
+        }
+        // The port's options: the logo's mark, its coverage read from the picture.
+        float mark = -1.0;
+        if (symbol == 10) {
+            vec2 uv = q / logo_half * 0.5 + 0.5;
+            bool inside = all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0)));
+            mark = inside ? texture(tex_T0, uv).a : 0.0;
             ink.rgb = vec3(0.92);
         }
         if (label0 >= 0) {        // the shoulders: their name
@@ -192,7 +201,7 @@ void main() {
             c = over(c, vec4(vec3(0.0), 0.45 * ink.a * fill(s - 0.02) * (1.0 - fill(s))));
         }
         ink.a *= 0.75 + 0.25 * held;
-        c = over(c, vec4(ink.rgb, ink.a * fill(s)));
+        c = over(c, vec4(ink.rgb, ink.a * (mark >= 0.0 ? mark : fill(s))));
         // The glow of a press, outside the outline.
         c = over(vec4(accent, 0.40 * held * (1.0 - smoothstep(0.0, 0.18, d)) * step(0.0, d)), c);
     }
@@ -231,7 +240,14 @@ struct State {
     // when the pad was last drawn.
     std::vector<float> press;
     std::chrono::steady_clock::time_point last{};
+    // The logo's mark for the options button, and the height in pixels it was made at.
+    GLuint mark = 0;
+    int mark_height = 0;
+    float mark_aspect = 1.0f;
 };
+
+// The mark's half height on the options button, in radii: as large as the face buttons' symbols.
+constexpr float kMarkHalf = 0.44f;
 
 // The seconds a let-go control takes to ease most of the way out.
 constexpr float kPressEase = 0.06f;
@@ -270,6 +286,44 @@ Look look(const TouchControl& c) {
         case Button::Start: return {kStart, 0.95f, 0.92f, 0.88f};
         default: return {kNone, 0.9f, 0.9f, 0.9f};
     }
+}
+
+// The options button's mark made `height` pixels high, white with the logo's coverage as alpha,
+// when it is not that size yet.
+void make_mark(int height) {
+    height = std::max(height, 8);
+    if (s.mark != 0 && s.mark_height == height) {
+        return;
+    }
+    const logo::Mask mask = logo::draw(height, false);
+    std::vector<std::uint8_t> rgba(mask.alpha.size() * 4, 255);
+    for (std::size_t i = 0; i < mask.alpha.size(); ++i) {
+        rgba[i * 4 + 3] = mask.alpha[i];
+    }
+    if (s.mark == 0) {
+        glGenTextures(1, &s.mark);
+    }
+    glBindTexture(GL_TEXTURE_2D, s.mark);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        static_cast<GLint>(GL_RGBA8),
+        mask.width,
+        mask.height,
+        0,
+        GL_RGBA,
+        GL_UNSIGNED_BYTE,
+        rgba.data()
+    );
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(GL_LINEAR));
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(GL_LINEAR));
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, static_cast<GLint>(GL_CLAMP_TO_EDGE));
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, static_cast<GLint>(GL_CLAMP_TO_EDGE));
+    glBindTexture(GL_TEXTURE_2D, 0);
+    s.mark_height = height;
+    s.mark_aspect = static_cast<float>(mask.width) / static_cast<float>(mask.height);
 }
 
 bool is_arm(const TouchControl& c) {
@@ -363,6 +417,13 @@ void draw(platform::TouchPad& touch, int width, int height) {
             continue;
         }
         const Look l = look(c);
+        if (l.symbol == kMenu) {
+            const float mark_height = 2.0f * kMarkHalf * c.radius * static_cast<float>(height);
+            make_mark(static_cast<int>(std::lround(mark_height)));
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, s.mark);
+            glUniform2f(s.shader.uniform("logo_half"), kMarkHalf * s.mark_aspect, kMarkHalf);
+        }
         box(c.x, c.y, c.radius, c.stretch, 1.2f);
         glUniform3f(s.shader.uniform("tint"), l.r, l.g, l.b);
         float& press = s.press[i];
@@ -378,6 +439,7 @@ void draw(platform::TouchPad& touch, int width, int height) {
         glUniform2f(s.shader.uniform("knob"), dx / c.radius, dy / c.radius);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
+    glBindTexture(GL_TEXTURE_2D, 0);
     glBindVertexArray(0);
     glDisable(GL_BLEND);
 }
@@ -386,6 +448,9 @@ void release() {
     s.shader.release();
     if (s.vao != 0) {
         glDeleteVertexArrays(1, &s.vao);
+    }
+    if (s.mark != 0) {
+        glDeleteTextures(1, &s.mark);
     }
     s = State{};
 }

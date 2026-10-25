@@ -4,7 +4,7 @@
 """
 The gate for backfilled (functional) C: a function counts as done only when
 fcheck says SAME on real calls of the retail game; one fcheck cannot reach is
-"unchecked", never done (docs/workflow/BACKFILL.md).
+"unchecked", never done (docs/port/BACKFILL.md).
 
   /opt/homebrew/bin/python3 tools/fcheck_gate.py run                   PAL: check every row of games/rac1/nonmatching/functional.tsv
   /opt/homebrew/bin/python3 tools/fcheck_gate.py run --only func_001F7E98 ...
@@ -78,7 +78,7 @@ US_VERDICTS = ROOT / "port/game/rac1-ntsc/hand/fcheck.tsv"
 PYTHON = "/opt/homebrew/bin/python3"
 HEADER = "name\tstatus\tdate\tfcheck\tcsum\tnote"
 HEAD_COMMENT = ("# fcheck verdicts for the rows of {table} (tools/fcheck_gate.py writes this; "
-                "docs/workflow/BACKFILL.md, \"The gate\"). Only status same is done.")
+                "docs/port/BACKFILL.md, \"The gate\"). Only status same is done.")
 STATUSES = ("same", "differs", "unchecked", "no-states", "not-executable")
 EXECUTABLE = re.compile(r"func_[0-9A-F]{8}")
 NO_US_ORACLE = "no US oracle (fcheck has no interpreter build for the NTSC-U disc)"
@@ -158,7 +158,7 @@ def decomp_root() -> Path:
     """rac1-decomp's checkout: $OPENRAC_DECOMP when set and not empty, else rac1/pal's sister
     checkout by the rule every tool follows (games.source_checkout: $OPENRAC_SOURCE_RAC1_PAL, else
     game.json's checkout). OPENRAC_DECOMP is kept, and wins, because the gate's users and
-    docs/workflow/BACKFILL.md already name it."""
+    docs/port/BACKFILL.md already name it."""
     override = os.environ.get("OPENRAC_DECOMP")
     if override:
         return Path(override)

@@ -92,6 +92,7 @@ export function isNewerVersion(current: string, latest: string): boolean {
 /** The releases of the repository that built this launcher (OpenRAC's when it is not known). */
 const DEFAULT_SOURCE: UpdateSource = {
   repository: "OpenRAC/OpenRAC",
+  fork: false,
   channel: null,
   manifest: "https://github.com/OpenRAC/OpenRAC/releases/latest/download/latest.json",
   page: "https://github.com/OpenRAC/OpenRAC/releases",
@@ -169,6 +170,25 @@ export async function checkGitHubRelease(
   }
 }
 
+/** The branches of SOURCE's repository with development builds (their rolling `launcher-dev-*`
+ *  releases), newest first, as their tags name them: what a fork's player may follow (Settings).
+ *  Empty when GitHub cannot be asked. */
+export async function devBranches(source: UpdateSource): Promise<string[]> {
+  if (!inTauri) return (await import("./mock")).MOCK_DEV_BRANCHES;
+  if (!/^[\w.-]+\/[\w.-]+$/.test(source.repository)) return [];
+  try {
+    const res = await fetch(`https://api.github.com/repos/${source.repository}/releases?per_page=100`, {
+      headers: { Accept: "application/vnd.github.v3+json" },
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) return [];
+    const releases = (await res.json()) as GitHubReleaseResponse[];
+    return releases.flatMap((r) => (r.tag_name?.startsWith("launcher-dev-") ? [r.tag_name.slice(13)] : []));
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Checks for updates using the official Tauri updater plugin first.
  * Falls back to checking GitHub Releases API if running in browser or if updater is unavailable.
@@ -178,6 +198,7 @@ export async function checkForUpdate(
   currentVersion: string,
   source: UpdateSource = DEFAULT_SOURCE,
   channel: UpdateChannel = source.channel ? "dev" : "stable",
+  branch: string | null = null,
 ): Promise<UpdateInfo | null> {
   if (!inTauri) {
     // The browser preview's own answer (?update, ?latest, ?offline), when it has one.
@@ -190,7 +211,7 @@ export async function checkForUpdate(
     // The chosen channel's manifest in the repository that built it (a fork's) is the one answer:
     // GitHub's latest release may be another channel's, which this launcher cannot install from.
     activeAndroidRelease = null;
-    const release = await api.updateCheck(channel);
+    const release = await api.updateCheck(channel, branch);
     activeAndroidRelease = release;
     if (!release) return null;
     return {
@@ -207,7 +228,7 @@ export async function checkForUpdate(
     try {
       // Asked at the chosen channel's manifest (src-tauri/src/lib.rs, launcher_update_check), not
       // only the one it was built with.
-      const found = await api.launcherUpdateCheck(channel);
+      const found = await api.launcherUpdateCheck(channel, branch);
       if (found) {
         const update = new Update(found);
         activeTauriUpdate = update;

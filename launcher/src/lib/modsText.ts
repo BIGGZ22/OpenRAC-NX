@@ -66,7 +66,7 @@ export const PAGE = {
   /** Under Play with mods when it cannot start. */
   playEarly: "Not playable yet",
   playMissing: "Not on this computer yet",
-  playBuild: "Build the game first, on its page",
+  playBuild: "Build the game first ›",
   earlyTitle: "Early access",
   earlyLine:
     "Its levels open in Godot and you can make texture and model packs. Packing level edits and playing come later.",

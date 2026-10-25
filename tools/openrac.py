@@ -310,12 +310,58 @@ def source_table() -> str:
     return "\n".join(out) + "\n"
 
 
+# Versions the README's progress leaves out for now: Secret Agent Clank, until bytematch.dev has
+# its reports (its badge says "version not found" until then).
+PROGRESS_HIDDEN = {"SCUS_976.23"}
+
+
+def short_title(game: dict, name: str) -> str:
+    """A game's name in the README's progress: its title without the series ("Going Commando"),
+    and the version ("PAL") when the game has more than one."""
+    title = game["title"]
+    for series in ("Ratchet & Clank: ", "Ratchet: "):
+        title = title.removeprefix(series)
+    return f"{title} ({name.upper()})" if len(game["versions"]) > 1 else title
+
+
+def progress_box(versions) -> str:
+    """The README's compact progress: a table the page's width, one row per version with a
+    ByteMatch project: its name, the decompilation project it comes from, and a live
+    bytematch.dev badge of the code it has matched, in the launcher's amber: light enough that
+    the badge writes its figure in dark text (it has no option for the text's colour). VERSIONS
+    is games.versions()."""
+    rows = []
+    for game, name, v in versions:
+        slug = v.get("bytematch")
+        if not slug or v["serial"] in PROGRESS_HIDDEN:
+            continue
+        title = short_title(game, name)
+        source = v.get("source") or {}
+        # The NTSC decomp is shown as its project, at the workspace owner's request.
+        label = "Lombyte Project" if (game["id"], name) == ("rac1", "ntsc") else source.get("name")
+        project = f'<a href="{source["repo"]}">{label}</a>' if source.get("repo") else "–"
+        query = urlencode({"mode": "shield", "label": "", "measure": "matched_code_percent",
+                           "version": v["serial"], "color": "ffb443", "style": "flat-square"})
+        badge = (f'<a href="https://bytematch.dev/{slug}/{v["serial"]}">'
+                 f'<img src="https://bytematch.dev/{slug}.svg?{query.replace("&", "&amp;")}" '
+                 f'alt="{title}: code decompiled"></a>')
+        rows.append(f'  <tr><td>{title.replace("&", "&amp;")}</td><td>{project}</td>'
+                    f'<td align="right">{badge}</td></tr>')
+    # GitHub sizes a table to its content, whatever its own width says: the columns' widths make
+    # it as wide as the README's column.
+    return ('<table>\n'
+            '  <tr><th align="left" width="260">Game</th><th align="left" width="270">Project</th>'
+            '<th align="right" width="190">Code decompiled</th></tr>\n'
+            + "\n".join(rows) + "\n</table>\n")
+
+
 def tables() -> None:
     """Rewrite every <!-- NAME:begin --> ... <!-- NAME:end --> block in README.md and
     baserom/README.md with the table of that name."""
     summary = PROGRESS / "summary.json"
     rows = [(g, n, v, measure(v, games.source_checkout(g["id"], n))) for g, n, v in games.versions()]
     made = {"games": game_table(), "discs": disc_table(), "boot": boot_table(), "sources": source_table(),
+            "badges": progress_box(games.versions()),
             "progress": render(rows, dates=False, badges=True) if summary.exists() else None}
     for doc in (ROOT / "README.md", BASEROM / "README.md", GAMES / "README.md", ROOT / "docs/SOURCES.md"):
         if not doc.exists():

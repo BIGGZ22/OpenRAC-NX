@@ -1,6 +1,6 @@
 <script lang="ts">
   // The website's sticky orange bar (openrac-site src/components/Header.tsx):
-  // the wrench, "OpenRAC" in Audiowide, round tabs, a white Discord button.
+  // the OpenRAC logo in the bar's ink, and round pills in a shade of it: the tabs, the site, Discord.
   // On Android the same places are a navigation rail on the left, or a bar at the bottom when
   // the window is narrow, as Android's own apps have them (Material's navigation rail and bar).
   import { api, inTauri, onAndroid } from "$lib/api";
@@ -8,9 +8,12 @@
   import { DISCORD_URL, SITE_URL } from "$lib/links";
   import { untrack } from "svelte";
   import Icon, { type IconName } from "./Icon.svelte";
+  import Logo from "./Logo.svelte";
 
   /** The first run: the bar with the name only, nothing to go to yet. */
-  let { setup = false }: { setup?: boolean } = $props();
+  /** `shown`: the page on screen, which follows app.page inside a page's slide (App.svelte), so that
+   *  the tabs change with the page rather than a moment before it. */
+  let { setup = false, shown }: { setup?: boolean; shown?: Page } = $props();
 
   // A player has three places to be: the games, modding and the settings. What the launcher
   // ran (Activity) opens from the running job here and from a game's menu. With
@@ -28,7 +31,10 @@
   const running = $derived(runningJob());
   const pending = $derived(pendingJobs());
   /** The tab that is open: a game's page belongs to the games. */
-  const current = $derived<Page>(app.page === "game" ? "library" : app.page);
+  const current = $derived.by<Page>(() => {
+    const page = shown ?? app.page;
+    return page === "game" ? "library" : page;
+  });
 
   // The bar's tabs share one highlight that slides to the tab opened. Placed without a
   // transition the first time, so that it does not fly in from the left edge.
@@ -63,11 +69,9 @@
   <!-- The first run: the name, not yet a way back to the games. -->
   {#if setup}
     <div class="brand" title={app.info?.version ? `OpenRAC Launcher ${app.info.version}` : undefined}>
-      <img src="/wrench.webp" alt="" width="40" height="40" />
-      <span>Open<b>RAC</b></span>
-      <small
-        >Launcher{#if app.info?.version}<span class="ver">{app.info.version}</span>{/if}</small
-      >
+      <Logo height={34} />
+      <span class="brand-mark"><Logo mark height={37} label="" /></span>
+      {#if app.info?.version}<small class="ver">{app.info.version}</small>{/if}
     </div>
   {:else}
     <button
@@ -76,13 +80,11 @@
       aria-label="OpenRAC: your games"
       title={app.info?.version ? `OpenRAC Launcher ${app.info.version}` : undefined}
     >
-      <img src="/wrench.webp" alt="" width="40" height="40" />
-      <span>Open<b>RAC</b></span>
-      <!-- The launcher's version beside its name, on every page (also in the tooltip, for a narrow
-           window that hides the tag). -->
-      <small
-        >Launcher{#if app.info?.version}<span class="ver">{app.info.version}</span>{/if}</small
-      >
+      <Logo height={34} />
+      <span class="brand-mark"><Logo mark height={37} label="" /></span>
+      <!-- The launcher's version beside the logo, on every page (also in the tooltip, for a phone's
+           width, which shows the mark alone). -->
+      {#if app.info?.version}<small class="ver">{app.info.version}</small>{/if}
     </button>
   {/if}
 
@@ -150,24 +152,38 @@
     {/if}
     {#if !inTauri}<span class="preview">Browser preview</span>{/if}
     {#if !onAndroid}
-      <button class="site" onclick={() => void api.openUrl(SITE_URL)} aria-label="openrac.dev" title="openrac.dev"
-        ><Icon name="external" size={14} /><span class="label">openrac.dev</span></button
-      >
-      <!-- The community: the site's white button, with Discord's mark, which tilts like the wrench. -->
-      <button class="discord" onclick={() => void api.openUrl(DISCORD_URL)} aria-label="Join the OpenRAC Discord">
-        <svg class="mark" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path
-            d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"
-            fill="currentColor"
-          />
-        </svg>
-        <span class="label">Discord</span>
-      </button>
+      <!-- Where OpenRAC lives: the site and the community, two marks in one capsule of the selected
+           tab's dark brown. -->
+      <div class="links">
+        <button class="site" onclick={() => void api.openUrl(SITE_URL)} aria-label="openrac.dev" title="openrac.dev"
+          ><Icon name="globe" size={18} /></button
+        >
+        <button
+          class="discord"
+          onclick={() => void api.openUrl(DISCORD_URL)}
+          aria-label="Join the OpenRAC Discord"
+          title="Discord"
+        >
+          <svg class="mark" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path
+              d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+      </div>
     {/if}
   </div>
 </header>
 
 <style>
+  /* On a desktop the bar writes in the theme's page colour, so the logo and the dark chips match
+     the window under them; Android keeps the picked game's own ink. */
+  :global(html:not([data-platform="android"])) .site-header {
+    --bar-ink-deep: var(--ink-deep);
+    --bar-name: var(--ink-deep);
+  }
+
   .site-header {
     position: relative;
     z-index: 20;
@@ -175,10 +191,11 @@
     align-items: center;
     gap: 22px;
     flex: none;
-    height: 60px;
+    height: var(--nav-top);
     width: 100%;
     padding: 0 18px;
-    background: linear-gradient(to bottom, var(--bar-top), var(--bar-bottom));
+    /* Wide stripes of two close golds: the bar's colour, quieter than one bright yellow. */
+    background: repeating-linear-gradient(35deg, var(--bar-stripe) 0 20px, var(--bar-stripe-alt) 20px 40px);
     border-bottom: 1px solid rgb(0 0 0 / 0.3);
     color: var(--bar-name);
     box-shadow:
@@ -201,66 +218,48 @@
     outline-offset: 2px;
   }
 
+  /* The logo in the bar's ink: the accent is the bar itself. */
   .brand {
     display: inline-flex;
     align-items: center;
     flex-shrink: 0;
     gap: 8px;
-    font-family: var(--font-brand);
-    font-size: 1.625rem;
-    font-weight: 400;
     color: var(--bar-name);
   }
 
-  .brand b {
-    font-weight: 400;
+  /* Its mark alone, for a window too narrow for the name (below). */
+  .brand .brand-mark {
+    display: none;
   }
 
-  /* The wrench turns in when the launcher opens, and again under the pointer or a press (not on
-     Android, below). */
-  .brand img {
-    width: 40px;
-    height: 40px;
-    transition: transform var(--slow) var(--ease);
-    animation: wrench-in 0.9s var(--ease) both;
+  /* The logo comes in when the launcher opens (not on Android, below), and then holds still: its
+     mark is the "O" of the name, so it cannot move on its own. */
+  .brand :global(.logo) {
+    animation: logo-in 0.7s var(--ease) both;
   }
 
-  .brand:active img {
-    transform: rotate(-25deg) scale(1.1);
-  }
-
-  @media (hover: hover) {
-    .brand:hover img {
-      transform: rotate(-25deg) scale(1.1);
-    }
-  }
-
-  @keyframes wrench-in {
+  @keyframes logo-in {
     from {
       opacity: 0;
-      transform: rotate(-120deg) scale(0.6);
+      transform: translateX(-8px);
     }
   }
 
-  .brand small {
-    font-family: var(--font-head);
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--bar-ink);
-    border: 1px solid rgb(0 0 0 / 0.3);
-    border-radius: 999px;
-    padding: 2px 8px;
-    margin-left: 4px;
-  }
-
+  /* The version beside the logo, as tall as the capitals of "RAC" and level with them (the logo's
+     box is centred on its letters: Logo.svelte), in the selected tab's dark brown and gold. */
   .brand .ver {
-    margin-left: 6px;
-    padding-left: 6px;
-    border-left: 1px solid rgb(0 0 0 / 0.3);
-    letter-spacing: 0.06em;
-    text-transform: none;
+    display: inline-flex;
+    align-items: center;
+    height: 15px;
+    padding: 0 6px;
+    margin-left: 2px;
+    border-radius: 999px;
+    background: var(--bar-ink-deep);
+    color: var(--gold);
+    font-size: 0.625rem;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
   }
 
   nav {
@@ -295,9 +294,10 @@
   .tab {
     position: relative;
     border-radius: 999px;
-    padding: 7px 15px;
+    padding: 5px 14px;
     font-size: 0.9375rem;
-    font-weight: 500;
+    /* Heavier than the page's text, to stand beside the logo's strokes. */
+    font-weight: 600;
     color: var(--bar-ink);
     transition: color var(--medium) var(--ease);
   }
@@ -351,74 +351,62 @@
   }
 
   .preview {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgb(0 0 0 / 0.12);
     font-size: 0.75rem;
     font-weight: 700;
-    color: var(--bar-ink);
-    border: 1px dashed rgb(0 0 0 / 0.4);
-    border-radius: 999px;
-    padding: 3px 10px;
-  }
-
-  .site {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--bar-ink);
-    padding: 7px 10px;
-    border-radius: 999px;
-  }
-
-  @media (hover: hover) {
-    .site:hover {
-      background: rgb(0 0 0 / 0.1);
-    }
-  }
-
-  /* Discord: the site's white button, raised a little off the bar, its mark in the bar's ink. */
-  .discord {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.875rem;
-    font-weight: 700;
-    background: var(--bar-button);
     color: var(--bar-ink-deep);
-    border: 1px solid rgb(0 0 0 / 0.12);
+  }
+
+  /* A capsule as tall as the tabs, in the selected tab's dark brown, its marks in gold that turn
+     amber on a lighter round under the pointer. */
+  .links {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 30px;
+    padding: 0 3px;
     border-radius: 999px;
-    padding: 6px 16px 6px 12px;
-    box-shadow:
-      0 2px 0 rgb(0 0 0 / 0.18),
-      inset 0 -2px 0 rgb(0 0 0 / 0.06);
+    background: var(--bar-ink-deep);
+  }
+
+  .site,
+  .discord {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    color: var(--gold);
     transition:
-      transform 0.15s ease,
-      box-shadow 0.15s ease,
-      background 0.15s ease;
+      background var(--fast) var(--ease),
+      color var(--fast) var(--ease);
   }
 
   .discord .mark {
-    flex: none;
-    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: transform var(--medium) var(--ease);
   }
 
   @media (hover: hover) {
+    .site:hover,
     .discord:hover {
-      transform: translateY(-1px);
-      background: var(--bar-ink-deep);
-      color: var(--bar-button);
-      box-shadow: 0 6px 16px rgb(0 0 0 / 0.28);
+      background: rgb(255 255 255 / 0.1);
+      color: var(--amber);
     }
 
     .discord:hover .mark {
       transform: rotate(-12deg) scale(1.08);
-      color: var(--gold);
     }
   }
 
+  .site:active,
   .discord:active {
-    transform: translateY(1px);
-    box-shadow: 0 1px 0 rgb(0 0 0 / 0.2);
+    background: rgb(255 255 255 / 0.1);
+    color: var(--amber);
   }
 
   /* An update: the selected tab's dark brown and gold, with a dot that pulses. */
@@ -432,13 +420,15 @@
     color: var(--gold);
     border: 1px solid rgb(0 0 0 / 0.3);
     border-radius: 999px;
-    padding: 6px 14px 6px 11px;
-    transition: transform 0.15s ease;
+    padding: 4px 14px 4px 11px;
+    transition: color var(--fast);
   }
 
+  /* Under the pointer only its gold brightens: no blue edge (app.css's buttons) and no lift, which
+     moved it by a pixel and left its text redrawn a little differently. */
   @media (hover: hover) {
     .update:hover {
-      transform: translateY(-1px);
+      border-color: rgb(0 0 0 / 0.3);
       color: var(--amber);
     }
   }
@@ -478,36 +468,27 @@
     margin-left: -4px;
   }
 
-  /* The version tag beside the name gives way first (it is in the tooltip and in Settings). */
   @media (max-width: 1240px) {
     header,
     .site-header {
       gap: 18px;
     }
 
-    .brand small,
     .preview {
       display: none;
     }
   }
 
   /* Down to the window's smallest (960 px), with developer tools, a job and an update all showing:
-     the site link and Discord keep their marks, the update its word, the job less of its name. */
+     the update keeps its word, the job less of its name. */
   @media (max-width: 1180px) {
     header,
     .site-header {
       gap: 14px;
     }
 
-    .site .label,
-    .discord .label,
     .update .label {
       display: none;
-    }
-
-    .site,
-    .discord {
-      padding: 7px 9px;
     }
 
     .job {
@@ -515,16 +496,10 @@
     }
   }
 
-  /* A narrow window keeps the tabs: the site link and the tag give way first. */
+  /* A narrow window keeps the tabs. */
   @media (max-width: 900px) {
     .site-header {
       gap: 12px;
-    }
-
-    .brand small,
-    .site,
-    .preview {
-      display: none;
     }
 
     .job {
@@ -532,13 +507,18 @@
     }
   }
 
-  /* A phone held upright: the wrench stands for the name, Discord and the running task give way,
-     and the tabs scroll if they still do not fit. */
+  /* A phone held upright: the logo's mark stands for the name, the version (in the tooltip), the
+     links and the running task give way, and the tabs scroll if they still do not fit. */
   @media (max-width: 560px) {
-    .brand span,
-    .discord,
+    .brand > :global(.logo),
+    .brand .ver,
+    .links,
     .job {
       display: none;
+    }
+
+    .brand .brand-mark {
+      display: contents;
     }
 
     nav {
@@ -549,7 +529,7 @@
     }
 
     .tab {
-      padding: 7px 11px;
+      padding: 5px 11px;
     }
   }
 
@@ -577,28 +557,30 @@
     overflow-y: auto;
   }
 
-  /* The wrench on the bar's orange, as the app's icon has it. */
+  /* The logo's mark in the picked game's accent, as wide as the rail's destinations: the rail has
+     no room for the name. */
   :global(html[data-platform="android"]) .brand {
     flex: none;
     justify-content: center;
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-    background: linear-gradient(to bottom, var(--bar-top), var(--bar-bottom));
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
+    width: 56px;
+    padding-top: 6px;
+  }
+
+  :global(html[data-platform="android"]) .brand > :global(.logo),
+  :global(html[data-platform="android"]) .brand .ver {
+    display: none;
   }
 
   /* It stays still there: the logo of an app, not a control that plays. */
-  :global(html[data-platform="android"]) .brand img {
-    width: 34px;
-    height: 34px;
-    animation: none;
-    transform: none;
-    transition: none;
+  :global(html[data-platform="android"]) .brand .brand-mark {
+    display: contents;
+    color: var(--amber);
   }
 
-  :global(html[data-platform="android"]) .brand :is(span, small) {
-    display: none;
+  :global(html[data-platform="android"]) .brand .brand-mark :global(.logo) {
+    width: 53px;
+    height: auto;
+    animation: none;
   }
 
   :global(html[data-platform="android"]) nav {
@@ -610,7 +592,7 @@
     display: none;
   }
 
-  /* A destination: its icon in a pill that widens out from the middle when it is the open one,
+  /* A destination: its icon in a circle that grows out from the middle when it is the open one,
      and its name under it. */
   :global(html[data-platform="android"]) .tab {
     display: flex;
@@ -621,7 +603,7 @@
     padding: 0;
     border-radius: 0;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--soft);
   }
 
@@ -630,13 +612,14 @@
     filter: none;
   }
 
+  /* A circle, as round as the logo's "O" above them. */
   .icon {
     position: relative;
     display: grid;
     place-items: center;
-    width: 56px;
-    height: 32px;
-    border-radius: 16px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
   }
 
   .icon::before {
@@ -645,15 +628,17 @@
     inset: 0;
     border-radius: inherit;
     background: color-mix(in srgb, var(--amber) 22%, transparent);
-    transform: scaleX(0.4);
+    transform: scale(0.5);
     opacity: 0;
     transition:
       transform var(--medium) var(--ease),
       opacity var(--fast);
   }
 
+  /* Their strokes heavier than the page's icons, to stand under the logo's. */
   .icon :global(svg) {
     position: relative;
+    stroke-width: 2.3;
     transition: transform var(--medium) var(--ease);
   }
 
@@ -673,8 +658,8 @@
   /* A new launcher is out: a dot on Settings, where it is installed from. */
   .badge {
     position: absolute;
-    top: 3px;
-    right: 13px;
+    top: 4px;
+    right: 4px;
     width: 8px;
     height: 8px;
     border-radius: 50%;
@@ -684,8 +669,8 @@
 
   :global(html[data-platform="android"]) .tab .count {
     position: absolute;
-    top: -4px;
-    left: 44px;
+    top: -2px;
+    left: 26px;
     min-width: 18px;
     height: 18px;
     font-size: 0.75rem;

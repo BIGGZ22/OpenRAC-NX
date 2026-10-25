@@ -24,3 +24,9 @@ None of these licenses cover the games. OpenRAC holds no game code or assets:
 you supply your own discs ([docs/policy/SOURCING.md](docs/policy/SOURCING.md)).
 Third-party code and data used in OpenRAC are listed, with their licenses, in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and in each game's own notices.
+
+## Trademarks
+
+Ratchet & Clank is a trademark of Sony Interactive Entertainment, and the games
+were developed by Insomniac Games. OpenRAC is an unofficial fan project, not
+affiliated with or endorsed by either.

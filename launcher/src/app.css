@@ -26,11 +26,12 @@
   /* The header bar's gradient and the dark brown it writes on. */
   --bar-top: #e5a013;
   --bar-bottom: #cd8300;
+  --bar-stripe: #c99222;
+  --bar-stripe-alt: #bd8619;
   --bar-ink: #2a1800;
   --bar-ink-deep: #1b1206;
-  /* The name on the bar, and the site's white button on it (Discord). */
+  /* The logo on the bar. */
   --bar-name: #000;
-  --bar-button: #fff;
   /* Text on a game's own colours or picture: a card's title, the disc switch, a name on Android's
      game strip. */
   --on-game: #fff;
@@ -46,8 +47,6 @@
   --font-sans: "Inter Variable", system-ui, sans-serif;
   --font-brand: "Audiowide", "Inter Variable", sans-serif;
   --font-head: "Orbitron Variable", "Inter Variable", sans-serif;
-  /* Size Matters' titles, as on the site's card. */
-  --font-chakra: "Chakra Petch", "Orbitron Variable", sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
 
   --radius: 16px;
@@ -66,7 +65,7 @@
      a narrow window and Android set them below, the same on every page. */
   /* What the navigation takes of the window: the header bar on top, or on Android the rail on
      the left or the bar at the bottom (Header.svelte). */
-  --nav-top: 60px;
+  --nav-top: 50px;
   --nav-left: 0px;
   --nav-bottom: 0px;
   color-scheme: dark;
@@ -742,15 +741,57 @@ ol.steps select:focus-visible {
   animation: rise 0.6s var(--ease) both;
 }
 
-/* Android: one page gives way to the next (App.svelte's view transition). Only the page moves:
-   the rail stays live, its highlight sliding to the tab pressed. */
-html[data-platform="android"] main {
+/* One page, or the game on it, gives way to the next (motion.ts's slide). Only the page moves:
+   the bar or the rail stays live, its highlight sliding to the tab pressed, and so does the game
+   list beside the page (SideFrame), unless the next page has none. */
+main {
   view-transition-name: page;
 }
 
 ::view-transition-old(root),
-::view-transition-new(root) {
+::view-transition-new(root),
+::view-transition-group(side),
+::view-transition-image-pair(side),
+::view-transition-old(side),
+::view-transition-new(side) {
   animation: none;
+}
+
+::view-transition-old(side):only-child {
+  animation: page-fade 0.2s ease-in both;
+}
+
+::view-transition-new(side):only-child {
+  animation: page-fade 0.3s var(--ease) reverse both;
+}
+
+/* Which way: the tabs of the bar go sideways, those of Android's rail and the games of the list
+   up and down. */
+html[data-nav="forward"] {
+  --page-in: 48px 0;
+  --page-out: -28px 0;
+}
+
+html[data-nav="back"] {
+  --page-in: -48px 0;
+  --page-out: 28px 0;
+}
+
+html[data-platform="android"][data-nav="forward"],
+html[data-nav="down"] {
+  --page-in: 0 48px;
+  --page-out: 0 -28px;
+}
+
+html[data-platform="android"][data-nav="back"],
+html[data-nav="up"] {
+  --page-in: 0 -48px;
+  --page-out: 0 28px;
+}
+
+html[data-nav="down"],
+html[data-nav="up"] {
+  --page-in-time: 0.32s;
 }
 
 ::view-transition-old(page) {
@@ -758,42 +799,27 @@ html[data-platform="android"] main {
 }
 
 ::view-transition-new(page) {
-  animation: page-in 0.38s var(--ease) both;
-}
-
-html[data-nav="back"]::view-transition-old(page) {
-  animation-name: page-out-back;
-}
-
-html[data-nav="back"]::view-transition-new(page) {
-  animation-name: page-in-back;
+  animation: page-in var(--page-in-time, 0.38s) var(--ease) both;
 }
 
 @keyframes page-out {
   to {
     opacity: 0;
-    transform: translateY(-28px) scale(0.98);
+    translate: var(--page-out, 0);
+    scale: 0.98;
   }
 }
 
 @keyframes page-in {
   from {
     opacity: 0;
-    transform: translateY(48px);
+    translate: var(--page-in, 0);
   }
 }
 
-@keyframes page-out-back {
+@keyframes page-fade {
   to {
     opacity: 0;
-    transform: translateY(28px) scale(0.98);
-  }
-}
-
-@keyframes page-in-back {
-  from {
-    opacity: 0;
-    transform: translateY(-48px);
   }
 }
 
@@ -822,9 +848,9 @@ html[data-nav="back"]::view-transition-new(page) {
   animation-delay: 200ms;
 }
 
-/* Android: the page slides in whole (the view transition above), so its sections and game tiles
-   come with it rather than rising again after it, which showed as each one popping in. */
-html[data-platform="android"] :is(.page > :is(section, .panel, h1), .tile.rise) {
+/* Where the page slides in whole (the view transition above), its sections and game tiles come
+   with it rather than rising again after it, which showed as each one popping in. */
+html[data-motion="slides"] :is(.page > :is(section, .panel, h1), .tile.rise) {
   animation: none;
 }
 
@@ -896,13 +922,16 @@ html[data-platform="android"] * {
   backdrop-filter: none !important;
 }
 
-/* An app's controls are not text to select: a long press does nothing, as in Android's own apps.
-   What is text (fields, paths, logs) still is. */
-html[data-platform="android"] body {
+/* An app's controls are not text to select: a drag or a long press over a button or a label
+   selects nothing, as in a desktop app or Android's own. What is text to copy (fields, paths,
+   logs) still is, unless it is on a button. */
+body {
+  -webkit-user-select: none;
   user-select: none;
 }
 
-html[data-platform="android"] :is(input, textarea, pre, code, .mono, .selectable) {
+:is(input, textarea, pre, code, .mono, .selectable):not(button, button *) {
+  -webkit-user-select: text;
   user-select: text;
 }
 

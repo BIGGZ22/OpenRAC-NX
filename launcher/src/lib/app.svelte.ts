@@ -20,9 +20,10 @@ import {
   type RunInputs,
   type Scope,
   type Started,
-  type UpdateChannel,
   type VersionView,
   updateChannelOf,
+  updateBranchOf,
+  updateSourceOf,
 } from "./api";
 import { Queue, type Job } from "./queue";
 import { backgroundStatus } from "./progress";
@@ -290,6 +291,8 @@ export async function start() {
       }
     }
     app.info = await api.appInfo();
+    // Android: the config names the carried tools' Python only once they are unpacked.
+    if (onAndroid) await prepareTools();
     app.config = await firstRun(await api.getConfig());
   } catch (e) {
     // The launcher could not read what it needs to start: it says so, and the player may
@@ -297,7 +300,6 @@ export async function start() {
     app.startError = errorText(e);
     return;
   }
-  if (onAndroid) await prepareTools();
   // The version the launcher showed last; a version named in the address (the browser
   // preview's ?version=) is kept.
   if (!app.version && app.config.lastVersion) app.version = app.config.lastVersion;
@@ -451,13 +453,13 @@ export function dismissStopped() {
   if (game) void dismissCrashes(game);
 }
 
-/** Looks for a new launcher now (at start, or Settings' "Check now") on CHANNEL, by default the
- *  player's; true when one is out. Throws when there was nothing to compare with (no release where
- *  the launcher looks, no network). */
-export async function lookForUpdate(channel?: UpdateChannel): Promise<boolean> {
+/** Looks for a new launcher now (at start, or Settings' "Check now") where CONFIG points (its channel
+ *  and a fork's branch), by default the saved settings; true when one is out. Throws when there was
+ *  nothing to compare with (no release where the launcher looks, no network). */
+export async function lookForUpdate(config: Config | null = app.config): Promise<boolean> {
   if (!app.info?.version) return false;
-  channel ??= updateChannelOf(app.info, app.config);
-  const up = await checkForUpdate(app.info.version, app.info.updateChannels[channel], channel);
+  const channel = updateChannelOf(app.info, config);
+  const up = await checkForUpdate(app.info.version, updateSourceOf(app.info, config), channel, updateBranchOf(config));
   app.update = up;
   return !!up;
 }

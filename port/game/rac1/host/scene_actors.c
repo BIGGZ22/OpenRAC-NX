@@ -15,7 +15,7 @@
  * CreateMoby answers 0 when the level's 255 spawned mobys are all in use. On Gaspar (level 9) the
  * lava's sparks fill the pool in bursts, and picking up the Pilot's Helmet (class 1290, its update
  * func_L00_002E1850) starts a scene that then wants mobys: the read through 0 crashed the port.
- * The original game has the same latent bug: fcheck (docs/workflow/BACKFILL.md) saw retail's pool
+ * The original game has the same latent bug: fcheck (docs/port/BACKFILL.md) saw retail's pool
  * reach 254 of 255 on Gaspar from the sparks' bursts, so the console is one burst away from the
  * same read (where it reads low memory and goes on with garbage, or stops).
  *

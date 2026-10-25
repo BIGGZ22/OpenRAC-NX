@@ -77,16 +77,22 @@ fn update_source<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> openrac_launch
     openrac_launcher_core::update::source(&endpoint)
 }
 
-/// Where the launcher looks for its updates: CHANNEL (the Settings page's, before it is saved), else
-/// the one the player chose, else the one it was built from.
+/// Where the launcher looks for its updates: CHANNEL and a fork's BRANCH (the Settings page's,
+/// before they are saved), else the ones the player chose, else the one it was built from.
 fn chosen_update_source<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     channel: Option<openrac_launcher_core::update::Channel>,
+    branch: Option<String>,
 ) -> openrac_launcher_core::update::UpdateSource {
     let built = update_source(app);
-    let chosen =
-        channel.or_else(|| app.try_state::<AppState>().and_then(|state| state.config.lock().unwrap().update_channel));
-    built.on(chosen.unwrap_or(built.kind()))
+    let (channel, branch) = match channel {
+        Some(channel) => (Some(channel), branch),
+        None => app.try_state::<AppState>().map_or((None, None), |state| {
+            let config = state.config.lock().unwrap();
+            (config.update_channel, config.update_branch.clone())
+        }),
+    };
+    built.chosen(channel.unwrap_or(built.kind()), branch.as_deref())
 }
 
 #[tauri::command]
@@ -113,11 +119,12 @@ fn app_info(app: AppHandle, state: State<'_, AppState>) -> AppInfo {
 async fn launcher_update_check(
     webview: tauri::Webview,
     channel: Option<openrac_launcher_core::update::Channel>,
+    branch: Option<String>,
 ) -> Result<Option<serde_json::Value>, String> {
     #[cfg(desktop)]
     {
         use tauri_plugin_updater::UpdaterExt;
-        let source = chosen_update_source(webview.app_handle(), channel);
+        let source = chosen_update_source(webview.app_handle(), channel, branch);
         let url = tauri::Url::parse(&source.manifest).map_err(|e| format!("{}: {e}", source.manifest))?;
         let updater =
             webview.updater_builder().endpoints(vec![url]).and_then(|b| b.build()).map_err(|e| e.to_string())?;
@@ -137,7 +144,7 @@ async fn launcher_update_check(
     }
     #[cfg(not(desktop))]
     {
-        let _ = (webview, channel);
+        let _ = (webview, channel, branch);
         Err("on Android the launcher updates through update_check".into())
     }
 }
@@ -1452,6 +1459,7 @@ fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     settle_root(&mut config, bundled.as_deref());
     let discord = start_discord(&config);
     start_log(app, config_file.as_deref());
+    migrate_install_saves(&config);
     app.manage(AppState { config: Mutex::new(config), config_file, jobs: Jobs::default(), discord, bundled });
     Ok(())
 }
@@ -1564,6 +1572,19 @@ fn start_discord(config: &Config) -> Arc<Mutex<DiscordState>> {
         });
     }
     discord
+}
+
+/// Memory cards and settings that some development builds kept in the install folder go to the
+/// data folder's migrated/ (core saves.rs). Android never kept them there.
+fn migrate_install_saves(config: &Config) {
+    let Some(install) = config.install_dir.as_deref().filter(|_| Platform::current() != Platform::Android) else {
+        return;
+    };
+    match openrac_launcher_core::saves::migrate_install_saves(install, &openrac_launcher_core::saves::data_home()) {
+        Ok(0) => {}
+        Ok(copied) => launcher_log::line(&format!("saves: {copied} files from {} are in migrated/", install.display())),
+        Err(e) => launcher_log::line(&format!("saves: not migrated: {e}")),
+    }
 }
 
 /// The launcher's own log, beside launcher.json (core launcher_log.rs), opened with the version and

@@ -31,14 +31,21 @@ export function gameArt(game: string): string | null {
   return GAME_ART[game] ?? null;
 }
 
-// The pictures, decoded once and kept (Android's Games tab): a tile that mounts again finds its
-// picture ready, rather than showing its colours for a frame first.
+/** A game's picture as Android's Games tab shows it: 1280 wide (scripts/media.py thumbs), where
+ *  the picture itself can be 3840 and take a moment to decode each time the tab opens. */
+export function gameTileArt(game: string): string | null {
+  return GAME_ART[game]?.replace(/-bg\.webp$/, "-tile.webp") ?? null;
+}
+
+// The tiles' pictures, decoded once and kept (Android's Games tab): a tile that mounts again finds
+// its picture ready, rather than showing its colours for a frame first.
 const kept: HTMLImageElement[] = [];
 
-/** Decodes every game's picture ahead of its first showing; once. */
+/** Decodes every game's tile picture ahead of its first showing; once. */
 export function preloadArt(): void {
   if (kept.length || typeof Image === "undefined") return;
-  for (const src of Object.values(GAME_ART)) {
+  for (const src of Object.keys(GAME_ART).map(gameTileArt)) {
+    if (!src) continue;
     const img = new Image();
     img.src = src;
     img.decode().catch(() => undefined); // a picture that is not there stays out

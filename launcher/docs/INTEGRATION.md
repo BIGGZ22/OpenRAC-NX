@@ -363,7 +363,7 @@ published, waits on package 7.
 
 ## Open decisions
 
-These are not the launcher's to settle alone ([AGENTS.md](../../AGENTS.md), rule 11):
+These are not the launcher's to settle alone ([CONTRIBUTING.md](../../CONTRIBUTING.md#ground-rules): open questions are decided together):
 
 - **How players get OpenRAC.** Today the launcher needs a git checkout. A
   player-facing release could bundle `tools/` and the game folders instead,
@@ -372,7 +372,7 @@ These are not the launcher's to settle alone ([AGENTS.md](../../AGENTS.md), rule
   `https://openrac.dev/progress.json` at start-up and rewrites the
   checkout's `progress/summary.json` with it, and shows Discord Rich Presence
   unless switched off. `progress/summary.json` is a generated file that
-  `tools/openrac.py progress` writes (AGENTS.md, rule 9): whether the
+  `tools/openrac.py progress` writes (never edited by hand, CONTRIBUTING.md): whether the
   launcher should keep its copy elsewhere is for the maintainers.
 - **Which games and versions to put first.** The launcher shows every version
   in `games/`; the six games are rac1 (PAL and NTSC-U), rac2, rac3, rac4,

@@ -10,7 +10,7 @@ The project is early. The boot executable is SCUS_976.23; the 31 level modules
 are relocatable modules in the SNR2 `.REL` format.
 
 Disc checksums are in [game.json](game.json) and the
-[README's table](../../README.md#supported-discs).
+[table in baserom/README.md](../../baserom/README.md#disc-images).
 
 ## What "matched" means here
 

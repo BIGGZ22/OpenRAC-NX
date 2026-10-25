@@ -134,11 +134,11 @@
 </div>
 
 <style>
-  /* As tall as the window leaves below the header (60px, as SideFrame's list) and the page's
+  /* As tall as the window leaves below the header (--nav-top, as SideFrame's list) and the page's
      padding, whatever the page around it: the page scrolls as a whole, so a height of 100% would
      grow with the output. The job list and the output scroll inside it. */
   .console {
-    height: calc(100dvh - 60px - var(--page-top, 24px) - var(--page-bottom, 48px));
+    height: calc(100dvh - var(--nav-top) - var(--page-top, 24px) - var(--page-bottom, 48px));
     min-height: 360px;
     display: grid;
     grid-template-columns: minmax(200px, 300px) minmax(0, 1fr);

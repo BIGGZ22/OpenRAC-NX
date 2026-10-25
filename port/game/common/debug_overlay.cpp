@@ -36,6 +36,7 @@
 #include "renderer/gl.h"
 #include "renderer/gl_stats.h"
 #include "renderer/ui/imgui_gl.h"
+#include "renderer/ui/logo.h"
 #include "scene/screenshot.h"
 #include "settings.h"
 
@@ -215,6 +216,33 @@ void initialise_touch(SDL_Window* window) {
 #endif
 }
 
+// The logo for the drawer's header, drawn once into ImGui's font atlas before the atlas goes to
+// the GPU, so that ImGui draws it as it draws text, with no texture of its own.
+void add_logo() {
+    ImGuiIO& io = ImGui::GetIO();
+    const renderer::ui::logo::Mask mask =
+        renderer::ui::logo::draw(static_cast<int>(std::lround(dp(30.0f))), true);
+    const int rect = io.Fonts->AddCustomRectRegular(mask.width, mask.height);
+    unsigned char* pixels = nullptr;
+    int width = 0;
+    int height = 0;
+    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+    const ImFontAtlasCustomRect* at = io.Fonts->GetCustomRectByIndex(rect);
+    if (pixels == nullptr || at == nullptr || !at->IsPacked()) {
+        return;
+    }
+    for (int y = 0; y < mask.height; ++y) {
+        for (int x = 0; x < mask.width; ++x) {
+            unsigned char* p =
+                pixels + (static_cast<std::size_t>(at->Y + y) * width + at->X + x) * 4;
+            p[0] = p[1] = p[2] = 255;
+            p[3] = mask.alpha[static_cast<std::size_t>(y) * mask.width + x];
+        }
+    }
+    s.logo_rect = rect;
+    s.logo_name_x = mask.name_x;
+}
+
 bool initialise(SDL_Window* window) {
     if (s.initialised) {
         return true;
@@ -234,6 +262,7 @@ bool initialise(SDL_Window* window) {
     style.FramePadding = ImVec2(4.0f, 2.0f);
     style.ItemSpacing = ImVec2(6.0f, 3.0f);
     initialise_touch(window);
+    add_logo();
     std::string error;
     const bool started =
         s.gl_subset ? ImGui_ImplSDL3_InitForOther(window) && renderer::ui::imgui_gl::init(error)
