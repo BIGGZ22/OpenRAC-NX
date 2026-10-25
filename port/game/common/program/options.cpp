@@ -95,7 +95,22 @@ void move_old_data_home(const fs::path& base) {
         return;
     }
 
-    fs::rename(old, fs::path(old).concat(".moved"), error);
+    const fs::path moved = fs::path(old).concat(".moved");
+    fs::rename(old, moved, error);
+
+    // Kept under its name, the old folder is copied again next start, the new files left alone.
+    if (error) {
+        log::warn(
+            "the cards and settings in {} are also in {}, but {} cannot be renamed {}: {}",
+            old.string(),
+            base.string(),
+            old.string(),
+            moved.filename().string(),
+            error.message()
+        );
+        return;
+    }
+
     log::info("the cards and settings in {} are now in {}", old.string(), base.string());
 }
 #endif
