@@ -12,7 +12,6 @@
 #include <fstream>
 #include <system_error>
 
-#include "common/c_boundary.h"
 #include "common/log.h"
 #include "fixes.h"
 
@@ -24,6 +23,10 @@ Settings g_settings;
 std::atomic<float> g_gain{1.0f};  // g_settings.volume, read by the sound's thread
 std::atomic<bool> g_muted{false};
 std::filesystem::path g_file;
+
+// How far from 0 a game's option in the file may be (game_option): no option a game keeps comes
+// near it (rac1's volumes go to 0x400), and a hand-edited number past it is reported.
+constexpr int kGameOptionLimit = 1'000'000;
 
 // The names in the file, by value.
 constexpr const char* kDisplayMode[] = {"windowed", "borderless", "fullscreen"};
@@ -304,9 +307,10 @@ void load(const std::filesystem::path& file) {
             s.touch_layout = value;  // TouchPad::set_layout leaves out what it does not know
         } else if (key == "verbose_log") {
             known = parse_bool(value, s.verbose_log);
-        } else if (key.starts_with("game_")) {
+        } else if (key.starts_with(kGameOptionPrefix)) {
+            // An option the game keeps itself (game_option): any whole number in the file's range.
             int number = 0;
-            known = parse_int(value, -1000000, 1000000, number);
+            known = parse_int(value, -kGameOptionLimit, kGameOptionLimit, number);
             if (known) {
                 s.game_options[key] = number;
             }
@@ -426,6 +430,7 @@ void save() {
     if (s.verbose_log) {
         out << "verbose_log = 1\n";
     }
+    // The game's own options, as it last set them (set_game_option).
     for (const auto& [key, value] : s.game_options) {
         out << key << " = " << value << "\n";
     }
@@ -546,25 +551,22 @@ std::string frame_rate_name(const Settings& settings) {
     return "Display";
 }
 
+int game_option(std::string_view key, int fallback) {
+    const auto it = g_settings.game_options.find(key);
+    return it != g_settings.game_options.end() ? it->second : fallback;
+}
+
+void set_game_option(std::string_view key, int value) {
+    const auto it = g_settings.game_options.find(key);
+
+    // The game sets its options every frame (rac1/host/options.c): the file is written only when
+    // one changes, which the game does seldom (its menus, a loaded save).
+    if (it != g_settings.game_options.end() && it->second == value) {
+        return;
+    }
+
+    g_settings.game_options.insert_or_assign(std::string(key), value);
+    save();
+}
+
 }  // namespace openrac::settings
-
-// game_host.h: an option the game keeps itself, remembered between runs. The file is written when
-// one changes; the game sets them seldom (its menus, a loaded save).
-extern "C" int openrac_game_option(const char* key, int fallback) {
-    return openrac::c_boundary::call("openrac_game_option", fallback, [&] {
-        const auto& options = openrac::settings::get().game_options;
-        const auto it = options.find(key);
-        return it != options.end() ? it->second : fallback;
-    });
-}
-
-extern "C" void openrac_game_set_option(const char* key, int value) {
-    openrac::c_boundary::call("openrac_game_set_option", [&] {
-        auto& options = openrac::settings::get().game_options;
-        const auto [it, added] = options.try_emplace(key, value);
-        if (added || it->second != value) {
-            it->second = value;
-            openrac::settings::save();
-        }
-    });
-}

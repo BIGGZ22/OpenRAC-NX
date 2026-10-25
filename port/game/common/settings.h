@@ -10,9 +10,11 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <span>
 #include <string>
+#include <string_view>
 
 #include "renderer/gtao_settings.h"
 #include "renderer/temporal_settings.h"
@@ -121,7 +123,7 @@ struct Settings {
     bool verbose_log = false;  // the detailed log (as OPENRAC_LOG=verbose): level loads, pad changes, callers
     // Options the game keeps in its own memory, which a console forgets at power off (keys
     // game_*; game_host.h, openrac_game_option): the port remembers them between runs.
-    std::map<std::string, int> game_options;
+    std::map<std::string, int, std::less<>> game_options;
 };
 
 // The settings in use.
@@ -141,6 +143,17 @@ void save();
 void set_volume(int volume);
 void set_muted(bool muted);
 float output_gain();
+
+// The start of every key of Settings::game_options in the file.
+inline constexpr std::string_view kGameOptionPrefix = "game_";
+
+// Returns the game's option `key` (`game_` and a name, one of Settings::game_options), or
+// `fallback` while none is remembered. openrac_game_option's body (program/game_host.cpp).
+int game_option(std::string_view key, int fallback);
+
+// Remembers `value` for the game's option `key` (one starting with kGameOptionPrefix) and writes
+// the file when the value changed. openrac_game_set_option's body (program/game_host.cpp).
+void set_game_option(std::string_view key, int value);
 
 // Width over height of the picture for a window of that size.
 float aspect_ratio(const Settings& settings, int window_width, int window_height);
