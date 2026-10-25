@@ -48,6 +48,134 @@ constexpr const char* kLabels[kRows] = {
 constexpr int kFixesHeading = kRows;
 constexpr const char* kFixesLabel = "Game fixes";
 
+// The page's texts in the game's other languages: English, then French, German, Spanish and
+// Italian, the PAL disc's five. Draft translations, to be checked by native speakers.
+struct Words {
+    const char* text[5];
+};
+constexpr Words kWords[] = {
+    {{"Display mode", "Mode d'affichage", "Anzeigemodus", "Modo de pantalla", "Modalità schermo"}},
+    {{"Monitor", "Écran", "Monitor", "Monitor", "Monitor"}},
+    {{"Resolution", "Résolution", "Auflösung", "Resolución", "Risoluzione"}},
+    {{"Picture", "Format d'image", "Bildformat", "Formato de imagen", "Formato immagine"}},
+    {{"HUD", "Interface", "HUD", "HUD", "HUD"}},
+    {{"Render scale", "Échelle de rendu", "Renderskalierung", "Escala de render", "Scala di rendering"}},
+    {{"Anti-aliasing", "Anticrénelage", "Kantenglättung", "Antialiasing", "Antialiasing"}},
+    {{"Anisotropic filtering", "Filtrage anisotrope", "Anisotrope Filterung", "Filtrado anisotrópico",
+      "Filtro anisotropico"}},
+    {{"VSync", "Synchro verticale", "VSync", "Sincronía vertical", "Sincronia verticale"}},
+    {{"Frame rate", "Fréquence d'images", "Bildrate", "Fotogramas", "Frequenza fotogrammi"}},
+    {{"Frame cap", "Limite d'images", "Bildratenlimit", "Límite de fotogramas", "Limite fotogrammi"}},
+    {{"Frame counter", "Compteur d'images", "Bildzähler", "Contador de fotogramas", "Contatore fotogrammi"}},
+    {{"Mute in background", "Muet en arrière-plan", "Im Hintergrund stumm", "Silencio en segundo plano",
+      "Muto in background"}},
+    {{"Skip cutscenes", "Passer les cinématiques", "Videos überspringen", "Saltar cinemáticas", "Salta filmati"}},
+    {{"Game fixes", "Corrections du jeu", "Spielkorrekturen", "Correcciones del juego", "Correzioni del gioco"}},
+    {{"Wide-screen effects", "Effets écran large", "Breitbild-Effekte", "Efectos panorámicos",
+      "Effetti widescreen"}},
+    {{"Wide-screen crate orbs", "Orbes de caisse écran large", "Breitbild-Kistenkugeln",
+      "Orbes de caja panorámicos", "Sfere casse widescreen"}},
+    {{"Wide-screen seas, lava", "Mers et lave écran large", "Breitbild-Meere, Lava", "Mares y lava panorámicos",
+      "Mari e lava widescreen"}},
+    {{"On", "Activé", "An", "Sí", "Sì"}},
+    {{"Off", "Désactivé", "Aus", "No", "No"}},
+    {{"Original", "Original", "Original", "Original", "Originale"}},
+    {{"Desktop", "Bureau", "Desktop", "Escritorio", "Desktop"}},
+    {{"Window's own", "Celui de la fenêtre", "Wie das Fenster", "El de la ventana", "Quello della finestra"}},
+    {{"Trilinear", "Trilinéaire", "Trilinear", "Trilineal", "Trilineare"}},
+    {{"Window", "Fenêtre", "Fenster", "Ventana", "Finestra"}},
+    {{"Borderless", "Sans bordure", "Rahmenlos", "Sin bordes", "Senza bordi"}},
+    {{"Fullscreen", "Plein écran", "Vollbild", "Pantalla completa", "Schermo intero"}},
+    {{"Centre", "Centre", "Mitte", "Centro", "Centro"}},
+    {{"Edges", "Bords", "Ränder", "Bordes", "Bordi"}},
+    {{"Adaptive", "Adaptative", "Adaptiv", "Adaptativa", "Adattiva"}},
+    {{"Unlimited", "Illimitée", "Unbegrenzt", "Ilimitada", "Illimitata"}},
+    {{"Display", "Écran", "Bildschirm", "Pantalla", "Schermo"}},
+    {{"Video", "Vidéo", "Video", "Vídeo", "Video"}},
+    {{"Video Options", "Options vidéo", "Videooptionen", "Opciones de vídeo", "Opzioni video"}},
+    {{"Change the display, picture and frame rate", "Changer l'affichage, l'image et la fréquence",
+      "Anzeige, Bild und Bildrate ändern", "Cambiar pantalla, imagen y fotogramas",
+      "Cambia schermo, immagine e fotogrammi"}},
+};
+// Texts with a number in them: the words around it.
+constexpr Words kCustom = {{"Custom ", "Personnalisé ", "Eigenes ", "Personalizado ", "Personalizzato "}};
+constexpr Words kAnisotropic = {{"Anisotropic ", "Anisotrope ", "Anisotrop ", "Anisotrópico ", "Anisotropico "}};
+constexpr Words kNotConnected =
+    {{" (not connected)", " (non connecté)", " (nicht verbunden)", " (no conectado)", " (non collegato)"}};
+
+// The game's language as an index into Words (its word: 0 or 1 English, 2 French, 3 German,
+// 4 Spanish, 5 Italian); English for a game without one.
+int language() {
+    const openrac_front_end* fe = openrac_game_front_end;
+    if (fe == nullptr || fe->language == 0) {
+        return 0;
+    }
+    switch (GREF(std::int32_t, fe->language)) {
+        case 2: return 1;
+        case 3: return 2;
+        case 4: return 3;
+        case 5: return 4;
+        default: return 0;
+    }
+}
+
+// An English text of the page in the game's language.
+std::string translated(const std::string& text, int lang) {
+    if (lang == 0) {
+        return text;
+    }
+    for (const Words& w : kWords) {
+        if (text == w.text[0]) {
+            return w.text[lang];
+        }
+    }
+    for (const Words* w : {&kCustom, &kAnisotropic}) {
+        if (text.starts_with(w->text[0])) {
+            return w->text[lang] + text.substr(std::strlen(w->text[0]));
+        }
+    }
+    if (text.ends_with(kNotConnected.text[0])) {
+        return text.substr(0, text.size() - std::strlen(kNotConnected.text[0])) + kNotConnected.text[lang];
+    }
+    return text;
+}
+
+// UTF-8 in the game's text: ASCII as it is, and the accented letters at the game's own codes
+// (each vowel's acute, grave, circumflex and diaeresis in turn from 0x84 for a, 0x8C e, 0x94 i,
+// 0x9C o and 0xA4 u, the capitals 4 below; then ñ 0xA9, ç 0xAB, ß 0xAC, ¡ 0xAE, ¿ 0xAF).
+std::string game_text(const std::string& utf8) {
+    static constexpr struct {
+        char32_t letter;
+        unsigned char code;
+    } kCodes[] = {
+        {U'á', 0x84}, {U'à', 0x85}, {U'â', 0x86}, {U'ä', 0x87}, {U'é', 0x8C}, {U'è', 0x8D}, {U'ê', 0x8E},
+        {U'ë', 0x8F}, {U'í', 0x94}, {U'ì', 0x95}, {U'î', 0x96}, {U'ï', 0x97}, {U'ó', 0x9C}, {U'ò', 0x9D},
+        {U'ô', 0x9E}, {U'ö', 0x9F}, {U'ú', 0xA4}, {U'ù', 0xA5}, {U'û', 0xA6}, {U'ü', 0xA7}, {U'Á', 0x80},
+        {U'À', 0x81}, {U'Â', 0x82}, {U'Ä', 0x83}, {U'É', 0x88}, {U'È', 0x89}, {U'Ê', 0x8A}, {U'Ë', 0x8B},
+        {U'Í', 0x90}, {U'Ì', 0x91}, {U'Î', 0x92}, {U'Ï', 0x93}, {U'Ó', 0x98}, {U'Ò', 0x99}, {U'Ô', 0x9A},
+        {U'Ö', 0x9B}, {U'Ú', 0xA0}, {U'Ù', 0xA1}, {U'Û', 0xA2}, {U'Ü', 0xA3}, {U'Ñ', 0xA8}, {U'ñ', 0xA9},
+        {U'Ç', 0xAA}, {U'ç', 0xAB}, {U'ß', 0xAC}, {U'¡', 0xAE}, {U'¿', 0xAF},
+    };
+    std::string out;
+    for (std::size_t i = 0; i < utf8.size();) {
+        const auto c = static_cast<unsigned char>(utf8[i]);
+        if (c < 0x80 || (c & 0xE0) != 0xC0 || i + 1 >= utf8.size()) {
+            out += static_cast<char>(c);
+            ++i;
+            continue;
+        }
+        const char32_t letter = ((c & 0x1Fu) << 6) | (static_cast<unsigned char>(utf8[i + 1]) & 0x3Fu);
+        i += 2;
+        for (const auto& k : kCodes) {
+            if (k.letter == letter) {
+                out += static_cast<char>(k.code);
+                break;
+            }
+        }
+    }
+    return out;
+}
+
 // The value after `current` in a list (before it, for by = -1), around the ends; the first when
 // `current` is not one of them.
 template <typename T, std::size_t N>
@@ -314,7 +442,7 @@ Native n;
 
 void put_text(gaddr at, const std::string& text) {
     char* p = static_cast<char*>(G(at));
-    std::snprintf(p, kTextBytes, "%s", text.c_str());
+    std::snprintf(p, kTextBytes, "%s", game_text(translated(text, language())).c_str());
 }
 
 void build() {
@@ -554,10 +682,11 @@ void make(gaddr items) {
     }
     if (page::pause_texts == 0) {
         page::pause_texts = openrac_guest_static(page::kTextBytes * page::kPauseTexts);
-        page::put_text(page::pause_texts, "Video");
-        page::put_text(page::pause_texts + page::kTextBytes, "Video Options");
-        page::put_text(page::pause_texts + 2 * page::kTextBytes, "Change the display, picture and frame rate");
     }
+    // Each time: in the language the game has now.
+    page::put_text(page::pause_texts, "Video");
+    page::put_text(page::pause_texts + page::kTextBytes, "Video Options");
+    page::put_text(page::pause_texts + 2 * page::kTextBytes, "Change the display, picture and frame rate");
     for (gaddr at = 0x40; at < 0x7C; at += 4) {  // the focus and the screens: our list for Camera's
         if (GREF(std::uint32_t, m.page + at) == camera_list) {
             GREF(std::uint32_t, m.page + at) = m.list;

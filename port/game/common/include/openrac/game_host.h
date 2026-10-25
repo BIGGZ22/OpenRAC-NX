@@ -171,6 +171,9 @@ typedef struct openrac_front_end {
     /* Writes the hero body first, then currently attached equipment mobys, up to capacity.
      * Returns the count written; zero or NULL means no readable shadow rig this frame. */
     unsigned (*hero_shadow_casters)(gaddr* addresses, unsigned capacity);
+    /* A word: the game's language (rac1: 0 English, 2 French, 3 German, 4 Spanish, 5 Italian), for
+     * the port's own texts in its menus (options_menu.cpp); 0 for none. */
+    gaddr language;
 } openrac_front_end;
 
 extern const openrac_front_end* openrac_game_front_end;
