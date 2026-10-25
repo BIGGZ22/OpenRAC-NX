@@ -1534,7 +1534,8 @@ class SharedLibraries(unittest.TestCase):
         for name in names:
             with self.subTest(name):
                 self.assertIn(f" openrac_lib_{name}(", header)
-        self.assertEqual(header.count(" openrac_lib_"), len(names))
+        # Functions only: the header also declares the library's variables (gs_images_parked).
+        self.assertEqual(len(re.findall(r" openrac_lib_\w+\(", header)), len(names))
 
 
 class Places(unittest.TestCase):
