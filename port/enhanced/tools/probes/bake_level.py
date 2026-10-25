@@ -8,6 +8,7 @@ Generated plans, logs and probe assets contain game data and must stay local.
 from __future__ import annotations
 
 import argparse
+import contextlib
 from dataclasses import asdict, dataclass
 import json
 import math
@@ -90,6 +91,14 @@ def inspection(text):
     return grid, emission, fields['scene_hash']
 
 
+# The baker's exit status for a level with nothing to bake (level_scene.h, kNothingToBake).
+NOTHING_TO_BAKE = 3
+
+
+class NothingToBake(Exception):
+    """The level has nothing for light to bounce off (the flight between planets: only a sky)."""
+
+
 class NativeBatch:
     """Keep one native scene alive while the Python planner chooses its grids."""
 
@@ -118,6 +127,8 @@ class NativeBatch:
                     return self
                 lines.append(line)
             self.process.wait()
+            if self.process.returncode == NOTHING_TO_BAKE:
+                raise NothingToBake(''.join(lines).strip().splitlines()[-1] if lines else 'nothing to bake')
             raise subprocess.CalledProcessError(self.process.returncode or 1, self.command)
         except BaseException:
             self.close()
@@ -178,7 +189,18 @@ def bake_level(level_dir: Path, output_dir: Path, baker: Path, *, disc=None, opt
     output_dir.mkdir(parents=True, exist_ok=resume)
 
     command = common + ['--batch-output', str(output_dir)] + (['--resume'] if resume else [])
-    with NativeBatch(command, output_dir/'batch.log', append=resume, progress=progress) as native:
+    batch = NativeBatch(command, output_dir/'batch.log', append=resume, progress=progress)
+    try:
+        batch.__enter__()
+    except NothingToBake as nothing:
+        # Done, with no bake: the game keeps the level's original lighting (no sparse.orpg).
+        write_json(output_dir/'bake-result.json', replace=resume, value={
+            'version': 1, 'verified': True, 'empty': True, 'note': str(nothing),
+            'probe_format_version': profile['probe_format_version'], 'bake_version': profile['bake_version']})
+        print(f'Nothing to bake: {nothing}', flush=True)
+        return None
+    # Started above (its start says whether there is anything to bake): closed whatever happens.
+    with contextlib.closing(batch) as native:
         coarse, emission, source_hash = inspection(native.inspection)
         if settings.enabled and gameplay is not None:
             plan = seeds.plan_level(level_dir, coarse, profile, gameplay, settings.planner_options())

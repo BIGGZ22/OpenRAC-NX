@@ -121,7 +121,7 @@ def up_to_date(output: Path, stamp: dict, profile: dict | None = None) -> bool:
         old = json.loads((output/STAMP).read_text())
     except (OSError, ValueError):
         return False
-    if not ((output/'sparse.orpg').is_file() and (output/'bake-result.json').is_file()):
+    if not ((output/'sparse.orpg').is_file() or empty_bake(output)) or not (output/'bake-result.json').is_file():
         return False
     if old == stamp:
         return True
@@ -136,6 +136,14 @@ def up_to_date(output: Path, stamp: dict, profile: dict | None = None) -> bool:
         return False
     return (result.get('bake_version') == profile.get('bake_version')
             and result.get('probe_format_version') == profile.get('probe_format_version'))
+
+
+def empty_bake(output: Path) -> bool:
+    """Whether OUTPUT is a level with nothing to bake (bake_level's 'empty' result)."""
+    try:
+        return json.loads((output/'bake-result.json').read_text()).get('empty') is True
+    except (OSError, ValueError, AttributeError):
+        return False
 
 
 def time_left(seconds: float) -> str:
@@ -291,7 +299,10 @@ def bake_all(levels_dir: Path, output_dir: Path, baker: Path, *, disc=None,
         if update and up_to_date(final, stamp, profile):
             if json.loads((final/STAMP).read_text()) != stamp:
                 (final/STAMP).write_text(json.dumps(stamp, indent=2)+'\n', encoding='utf-8')
-            result.update(verified=True, sparse=f'{level.name}/sparse.orpg', kept=True)
+            if empty_bake(final):
+                result.update(verified=True, empty=True, kept=True)
+            else:
+                result.update(verified=True, sparse=f'{level.name}/sparse.orpg', kept=True)
             finished(index, result, 'up to date')
             return
         # A cache's level is baked beside the one in place, which it replaces once verified. What
@@ -327,8 +338,12 @@ def bake_all(levels_dir: Path, output_dir: Path, baker: Path, *, disc=None,
             if final.exists():
                 shutil.rmtree(final)
             work.rename(final)
-            sparse = final/sparse.name
+            sparse = final/sparse.name if sparse is not None else None
             shutil.rmtree(output_dir/f'.{level.name}.failed', ignore_errors=True)
+        if sparse is None:
+            result.update(verified=True, empty=True)
+            finished(index, result, 'nothing to bake (it keeps its own lighting)')
+            return
         result.update(verified=True, sparse=sparse.relative_to(output_dir).as_posix())
         finished(index, result, 'baked')
 

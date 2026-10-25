@@ -276,10 +276,18 @@ fn bake_status_on(
         let baked = probes.join(&name);
         let stamp: Option<Value> =
             std::fs::read_to_string(baked.join(STAMP)).ok().and_then(|t| serde_json::from_str(&t).ok());
+        // A level with nothing for light to bounce off (the flight between planets) is done with no
+        // bake: the game keeps its own lighting there (bake_all.py, empty_bake).
+        let empty = || {
+            std::fs::read_to_string(baked.join("bake-result.json"))
+                .ok()
+                .and_then(|t| serde_json::from_str::<Value>(&t).ok())
+                .is_some_and(|r| r["empty"] == Value::Bool(true))
+        };
         let current = stamp.as_ref().is_some_and(|s| {
             s["manifest_sha256"].as_str() == sha256(&manifest).as_deref()
                 && has_baker
-                && baked.join("sparse.orpg").is_file()
+                && (baked.join("sparse.orpg").is_file() || empty())
                 && profile(&entry.path()).is_some_and(|p| made_by(s, &baked, &p))
         });
         if current {
@@ -529,6 +537,14 @@ mod tests {
         std::fs::create_dir_all(probes.join(".level_99.failed")).unwrap();
         let some = status();
         assert_eq!((some.available, some.levels, some.ready, some.failed), (true, 3, 1, 1));
+        // A level with nothing to bake (no sparse.orpg, an empty result) counts as ready.
+        std::fs::remove_dir_all(probes.join(".level_99.failed")).unwrap();
+        stamp("level_99", "level_99");
+        std::fs::remove_file(probes.join("level_99").join("sparse.orpg")).unwrap();
+        std::fs::write(probes.join("level_99").join("bake-result.json"), r#"{"verified": true, "empty": true}"#).unwrap();
+        assert_eq!(status().ready, 2);
+        std::fs::remove_dir_all(probes.join("level_99")).unwrap();
+        std::fs::create_dir_all(probes.join(".level_99.failed")).unwrap();
         // A baker that bakes otherwise (a new probe format, other quality): every bake is made again.
         std::fs::write(&baker, "another baker").unwrap();
         assert_eq!(status().ready, 0);

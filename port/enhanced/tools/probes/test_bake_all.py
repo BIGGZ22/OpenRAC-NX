@@ -218,6 +218,26 @@ class AllLevelBake(unittest.TestCase):
         lines = out.getvalue().splitlines()
         self.assertTrue(lines[lines.index('[4/4] level_99: baked') + 1].startswith('Lighting 100.0%'))
 
+    def test_a_level_with_nothing_to_bake_is_done_and_kept(self):
+        # The flight between planets has only a sky: the baker says so, and the level counts as
+        # done with no bake (the game keeps its own lighting there), not as a failure each time.
+        def bake(level, output, baker, **kwargs):
+            if level.name == 'level_99':
+                output.mkdir(parents=True, exist_ok=True)
+                (output/'bake-result.json').write_text('{"verified": true, "empty": true}')
+                return None
+            return self.fake_bake()(level, output, baker)
+        with patch.object(batch.bake_level, 'bake_level', side_effect=bake), \
+             contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True))
+        self.assertIn('level_99: nothing to bake', out.getvalue())
+        report = json.loads((self.output/'bake-all-result.json').read_text())
+        self.assertEqual(report['levels'][-1], {'level': 'level_99', 'verified': True, 'empty': True})
+        self.assertTrue((self.output/'level_99'/batch.STAMP).is_file())
+        with patch.object(batch.bake_level, 'bake_level', side_effect=bake) as run:
+            self.assertTrue(batch.bake_all(self.levels, self.output, self.baker, update=True))
+        run.assert_not_called()
+
     def test_time_left_in_round_words(self):
         self.assertEqual(batch.time_left(30), 'less than a minute left')
         self.assertEqual(batch.time_left(70), 'about a minute left')

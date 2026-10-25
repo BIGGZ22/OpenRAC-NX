@@ -358,6 +358,9 @@ int main(int argc, char** argv) {
         std::cout << "Saved " << output.string() << " (" << valid << '/' << volume.probes.size()
                   << " valid probes, " << seconds << " s)\n";
         return 0;
+    } catch (const NothingToBake& nothing) {
+        std::cerr << "probe bake: " << nothing.what() << '\n';
+        return kNothingToBake;
     } catch (const std::exception& error) {
         std::cerr << "probe bake: " << error.what() << '\n';
         return 1;
