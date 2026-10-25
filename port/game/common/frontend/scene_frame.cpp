@@ -242,8 +242,9 @@ void draw_world(SceneFrame& frame) {
     const float picture_scale = frame.picture_scale;
     const bool temporal_wanted = frame.temporal;
 
-    // Repeated pause-menu frames preserve the already completed world.
-    if (owner.renderer && !owner.repeat_frame) {
+    // Repeated pause-menu frames preserve the already completed world; a tick drawn over the last
+    // picture draws its 2D once, on its first frame (drawn again, a fade's darkening would add up).
+    if (owner.renderer && !owner.repeat_frame && !(owner.overdraw && !frame.output.first)) {
         // [debug tools] The passes hidden in the overlay; the render timed (common/stats.h).
         debug_overlay::before_render(owner.renderer.get());
         const stats::Scope render_scope("render");

@@ -1345,22 +1345,25 @@ const std::vector<renderer::UiQuad>* keep_2d_path(
     return named_quads;
 }
 
-// Decides whether the last frame stands for this tick's (a page menu's gap, a list not finished).
-void choose_repeat_frame(bool debug) {
+// Decides how this tick's frames start (frontend/tick_picture.h): the last frame standing, the last
+// frame under the tick's 2D, or a cleared frame. `level`: the level program loaded.
+void choose_repeat_frame(int level, bool debug) {
     Kept& k = *g->kept;
-    const bool menu_gap = (k.draws & 0x1Fu) == 0 && k.before_world >= 0x40000;
-    g->menu_gap_ticks = menu_gap ? g->menu_gap_ticks + 1 : 0;
-    // A tick that draws its world with no 2D list at all (the first tick of the vendor's fly-in,
-    // the first after a scene) is one whose list the game has not finished: drawn, it showed the
-    // world unfaded between the black of a fade's ticks (the flicker on opening the vendor). The
-    // last frame stands for it, as the console's screen did.
-    const bool unfinished = k.has_camera && (k.draws & 0x1Fu) != 0 && k.packets.empty();
-    g->repeat_frame = ((menu_gap && g->menu_gap_ticks <= 3) || unfinished) && g->frame.id() != 0;
-    if (g->repeat_frame && debug) {
+    const TickPicture picture = g->tick_pictures.choose(
+        {k.draws,
+         k.has_camera,
+         level >= 0 && level < 19,
+         k.packets.size(),
+         k.before_world,
+         g->frame.id() != 0}
+    );
+    g->repeat_frame = picture == TickPicture::Repeat;
+    g->overdraw = picture == TickPicture::Overdraw;
+    if (picture != TickPicture::Draw && debug) {
         log::info(
-            "frame {}: {}; the last frame stands",
+            "frame {}: {}",
             g->index,
-            unfinished ? "a world without its 2D list" : "no world under a page menu's list"
+            g->repeat_frame ? "the last frame stands" : "the 2D goes over the last frame"
         );
     }
     if (debug && k.frame % 100 == 0 && !k.strips.empty()) {
@@ -1562,7 +1565,7 @@ bool finish_tick(
     int level,
     bool debug
 ) {
-    choose_repeat_frame(debug);
+    choose_repeat_frame(level, debug);
     keep_effects(ram, state, named_quads);
     report_tick(ram, level);
 

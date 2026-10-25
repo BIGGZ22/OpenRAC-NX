@@ -143,6 +143,14 @@ void retain_background(SceneFrame& frame) {
     constexpr std::size_t kSnapshotBytes = 0x40000;
     const bool after_world = owner.last_world_tick != 0 && scene.frame - owner.last_world_tick <= 3;
 
+    // A level's tick without a world goes over the picture shown last (frontend/tick_picture.h):
+    // the frame keeps its colour, and only the tick's first frame draws its 2D.
+    if (owner.overdraw) {
+        owner.hold_last_world = false;
+        input.keep_colour = true;
+        return;
+    }
+
     // A newly opened page may omit the snapshot transfer for its first few ticks.
     if (first && has_camera && (scene.draws & 0x0Fu) == 0 && scene.before_world < kSnapshotBytes
         && (after_world || owner.last_tick_menu) && owner.last_world.width() == width
