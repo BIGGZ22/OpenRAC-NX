@@ -1026,7 +1026,9 @@ std::vector<JointMatrix> evaluate_keys(
         }
 
         rec[j][0] = V4{b(nq[0]), b(nq[1]), b(nq[2]), b(nq[3])};
-        rec[j][1] = V4{b(ns[0]), b(ns[1]), b(ns[2]), rec[j][1][3]};
+        // A modifier's own scale gives the joint one: the hoverboard girl's chest has no scale key.
+        const bool scaled = rec[j][1][3] != 0 || ns[0] != 1.0f || ns[1] != 1.0f || ns[2] != 1.0f;
+        rec[j][1] = V4{b(ns[0]), b(ns[1]), b(ns[2]), scaled ? (rec[j][1][3] | 1u) : 0u};
         rec[j][2] = V4{b(nt[0]), b(nt[1]), b(nt[2]), rec[j][2][3]};
     }
 
