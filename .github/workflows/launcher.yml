@@ -144,7 +144,7 @@ jobs:
               launcher/target/universal-apple-darwin/release/bundle/dmg/*.dmg
               launcher/target/universal-apple-darwin/release/bundle/macos/*.tar.gz
               launcher/target/universal-apple-darwin/release/bundle/macos/*.sig
-          # arm64-v8a, API 29 and later, with the runner's NDK; its Python is Chaquopy's. A debug
+          # arm64-v8a, API 28 and later, with the runner's NDK; its Python is Chaquopy's. A debug
           # APK, signed with the launcher's own key when the repository has it (the
           # ANDROID_KEYSTORE secrets: updates install only over an APK of the same key), else
           # with the runner's debug key; the device tests are in port/android/README.md.

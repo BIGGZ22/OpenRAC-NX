@@ -36,9 +36,10 @@ android {
             ?: "dev.openrac.launcher"
         manifestPlaceholders["appLabel"] = System.getenv("OPENRAC_ANDROID_APP_LABEL")?.takeIf { it.isNotEmpty() }
             ?: "OpenRAC Launcher"
-        // Android 10: the port's memory (memfd), libadrenotools' driver loading (API 28+) and the
-        // APIs the game's activity uses (docs/port/ANDROID.md).
-        minSdk = 29
+        // Android 9: libadrenotools' driver loading starts there, so a custom Vulkan driver (and
+        // with it Enhanced graphics) works on every supported version. Newer APIs are checked at
+        // run time (docs/port/ANDROID.md).
+        minSdk = 28
         targetSdk = 37
         // CI numbers each build (.github/workflows/launcher.yml): Android's home screens take a
         // new icon or name only from an APK whose version code changed.

@@ -118,9 +118,20 @@ GpuDriver load() {
     // A folder of the package's own for the files the driver writes (its shader cache).
     const std::string redirect = folder((fs::path(dir) / "redirect").string());
     fs::create_directories(redirect, ec);
-    void* vulkan = adrenotools_open_libvulkan(RTLD_NOW, ADRENOTOOLS_DRIVER_CUSTOM | ADRENOTOOLS_DRIVER_FILE_REDIRECT,
-                                              nullptr, hooks.c_str(), folder(dir).c_str(), library.c_str(),
-                                              redirect.c_str(), nullptr);
+    // Below Android 10 libadrenotools writes the patched system libraries to a folder rather than
+    // to memfds, which Android 9 does not promise; from Android 10 it ignores the folder.
+    const std::string patched = folder((fs::path(dir) / "patched").string());
+    fs::create_directories(patched, ec);
+    void* vulkan = adrenotools_open_libvulkan(
+        RTLD_NOW,
+        ADRENOTOOLS_DRIVER_CUSTOM | ADRENOTOOLS_DRIVER_FILE_REDIRECT,
+        patched.c_str(),
+        hooks.c_str(),
+        folder(dir).c_str(),
+        library.c_str(),
+        redirect.c_str(),
+        nullptr
+    );
     if (vulkan == nullptr) {
         driver.detail = std::format("the system's driver: libadrenotools could not load {} ({})", library,
                                     dlerror() != nullptr ? "see the log above" : "no reason given");

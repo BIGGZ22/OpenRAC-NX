@@ -241,7 +241,7 @@ std::string cpu_clocks() {
 std::string thermal() {
 #if defined(__ANDROID__)
     // The NDK's thermal manager (API 30, the headroom 31), looked up so that the port still runs
-    // on Android 10.
+    // on Android 9.
     using Acquire = void* (*)();
     using Status = int (*)(void*);
     using Headroom = float (*)(void*, int);

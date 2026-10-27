@@ -134,13 +134,13 @@ def python() -> tuple[Path, Path]:
 
 
 def embree_android_options(ndk: Path) -> dict[str, str]:
-    """How Embree is configured for Android: the port's preset's target (arm64-v8a, API 29, the
+    """How Embree is configured for Android: the port's preset's target (arm64-v8a, API 28, the
     shared C++ runtime) through the NDK's toolchain file, and build_port's Embree options for an
     ARM machine (Embree's own NEON)."""
     return {
         "CMAKE_TOOLCHAIN_FILE": (ndk / "build/cmake/android.toolchain.cmake").as_posix(),
         "ANDROID_ABI": "arm64-v8a",
-        "ANDROID_PLATFORM": "android-29",
+        "ANDROID_PLATFORM": "android-28",
         "ANDROID_STL": "c++_shared",
         "CMAKE_BUILD_TYPE": "Release",
         **desktop.embree_options("aarch64"),
