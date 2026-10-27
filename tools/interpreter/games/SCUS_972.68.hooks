@@ -1,0 +1,85 @@
+# Ratchet & Clank: Going Commando, SCUS_972.68 (US): the functions of the
+# program that the runtime answers itself, by address. The table is that of
+# the first game (SCES_509.16.hooks) with each function found again in this
+# program by the shape of its first instructions (runtime/tools/port_hooks.py);
+# the names are those of that table. Lines that start "# not here" are
+# functions of the first game that this one does not have in that shape: it
+# runs without them. The movie player was found by the message it prints.
+#
+# address  service            what is there
+
+# The disc drive.
+00124E08 sceCdInit
+001250E8 sceCdDiskReady
+001252E0 sceCdMmode
+001253A8 sceCdRead.callback
+001245D0 sceCdCallback
+00124B88 sceCdSync
+00125588 sceCdGetError
+00125620 sceCdBreak
+001256D8 sceCdReadClock
+
+# The second processor: there is none, so starting it and talking to it succeed at once.
+0011EED8 return1            # sceSifRebootIop
+0011EEA0 return1            # sceSifSyncIop
+0011CF78 return0            # sceSifInitRpc
+0011F5E0 return0
+0011E7A0 return0            # sceSifInitIopHeap
+0011F628 return0
+0011E0A0 return0            # sceFsReset
+# not here: return0            # the game's loader of modules for that processor
+
+# The display.
+001261F0 sceGsSyncV
+
+# The console.
+# not here: sceScfGetLanguage
+0026FEB8 printf             # the game's own message printer
+
+# Start-up code that searches and patches the console's kernel. There is no
+# kernel image here; what those patches provide, the runtime's kernel calls do.
+0011F718 nothing            # InitSystemCallTableAddress
+0011FAB8 nothing            # the alarm patch
+0011F938 nothing            # the configuration patch
+0011F058 return0            # the TLB functions
+
+# Remote calls to the second processor. Only the sound library reaches them:
+# the disc, card and pad libraries are replaced above them.
+0011D450 sceSifBindRpc
+0011D810 sceSifCheckStatRpc
+0011D620 sceSifCallRpc.989snd
+
+# The sound library's own disc access (it shares the drive with streaming).
+# not here: sceCdRead.callback # snd_StreamSafeCdRead
+# not here: sceCdSync          # snd_StreamSafeCdSync
+# not here: sceCdBreak         # snd_StreamSafeCdBreak
+# not here: sceCdGetError      # snd_StreamSafeCdGetError
+# not here: sceCdCallback      # snd_StreamSafeCdCallback
+# not here: return1            # snd_StreamSafeCheckCDIdle
+
+# The memory card.
+00127348 sceMcInit
+00127508 sceMcOpen
+00127630 sceMcMkdir
+00127668 sceMcClose
+00127720 sceMcSeek
+00127888 sceMcRead
+001279A0 sceMcWrite
+00127B88 sceMcSync
+00127CC0 sceMcGetInfo
+00127E48 sceMcGetDir
+00127F98 sceMcFormat
+00128068 sceMcDelete
+00128180 sceMcUnformat
+
+# The pad.
+001282A8 return1            # sceDbcInit
+001288C0 return1            # scePad2Init
+00128900 return0            # scePad2CreateSocket: socket 0
+00128A50 scePad2Read
+00128B28 scePad2GetButtonProfile
+00128C18 scePad2GetState
+00128F50 sceVibGetProfile
+
+# Movies are not played yet: the player returns at once.
+0034EF58 return1            # the game's movie player; 1 is what it answers when a movie was skipped

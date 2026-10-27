@@ -1,0 +1,36 @@
+# Ratchet & Clank (PAL): decompiled functions that the host build leaves to
+# the interpreter, each with the reason. A function is listed when its C
+# matches the retail bytes but does not do what the retail code does once it
+# is compiled for a host; the fix belongs in the decompilation, and the line
+# goes when it is made.
+#
+# How they are found: `openrac-boot --native LIBRARY --native-check N` runs
+# each function both ways and lists the ones that leave something else in
+# memory or in the result (runtime/port/README.md).
+#
+# name            why
+
+# A 64-bit value passes through a declaration typed as 32 bits. On the console
+# a register move carries all 64 bits whatever the C says; here the upper half
+# is dropped. (The build finds by itself the functions that cut the result of
+# a function listed in wide/; this one is another value.)
+func_0021C6C0     returns a colour that the retail code leaves zero-extended in 64 bits; declared s32, it comes back sign-extended
+
+# A local too small for what a callee does with it: the callee reads or writes
+# the floats after it, which are another local with the retail compiler's
+# stack layout and something else here. The fix is one local of the size the
+# callee uses.
+func_L08_00309050 `float v[2]` goes to a routine that reads three floats
+func_L14_002FDE28 `float v[3]` and `float t[3]` go to routines that read and write four
+func_L06_002EADC8 eight `float [4]` in a row; func_00215328 writes more than four into the first
+
+# A local read before anything set it. The retail code reads what an earlier
+# call left on its stack there, which no host build can reproduce; the check
+# lists these as `unset`. The fix is to set it, when the retail value is known.
+func_L00_00263D68 adds all four floats of a vector of which func_00215C00 set three
+func_L00_00265050 found by the check in level 3; not looked at further
+
+# Differ from the retail code in a level other than the one they are named
+# after; the cause is not found yet. They agree in their own level.
+func_L00_002584A8 level 3: leaves 6 where the retail code leaves 0, in the caller's frame
+func_L00_00261478 level 3: one float of the result is a little off

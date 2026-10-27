@@ -1,0 +1,13 @@
+# Ratchet & Clank (PAL): functions whose integer result is 64 bits wide,
+# whatever a source file declares. The host build reads every declaration of
+# them as returning `long`.
+#
+# On the console a result comes back in a 64-bit register and a caller that
+# stores it in a 64-bit place keeps all of it, even through a prototype that
+# says `int`; a host compiler drops the upper half at the call. A caller that
+# keeps the value in an `int` of its own still loses it and is listed in
+# leave/ instead.
+#
+# name            what it returns
+
+func_001F4868     a texture's GS TEX0 register value

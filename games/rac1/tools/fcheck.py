@@ -25,7 +25,7 @@ no states and cannot be checked this way. The first form captures FUNC alone
 when it has no states yet (about a minute).
 
 Executable functions only for now (func_XXXXXXXX). Needs OpenRAC built
-(cmake --build build/runtime in ~/Projects/OpenRAC) and the PAL disc image.
+(cmake -S tools/interpreter -B build/interpreter, then build it, in ~/Projects/OpenRAC) and the PAL disc image.
 """
 from __future__ import annotations
 
@@ -38,10 +38,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 OPENRAC = Path(__import__("os").environ.get("OPENRAC_ROOT", str(Path.home() / "Projects/RAC/OpenRAC")))
-BOOT = OPENRAC / "build/runtime/openrac-boot"
-FCHECK = OPENRAC / "build/runtime/openrac-fcheck"
+BOOT = OPENRAC / "build/interpreter/openrac-boot"
+FCHECK = OPENRAC / "build/interpreter/openrac-fcheck"
 DISC = next((p for p in (OPENRAC / "baserom/SCES_509.16.iso", OPENRAC / "games/rac1/baserom/SCES_509.16.iso") if p.exists()), OPENRAC / "baserom/SCES_509.16.iso")
-HOOKS = OPENRAC / "runtime/games/SCES_509.16.hooks"
+HOOKS = OPENRAC / "tools/interpreter/games/SCES_509.16.hooks"
 WORK = ROOT / "build-sn/fcheck"
 STATES = WORK / "states"
 # OpenRAC dropped runtime/ with its emulator; the hooks file is kept beside the states.

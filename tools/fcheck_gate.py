@@ -42,8 +42,8 @@ port/game/rac1-ntsc/hand/fcheck.tsv for hand.tsv. Columns:
           the verdict as stale (report lists those)
   note    free text: differing lines, the reason for unchecked
 
-Environment: OPENRAC_ROOT is the OpenRAC checkout that has build/runtime/
-openrac-fcheck and openrac-boot built (default: the checkout holding this script);
+Environment: OPENRAC_ROOT is the OpenRAC checkout that has build/interpreter/
+openrac-fcheck and openrac-boot built (cmake -S tools/interpreter -B build/interpreter) (default: the checkout holding this script);
 OPENRAC_DECOMP is rac1-decomp's checkout, when set; else the gate finds it as every
 tool finds a sister checkout (openrac_common.games.source_checkout): in
 OPENRAC_SOURCE_RAC1_PAL, else at the "checkout" games/rac1/game.json names for pal.
@@ -377,6 +377,11 @@ def fcheck_module(decomp: Path):
     spec = importlib.util.spec_from_file_location("rac1_fcheck", decomp / "tools/fcheck.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    # The test-only interpreter lives in tools/interpreter/ and builds to build/interpreter/.
+    base = Path(os.environ["OPENRAC_ROOT"])
+    mod.BOOT = base / "build/interpreter/openrac-boot"
+    mod.FCHECK = base / "build/interpreter/openrac-fcheck"
+    mod.HOOKS = next((h for h in (base / "tools/interpreter/games" / mod.HOOKS.name, mod.HOOKS) if h.exists()), mod.HOOKS)
     return mod
 
 

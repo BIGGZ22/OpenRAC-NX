@@ -1,0 +1,114 @@
+# The layout of every C++ file under runtime/. docs/CODING_CONVENTIONS.md says
+# why each choice was made; this file is the reference for what the layout is.
+# Formatting only: whitespace, line breaks, braces on bodies, and the order of
+# includes. It never changes what the program does.
+#
+#   clang-format -i FILE           apply it
+#   clang-format --dry-run -Werror FILE...   check it (prints nothing when clean)
+---
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: c++20
+
+# Indentation: four spaces, never a tab. A wrapped line goes one level in.
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+ColumnLimit: 100
+
+# Namespaces are not indented. Case labels are indented one level under switch.
+# Access specifiers sit at the class's own column.
+NamespaceIndentation: None
+FixNamespaceComments: true
+IndentCaseLabels: true
+IndentCaseBlocks: false
+AccessModifierOffset: -4
+IndentPPDirectives: None
+
+# Braces: opening brace on the line of the statement. Every body has braces.
+BreakBeforeBraces: Attach
+InsertBraces: true
+
+# One statement per line. Only these may share a line with their body: an empty
+# function, an accessor defined in its class, and a short lambda passed as an
+# argument. A case label never shares its line with a statement.
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortLambdasOnASingleLine: Inline
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+
+# A call or declaration that does not fit goes to the next line after "(". If
+# its arguments then fit on one line they stay together; if not, one per line.
+# The closing bracket gets its own line at the indent of the statement.
+AlignAfterOpenBracket: BlockIndent
+BinPackArguments: false
+BinPackParameters: false
+PenaltyReturnTypeOnItsOwnLine: 1000
+PenaltyBreakBeforeFirstCallParameter: 100
+
+# A wrapped expression starts its next line with the operator.
+AlignOperands: Align
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeTernaryOperators: true
+
+# Constructor initialisers share the signature's line if they fit, otherwise
+# the colon starts the next line and each initialiser has a line of its own.
+BreakConstructorInitializers: BeforeColon
+PackConstructorInitializers: CurrentLine
+
+# Pointers and references hug the type: u8* data, const Image& image.
+PointerAlignment: Left
+ReferenceAlignment: Pointer
+DerivePointerAlignment: false
+QualifierAlignment: Leave
+
+# Spaces.
+SpaceBeforeParens: ControlStatements
+SpaceAfterTemplateKeyword: true
+SpacesInContainerLiterals: false
+Cpp11BracedListStyle: true
+SpacesBeforeTrailingComments: 2
+SpacesInLineCommentPrefix:
+  Minimum: 1
+  Maximum: -1
+
+# Trailing comments in a run of lines line up. The tool never rewraps or
+# rewords a comment: comment text is written and wrapped by hand.
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 0
+ReflowComments: false
+
+# Blank lines: never two in a row, none at the start of a block, and one
+# between function and type definitions.
+MaxEmptyLinesToKeep: 1
+KeepEmptyLinesAtTheStartOfBlocks: false
+SeparateDefinitionBlocks: Always
+EmptyLineAfterAccessModifier: Never
+EmptyLineBeforeAccessModifier: LogicalBlock
+
+# A template's header goes on its own line.
+BreakTemplateDeclarations: Yes
+
+# A lambda's body is indented from the line its signature starts on.
+LambdaBodyIndentation: Signature
+
+# Includes: the file's own header first, then the standard library, then
+# third-party headers, then this project's, one blank line between groups and
+# alphabetical inside each.
+SortIncludes: CaseSensitive
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<SDL3/'
+    Priority: 3
+  - Regex: '^<[a-z_0-9]+(\.h)?>$'
+    Priority: 2
+  - Regex: '^"'
+    Priority: 4
+
+InsertNewlineAtEOF: true
+LineEnding: LF

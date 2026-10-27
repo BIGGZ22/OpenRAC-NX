@@ -213,7 +213,9 @@ Only `same` counts as done. `differs` is a bug to fix. The rest are open: say
 so when you hand the function on, and never call it verified. A backfill row with no
 verdict has not been through the gate.
 
-Run it (OpenRAC built so that `build/runtime/openrac-fcheck` and
+The gate uses the test-only interpreter in `tools/interpreter/` (built on its own with `cmake -S tools/interpreter -B build/interpreter`); it is never part of the port, the launcher or any release, and is never used to play.
+
+Run it (the interpreter built so that `build/interpreter/openrac-fcheck` and
 `openrac-boot` exist; the PAL disc in place; a container runtime for the
 retail compiler; headless, it opens no window):
 

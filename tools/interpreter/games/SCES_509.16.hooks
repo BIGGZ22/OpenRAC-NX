@@ -1,0 +1,82 @@
+# Ratchet & Clank, SCES_509.16 (PAL): the functions of the program that the
+# runtime answers itself, by address. The names are the public names of the
+# library functions at those addresses (runtime/docs/RAC1_PAL_SURVEY.md,
+# Appendix B) and of the services in src/sys/services.cpp.
+#
+# address  service            what is there
+
+# The disc drive.
+001211B0 sceCdInit
+00121490 sceCdDiskReady
+00121688 sceCdMmode
+00121750 sceCdRead.callback
+00120978 sceCdCallback
+00120F30 sceCdSync
+00121930 sceCdGetError
+001219C8 sceCdBreak
+00121A80 sceCdReadClock
+
+# The second processor: there is none, so starting it and talking to it succeed at once.
+0011D248 return1            # sceSifRebootIop
+0011D210 return1            # sceSifSyncIop
+0011AE20 return0            # sceSifInitRpc
+0011D960 return0
+0011CB40 return0            # sceSifInitIopHeap
+0011D9A8 return0
+0011BF48 return0            # sceFsReset
+00201D58 return0            # the game's loader of modules for that processor
+
+# The display.
+00122598 sceGsSyncV
+
+# The console.
+0012D380 sceScfGetLanguage
+001E9730 printf             # the game's own message printer
+
+# Start-up code that searches and patches the console's kernel. There is no
+# kernel image here; what those patches provide, the runtime's kernel calls do.
+0011DA98 nothing            # InitSystemCallTableAddress
+0011DE38 nothing            # the alarm patch
+0011DCB8 nothing            # the configuration patch
+0011D3C8 return0            # the TLB functions
+
+# Remote calls to the second processor. Only the sound library reaches them:
+# the disc, card and pad libraries are replaced above them.
+0011B2F8 sceSifBindRpc
+0011B6B8 sceSifCheckStatRpc
+0011B4C8 sceSifCallRpc.989snd
+
+# The sound library's own disc access (it shares the drive with streaming).
+0012EE98 sceCdRead.callback # snd_StreamSafeCdRead
+0012EF48 sceCdSync          # snd_StreamSafeCdSync
+0012EFE8 sceCdBreak         # snd_StreamSafeCdBreak
+0012F030 sceCdGetError      # snd_StreamSafeCdGetError
+0012F068 sceCdCallback      # snd_StreamSafeCdCallback
+0012EE70 return1            # snd_StreamSafeCheckCDIdle
+
+# The memory card.
+001236F0 sceMcInit
+001238B0 sceMcOpen
+001239D8 sceMcMkdir
+00123A10 sceMcClose
+00123AC8 sceMcSeek
+00123C30 sceMcRead
+00123D48 sceMcWrite
+00123F30 sceMcSync
+00124068 sceMcGetInfo
+001241F0 sceMcGetDir
+00124340 sceMcFormat
+00124410 sceMcDelete
+00124528 sceMcUnformat
+
+# The pad.
+00124650 return1            # sceDbcInit
+00124B88 return1            # scePad2Init
+00124BC8 return0            # scePad2CreateSocket: socket 0
+00124D18 scePad2Read
+00124DF0 scePad2GetButtonProfile
+00124EE0 scePad2GetState
+00125218 sceVibGetProfile
+
+# Movies are not played yet: the player returns at once.
+0023B670 return0            # the game's movie player
