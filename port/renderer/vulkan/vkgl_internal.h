@@ -1002,6 +1002,8 @@ struct Context {
     bool allow_present_id = true;
     bool allow_present_wait = true;
     bool allow_latest_ready = true;
+    // Config::setup: who makes the instance and the device (an outside owner shares them).
+    Config::DeviceSetup setup;
     bool present_id_enabled = false;
     bool present_wait_enabled = false;
     bool latest_ready_enabled = false;

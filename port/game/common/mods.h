@@ -52,11 +52,24 @@ struct Host {
     const openrac_input* (*input)(void) = nullptr;
     void (*take_input)(std::uint32_t devices) = nullptr;
     void (*capture_mouse)(bool capture) = nullptr;
+    // The graphics context (interface 1.4): what the port draws with (null: a test's, or no
+    // window, and then the backend is none); the views a mod asked for, given once load is over
+    // (null: none, as at reset); the Vulkan device setup a mod asked for, likewise.
+    const openrac_graphics* (*graphics)(void) = nullptr;
+    void (*set_views)(const openrac_view_source* source) = nullptr;
+    void (*set_vulkan_setup)(const openrac_vulkan_setup* setup) = nullptr;
 };
 
 // Loads the mods the list has on. Returns the session header's line: "lock-strafe 1.0.0", "none",
-// "none (purist mode)". Called once, after the game's functions are registered, before it runs.
+// "none (purist mode)". Called once, after the game's functions are registered, before it runs:
+// after the window opens, or before it when makes_vulkan_device says so.
 std::string load(const Host& host);
+
+// Whether an enabled mod of the list `list` (plugins.json) says in its manifest that it makes the
+// Vulkan device ("vulkan_device": true, interface 1.4): then load() runs before the window opens,
+// which makes the device, and otherwise after it, as before. Reads the manifests only; false in
+// purist mode or with no list.
+bool makes_vulkan_device(const std::filesystem::path& list, bool purist);
 
 // Each loaded mod's openrac_mod_unload, last first (at exit).
 void unload();

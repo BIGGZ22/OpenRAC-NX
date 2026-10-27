@@ -84,6 +84,10 @@ struct Manifest {
     std::vector<Requirement> requirements;  // the manifest's "requires"
     std::vector<Conflict> conflicts;
     std::vector<std::string> load_after, load_before;
+    // "vulkan_device": true (interface 1.4): the mod makes the Vulkan device with the port
+    // (openrac_api.setup_vulkan), so the mods load before the window opens. Ignored on a script
+    // mod or one of an older interface.
+    bool vulkan_device = false;
 };
 
 // A manifest's text checked by the rules of MODS.md section 3. False, and why, when one is broken.

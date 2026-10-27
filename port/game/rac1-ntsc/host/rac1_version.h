@@ -233,6 +233,9 @@
 #define func_00238688 game_FUN_00237370
 #define func_0023B670 game_FUN_0023a3b8
 #define func_L00_001EB6A8 game_FUN_L00_001eb328
+#define func_001EC210 game_FUN_001ebe68
+#define func_L00_002A6070 game_FUN_L00_002a4de0
+#define func_0020D678 game_FUN_0020c828
 #define func_L00_001EBD58 func_L00_001EB9D8
 #define func_L00_001EFFF0 func_L00_001EFC70
 #define func_L00_001F10E0 game_FUN_L00_001f0d60

@@ -552,6 +552,47 @@ public:
     // it go anyway (window not focused, overlay open). Any time.
     void capture_mouse(bool capture) const { m_api->capture_mouse(m_handle, capture ? 1 : 0); }
 
+    // Since 1.4: returns whether the port offers the graphics context, views
+    // and the Vulkan device (graphics(), on_views(), setup_vulkan()): a mod
+    // that wants to run on 1.3 checks this first.
+    bool has_views() const {
+      return m_api->api_minor >= 4 &&
+             m_api->size >=
+                 offsetof(openrac_api, setup_vulkan) + sizeof(void *);
+    }
+
+    // Since 1.4: returns what the port draws with (openrac_graphics); its
+    // backend is OPENRAC_GRAPHICS_NONE before the window opens.
+    const openrac_graphics &graphics() const { return *m_api->graphics(); }
+
+    // Since 1.4: has the port draw the views `source` asks for each frame
+    // (openrac_view_source, sdk/docs/views.md). Throws openrac::Error when
+    // refused. Only during load.
+    void on_views(const openrac_view_source &source) {
+      openrac_view_source sized = source;
+      sized.size = sizeof sized;
+
+      // One mod has the views, and only from its load.
+      if (const int result = m_api->on_views(m_handle, &sized);
+          result != OPENRAC_HOOK_OK) {
+        throw Error(std::string("on_views: ") + views_error(result));
+      }
+    }
+
+    // Since 1.4: has the port make its Vulkan device through `setup`
+    // (openrac_vulkan_setup); the manifest says "vulkan_device": true. Throws
+    // openrac::Error when refused. Only during load.
+    void setup_vulkan(const openrac_vulkan_setup &setup) {
+      openrac_vulkan_setup sized = setup;
+      sized.size = sizeof sized;
+
+      // One mod makes the device, and only from its load.
+      if (const int result = m_api->setup_vulkan(m_handle, &sized);
+          result != OPENRAC_HOOK_OK) {
+        throw Error(std::string("setup_vulkan: ") + views_error(result));
+      }
+    }
+
     // Returns a view of game memory.
     Memory memory() const { return Memory(m_api->memory); }
 
@@ -579,7 +620,23 @@ private:
                 return "hooks are taken during load only";
             default:
                 return "refused";
-        }
+            }
+    }
+
+    // Returns the words for a failed openrac_api.on_views or setup_vulkan.
+    static const char *views_error(int result) {
+      // Each failure has its own words; any other code is the port's and
+      // unnamed.
+      switch (result) {
+      case OPENRAC_HOOK_TAKEN:
+        return "another mod has it already";
+      case OPENRAC_HOOK_TOO_LATE:
+        return "refused (only during load)";
+      case OPENRAC_HOOK_UNKNOWN:
+        return "the structure is incomplete";
+      default:
+        return "refused";
+      }
     }
 
     // The port's table and this mod's handle; not owned, valid for the life of the program.

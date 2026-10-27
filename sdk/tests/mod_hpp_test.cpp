@@ -203,6 +203,32 @@ void host_capture_mouse(openrac_mod*, int capture) {
     g_capture = capture;
 }
 
+// The graphics, views and Vulkan device (1.4): what the fake port was given,
+// and whether it has views already (a second asking is taken).
+openrac_graphics g_graphics = [] {
+  openrac_graphics graphics{};
+  graphics.size = sizeof graphics;
+  graphics.backend = OPENRAC_GRAPHICS_OPENGL;
+  return graphics;
+}();
+openrac_view_source g_views{};
+openrac_vulkan_setup g_vulkan{};
+
+const openrac_graphics *host_graphics() { return &g_graphics; }
+
+int host_on_views(openrac_mod *, const openrac_view_source *source) {
+  if (g_views.begin != nullptr) {
+    return OPENRAC_HOOK_TAKEN;
+  }
+  g_views = *source;
+  return OPENRAC_HOOK_OK;
+}
+
+int host_setup_vulkan(openrac_mod *, const openrac_vulkan_setup *setup) {
+  g_vulkan = *setup;
+  return OPENRAC_HOOK_OK;
+}
+
 // Returns a table of the fake host's functions, as a port of the newest interface would fill it.
 openrac_api make_api() {
     openrac_api api{};
@@ -233,6 +259,9 @@ openrac_api make_api() {
     api.input = host_input;
     api.take_input = host_take_input;
     api.capture_mouse = host_capture_mouse;
+    api.graphics = host_graphics;
+    api.on_views = host_on_views;
+    api.setup_vulkan = host_setup_vulkan;
     return api;
 }
 
@@ -468,6 +497,45 @@ void check_input(openrac::Mod& mod) {
     CHECK(g_capture == 0);
 }
 
+// Checks the graphics, the views and the Vulkan device (1.4): what the port
+// reports, the source and setup given with their size, a second asking refused
+// with the port's words, and a 1.3 port.
+void check_views(openrac::Mod &mod, const openrac_api &api) {
+  CHECK(mod.has_views());
+  CHECK(mod.graphics().backend == OPENRAC_GRAPHICS_OPENGL);
+
+  openrac_view_source source{};
+  source.begin = [](void *, openrac_view *, int) { return 0; };
+  source.end = [](void *, const openrac_view *, int) {};
+  mod.on_views(source);
+
+  CHECK(g_views.size == sizeof(openrac_view_source) &&
+        g_views.begin != nullptr);
+
+  bool refused = false;
+
+  // The fake port has views already: the second asking is taken.
+  try {
+    mod.on_views(source);
+  } catch (const openrac::Error &e) {
+    refused = std::string(e.what()) == "on_views: another mod has it already";
+  }
+
+  CHECK(refused);
+
+  mod.setup_vulkan(openrac_vulkan_setup{});
+
+  CHECK(g_vulkan.size == sizeof(openrac_vulkan_setup));
+
+  openrac_api old = api; // a port of 1.3: the table ends before the graphics
+  old.api_minor = 3;
+  old.size = static_cast<uint32_t>(offsetof(openrac_api, graphics));
+
+  const openrac::Mod before(&old, nullptr);
+
+  CHECK(!before.has_views());
+}
+
 // Checks that a load that throws refuses the mod with the message, whatever the exception is.
 void check_refused_loads(const openrac_api& api, openrac_mod* handle) {
     g_failed.clear();
@@ -532,6 +600,7 @@ int main() {
     check_memory_and_stack(mod);
     check_binds();
     check_input(mod);
+    check_views(mod, api);
     check_refused_loads(api, handle);
     check_reload(api, handle);
 

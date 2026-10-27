@@ -18,6 +18,7 @@
 #include <string>
 
 #include "openrac/game_host.h"
+#include "openrac/openrac_mod.h"
 
 namespace openrac::frontend {
 
@@ -148,6 +149,15 @@ void take_keyboard();
 // A mod asks for the cursor captured (relative mouse mode) or let go. Applied each frame, and let
 // go anyway while the window is not focused or the overlay or the debug menu is open.
 void capture_mouse(bool capture);
+
+// What the port draws with, as a mod reads it (interface 1.4, openrac_mod.h's openrac_graphics):
+// the backend none while no window is open.
+const openrac_graphics* mod_graphics();
+
+// The views a mod draws besides the window's picture (interface 1.4, openrac_view_source): drawn
+// in each frame from now on; null for none. While a mod has views, Vulkan draws on the window's
+// thread (no render worker). Without a mod's views nothing of them runs.
+void set_view_source(const openrac_view_source* source);
 
 // While the debug overlay holds the game (its pause): draws the last tick again and reads the
 // window's events until the overlay lets a tick through. False once the window was closed.

@@ -114,4 +114,65 @@ inline Mat4 perspective_reversed(float fov_y, float aspect, float near_z, float 
     };
 }
 
+// perspective_reversed with a frustum that need not be centred (a headset's eye, OpenXR's
+// XrFovf): the angles of its left, right, top and bottom edges from straight ahead, in radians
+// (left and down negative).
+inline Mat4 perspective_off_centre_reversed(
+    float angle_left, float angle_right, float angle_up, float angle_down, float near_z, float far_z
+) {
+    const float left = std::tan(angle_left);
+    const float right = std::tan(angle_right);
+    const float up = std::tan(angle_up);
+    const float down = std::tan(angle_down);
+    return {
+        2.0f / (right - left),
+        0,
+        0,
+        0,
+        0,
+        2.0f / (up - down),
+        0,
+        0,
+        (right + left) / (right - left),
+        (up + down) / (up - down),
+        -(far_z + near_z) / (near_z - far_z),
+        -1,
+        0,
+        0,
+        -(2.0f * far_z * near_z) / (near_z - far_z),
+        0
+    };
+}
+
+// The view of an eye at `position`, turned by the unit quaternion `orientation` (x, y, z, w), both
+// in the view space of `view` (GL's, as OpenXR's: X right, Y up, looking down -Z): world to the
+// eye's view space.
+inline Mat4 eye_view(
+    const Mat4& view, const Vec3& position, const std::array<float, 4>& orientation
+) {
+    const float x = orientation[0], y = orientation[1], z = orientation[2], w = orientation[3];
+    // The eye's rotation, transposed (its inverse), column-major.
+    const Mat4 inverse_rotation = {
+        1 - 2 * (y * y + z * z),
+        2 * (x * y - z * w),
+        2 * (x * z + y * w),
+        0,
+        2 * (x * y + z * w),
+        1 - 2 * (x * x + z * z),
+        2 * (y * z - x * w),
+        0,
+        2 * (x * z - y * w),
+        2 * (y * z + x * w),
+        1 - 2 * (x * x + y * y),
+        0,
+        0,
+        0,
+        0,
+        1,
+    };
+    return multiply(
+        inverse_rotation, multiply(translation({-position[0], -position[1], -position[2]}), view)
+    );
+}
+
 }  // namespace openrac::renderer

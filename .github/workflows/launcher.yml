@@ -144,7 +144,7 @@ jobs:
               launcher/target/universal-apple-darwin/release/bundle/dmg/*.dmg
               launcher/target/universal-apple-darwin/release/bundle/macos/*.tar.gz
               launcher/target/universal-apple-darwin/release/bundle/macos/*.sig
-          # arm64-v8a, API 29 and later, with the runner's NDK; its Python is Chaquopy's. A debug
+          # arm64-v8a, API 28 and later, with the runner's NDK; its Python is Chaquopy's. A debug
           # APK, signed with the launcher's own key when the repository has it (the
           # ANDROID_KEYSTORE secrets: updates install only over an APK of the same key), else
           # with the runner's debug key; the device tests are in port/android/README.md.
@@ -170,7 +170,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         if: matrix.name != 'fedora'
         with:
           python-version: "3.12"

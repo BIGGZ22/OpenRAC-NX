@@ -35,6 +35,7 @@
 #include "frame_pacing.h"
 #include "game/common/frontend/geometry.h"
 #include "game/common/frontend/pacing.h"
+#include "game/common/frontend/scene_frame_internal.h"
 #include "game/common/frontend/state.h"
 #include "game/common/particle_texture_cache.h"
 #include "game/common/profile.h"
@@ -497,6 +498,8 @@ void close() {
         renderer::ui::fps_counter::release();
         renderer::ui::touch_overlay::release();
         debug_menu::release();
+        // A mod's views: it lets go of what it made with the context, while the context is there.
+        release_views(*g);
         // Temporal histories reference the target and scene, so retire them before either owner.
         g->temporal.reset();
         g->frame.release();

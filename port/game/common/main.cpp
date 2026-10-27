@@ -66,6 +66,7 @@
 #include "frontend.h"
 #include "platform/input.h"
 #include "platform/pump.h"
+#include "platform/window.h"
 #include "renderer/gl.h"
 #include "settings.h"
 #endif
@@ -196,6 +197,22 @@ const openrac_input* mod_input() {
     return nullptr;
 }
 
+#ifdef OPENRAC_FRONTEND
+// What mods loaded before the window asked of its keyboard and cursor (load_mods).
+bool g_early_keyboard = false;
+std::optional<bool> g_early_capture;
+
+// Gives the window what the mods loaded before it asked for.
+void apply_early_mod_input() {
+    if (g_early_keyboard) {
+        frontend::take_keyboard();
+    }
+    if (g_early_capture) {
+        frontend::capture_mouse(*g_early_capture);
+    }
+}
+#endif
+
 // The native mods the launcher's list has on (mods.h, docs/port/MODS.md), bound to this disc's hook
 // points (hostgen's hooks.c), once the game's functions are registered and before it runs; the
 // session header says which loaded.
@@ -213,15 +230,32 @@ void load_mods() {
     host.scripts = openrac_game_script_binding();  // generated (sdk/tools/gen_binding.py), or none
     host.input = mod_input;
 #ifdef OPENRAC_FRONTEND
+    // Mods loaded before the window opens (a mod that makes the Vulkan device): what they ask of
+    // the keyboard and the cursor is kept for the window (apply_early_mod_input).
     host.take_input = [](std::uint32_t devices) {
-        if ((devices & OPENRAC_INPUT_KEYBOARD) != 0 && g_window) {
-            frontend::take_keyboard();
+        if ((devices & OPENRAC_INPUT_KEYBOARD) != 0) {
+            if (g_window) {
+                frontend::take_keyboard();
+            } else {
+                g_early_keyboard = true;
+            }
         }
     };
     host.capture_mouse = [](bool capture) {
         if (g_window) {
             frontend::capture_mouse(capture);
+        } else {
+            g_early_capture = capture;
         }
+    };
+    host.graphics = frontend::mod_graphics;
+    host.set_views = frontend::set_view_source;
+    host.set_vulkan_setup = [](const openrac_vulkan_setup* setup) {
+        platform::VulkanSetup s;
+        if (setup != nullptr) {
+            s = {setup->user, setup->create_instance, setup->physical_device, setup->create_device};
+        }
+        platform::set_vulkan_setup(s);
     };
 #endif
     // "2026-10-21 14:02:11 +0200" as "2026-10-21T14:02:11+02:00".
@@ -323,6 +357,8 @@ int main(int argc, char** argv) {
         openrac_game_mods_dir = mods_path.c_str();
         log::info("edited levels from {}", mods_path);
     }
+    // The mods load before the window only for a mod that makes the Vulkan device.
+    bool mods_loaded = false;
 
 #ifdef OPENRAC_FRONTEND
     if (g_options.window) {
@@ -351,10 +387,20 @@ int main(int argc, char** argv) {
                       g_options.probes.empty() ? std::string("nowhere") : g_options.probes.string());
         }
         fs::path levels = g_options.levels.empty() ? default_levels(g_options.data) : levels_or_flat(g_options.levels);
+        // A mod that makes the Vulkan device with the port (a VR headset's) is loaded before the
+        // window, which makes the device; without one the mods load after it, as always.
+        if (mods::makes_vulkan_device(g_options.plugins, g_options.no_mods)) {
+            openrac_game_register_functions();
+            load_mods();
+            mods_loaded = true;
+        }
         if (!frontend::open(openrac_game.id, levels, why)) {
             log::fatalf("no window: {}", why);
         }
         g_window = true;
+        if (mods_loaded) {
+            apply_early_mod_input();
+        }
         if (g_options.debug_overlay) {
             frontend::debug_overlay::request();
         }
@@ -386,8 +432,10 @@ int main(int argc, char** argv) {
         }
     }
 
-    openrac_game_register_functions();
-    load_mods();
+    if (!mods_loaded) {
+        openrac_game_register_functions();
+        load_mods();
+    }
     openrac_guest_set_overlay_source(openrac_game_loaded_overlay);
     openrac_guest_set_level_programs(load_level_program);
     openrac_guest_stop_on_missing(g_options.keep_going ? 0 : 1);

@@ -47,7 +47,7 @@ class BuildAndroidTests(unittest.TestCase):
         options = build_android.embree_android_options(ndk)
         self.assertEqual(options["CMAKE_TOOLCHAIN_FILE"], (ndk / "build/cmake/android.toolchain.cmake").as_posix())
         self.assertEqual((options["ANDROID_ABI"], options["ANDROID_PLATFORM"], options["ANDROID_STL"]),
-                         ("arm64-v8a", "android-29", "c++_shared"))
+                         ("arm64-v8a", "android-28", "c++_shared"))
         self.assertEqual(options["EMBREE_STATIC_LIB"], "ON")
         # No x86 instruction sets: Embree keeps its own NEON on ARM.
         self.assertNotIn("EMBREE_ISA_AVX", options)

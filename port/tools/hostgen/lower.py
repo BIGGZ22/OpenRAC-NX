@@ -2031,7 +2031,7 @@ class Unit:
                     if copies is not None and any(o == copies[0] for o, _ in self.program.code_places(sym)):
                         copy = copies
                 callee_places = self.program.code_places(sym) if copy is not None and not places else []
-                hook = self._level_hook(sym) if not places and not callee_places else None
+                hook = self._level_hook(sym) if not callee_places else None
                 if hook is not None:
                     # A call to one of the executable's empty hook stubs, from engine code the level
                     # programs carry: each level fills the hook with its own function (guest.h).

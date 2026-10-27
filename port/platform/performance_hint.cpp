@@ -2,7 +2,7 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // performance_hint.h. On Android the hint session's functions are looked up in libandroid.so at
-// run time, since the port's Android build starts at API 29 and they came with API 33.
+// run time, since the port's Android build starts at API 28 and they came with API 33.
 
 #include "platform/performance_hint.h"
 

@@ -234,8 +234,9 @@ void set_camera(SceneFrame& frame) {
 
 // ---- World recording ----
 
-// Records the submitted world and temporal resolve before native HUD drawing.
-void draw_world(SceneFrame& frame) {
+// Records the submitted world and temporal resolve before native HUD drawing. Returns whether this
+// frame drew anew (a repeated frame keeps the picture drawn before).
+bool draw_world(SceneFrame& frame) {
     State& owner = frame.owner;
     const Kept& scene = frame.scene;
     const auto& graphics = frame.graphics;
@@ -274,7 +275,10 @@ void draw_world(SceneFrame& frame) {
         }
 
         owner.renderer->render(input, target);
+        return true;
     }
+
+    return false;
 }
 }  // namespace
 
@@ -295,7 +299,13 @@ void render_scene(
     set_packets(frame);
     set_target_mobys(frame);
     retain_background(frame);
-    draw_world(frame);
+    const bool world = draw_world(frame);
+
+    // A mod's views (a headset's eyes), from the same scene; nothing without a mod's.
+    if (views_wanted()) {
+        draw_views(frame, world);
+    }
+
     const auto recorded = std::chrono::steady_clock::now();
 
     // Frame-cost diagnostics deliberately stall the GPU, matching their synchronous reference behaviour.

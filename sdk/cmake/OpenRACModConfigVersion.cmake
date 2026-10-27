@@ -5,7 +5,7 @@
 # CMake reads this file for each find_package(OpenRACMod <version>) and sets PACKAGE_VERSION_* from
 # what it says. Keep PACKAGE_VERSION equal to OPENRAC_MOD_API_MAJOR.MINOR in
 # include/openrac/openrac_mod.h.
-set(PACKAGE_VERSION "1.3")
+set(PACKAGE_VERSION "1.4")
 # Another major is a different interface: the headers' ABI changed.
 if(PACKAGE_FIND_VERSION_MAJOR AND NOT PACKAGE_FIND_VERSION_MAJOR EQUAL 1)
   set(PACKAGE_VERSION_COMPATIBLE FALSE)

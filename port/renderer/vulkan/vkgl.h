@@ -58,7 +58,47 @@ struct Config {
     bool present_id = true;
     bool present_wait = true;
     bool fifo_latest_ready = true;
+
+    // An outside maker of the instance and the device, which then shares them (a mod's OpenXR
+    // session, openrac_mod.h's openrac_vulkan_setup): each function stands in for the backend's
+    // own step, from the create info the backend built; a null one leaves that step the
+    // backend's. Pointers stand for the Vulkan types, int for VkResult.
+    struct DeviceSetup {
+        void* user = nullptr;
+        int (*create_instance)(
+            void* user, void* get_instance_proc_addr, const void* create_info, void** instance
+        ) = nullptr;
+        void* (*physical_device)(void* user, void* instance) = nullptr;
+        int (*create_device)(
+            void* user,
+            void* get_instance_proc_addr,
+            void* physical_device,
+            const void* create_info,
+            void** device
+        ) = nullptr;
+    } setup;
 };
+
+// The open context's Vulkan objects, for an outside user of the device (a mod's OpenXR session):
+// null and 0 with no context. The queue is the one every submit goes to.
+struct Native {
+    void* instance = nullptr;
+    void* physical_device = nullptr;
+    void* device = nullptr;
+    void* queue = nullptr;
+    std::uint32_t queue_family = 0;
+    std::uint32_t queue_index = 0;
+    void* get_instance_proc_addr = nullptr;
+};
+
+Native native();
+
+// Copies the colour of GL texture `texture` (RGBA8, width by height) into `image`, a VkImage of
+// the device made outside the backend (VK_FORMAT_R8G8B8A8_UNORM or _SRGB, the same size, a
+// transfer destination), which is in `layout` (a VkImageLayout) and is left in it. Recorded in the
+// frame's commands, so done once present() has submitted them. False, with nothing recorded, for a
+// texture that is not that size or not colour.
+bool copy_to_image(unsigned texture, void* image, std::uint32_t layout, int width, int height);
 
 // Opens the device and the context. False, with why in `error`, when Vulkan cannot be used: the
 // caller falls back to OpenGL.

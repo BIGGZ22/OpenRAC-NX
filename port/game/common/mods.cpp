@@ -6,6 +6,7 @@
 #include "mods.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstring>
 #include <fstream>
 #include <memory>
@@ -105,6 +106,11 @@ openrac_mod* g_loading = nullptr;  // the mod whose openrac_mod_load runs: hooks
 std::vector<std::unique_ptr<openrac_mod>> g_loaded;
 std::vector<FrameCallback> g_frames;
 std::vector<PadCallback> g_pads;
+// The views and the Vulkan device setup (interface 1.4): one mod's each, none while its mod is null.
+openrac_view_source g_views{};
+openrac_mod* g_views_mod = nullptr;
+openrac_vulkan_setup g_vulkan{};
+openrac_mod* g_vulkan_mod = nullptr;
 std::vector<crash::ModImage> g_images;
 openrac_api g_api;
 
@@ -293,6 +299,73 @@ void api_capture_mouse(openrac_mod* mod, int capture) {
     }
 }
 
+const openrac_graphics* api_graphics(void) {
+    static openrac_graphics none = [] {
+        openrac_graphics n{};
+        n.size = sizeof(openrac_graphics);
+        return n;
+    }();
+    const openrac_graphics* graphics =
+        g_host != nullptr && g_host->graphics != nullptr ? g_host->graphics() : nullptr;
+    return graphics != nullptr ? graphics : &none;
+}
+
+// A structure the mod gives with its own size first, copied into `out`: what a mod built against
+// a smaller one does not have stays zero. False when it is not even the size and the user pointer.
+template <class T>
+bool copy_sized(const T* from, T& out) {
+    if (from == nullptr || from->size < offsetof(T, user) + sizeof(void*)) {
+        return false;
+    }
+    out = T{};
+    std::memcpy(&out, from, std::min<std::size_t>(from->size, sizeof(T)));
+    out.size = sizeof(T);
+    return true;
+}
+
+int api_on_views(openrac_mod* mod, const openrac_view_source* source) {
+    if (mod == nullptr || mod != g_loading) {
+        return OPENRAC_HOOK_TOO_LATE;
+    }
+    if (g_views_mod != nullptr) {
+        log::warn("mod {} asks for views, which mod {} has", mod->id, g_views_mod->id);
+        return OPENRAC_HOOK_TAKEN;
+    }
+    openrac_view_source s;
+    if (!copy_sized(source, s) || s.begin == nullptr || s.end == nullptr) {
+        return OPENRAC_HOOK_UNKNOWN;
+    }
+    g_views = s;
+    g_views_mod = mod;
+    return OPENRAC_HOOK_OK;
+}
+
+int api_setup_vulkan(openrac_mod* mod, const openrac_vulkan_setup* setup) {
+    if (mod == nullptr || mod != g_loading) {
+        return OPENRAC_HOOK_TOO_LATE;
+    }
+    if (g_vulkan_mod != nullptr) {
+        log::warn(
+            "mod {} asks to make the Vulkan device, which mod {} makes", mod->id, g_vulkan_mod->id
+        );
+        return OPENRAC_HOOK_TAKEN;
+    }
+    openrac_vulkan_setup s;
+    if (!copy_sized(setup, s)) {
+        return OPENRAC_HOOK_UNKNOWN;
+    }
+    if (!mod->manifest.vulkan_device) {
+        log::warn(
+            "mod {} makes the Vulkan device, but its manifest has no \"vulkan_device\": true; "
+            "the window may open before it loads",
+            mod->id
+        );
+    }
+    g_vulkan = s;
+    g_vulkan_mod = mod;
+    return OPENRAC_HOOK_OK;
+}
+
 void fill_api(const Host& host) {
     static std::string game, version, openrac_version;
     game = host.game;
@@ -326,6 +399,9 @@ void fill_api(const Host& host) {
     g_api.input = api_input;
     g_api.take_input = api_take_input;
     g_api.capture_mouse = api_capture_mouse;
+    g_api.graphics = api_graphics;
+    g_api.on_views = api_on_views;
+    g_api.setup_vulkan = api_setup_vulkan;
 }
 
 // ---- status.json ----
@@ -461,6 +537,14 @@ void undo(openrac_mod* mod) {
     mod->hooks.clear();
     std::erase_if(g_frames, [&](const FrameCallback& c) { return c.mod == mod; });
     std::erase_if(g_pads, [&](const PadCallback& c) { return c.mod == mod; });
+    if (g_views_mod == mod) {
+        g_views = {};
+        g_views_mod = nullptr;
+    }
+    if (g_vulkan_mod == mod) {
+        g_vulkan = {};
+        g_vulkan_mod = nullptr;
+    }
 }
 
 // Opens and loads one mod that passed the checks; false and why when it does not load.
@@ -650,6 +734,14 @@ std::string load(const Host& host) {
     if (host.pad_hook != nullptr) {
         *host.pad_hook = g_pads.empty() ? nullptr : run_pads;
     }
+    if (g_views_mod != nullptr && host.set_views != nullptr) {
+        log::info("mod {} draws views of the game", g_views_mod->id);
+        host.set_views(&g_views);
+    }
+    if (g_vulkan_mod != nullptr && host.set_vulkan_setup != nullptr) {
+        log::info("mod {} makes the Vulkan device", g_vulkan_mod->id);
+        host.set_vulkan_setup(&g_vulkan);
+    }
     g_outcomes = outcomes;
     write_status(kept, outcomes);
     g_images.clear();
@@ -669,6 +761,25 @@ std::string load(const Host& host) {
         line += std::format(" ({} not loaded: plugins/status.json)", refused);
     }
     return line;
+}
+
+bool makes_vulkan_device(const fs::path& list_path, bool purist) {
+    std::string text;
+    std::vector<ListEntry> list;
+    std::string error;
+    if (purist || !read_text(list_path, text) || !parse_list(text, list, error)) {
+        return false;
+    }
+    const fs::path folder = list_path.parent_path();
+    for (const ListEntry& e : list) {
+        std::string manifest_text;
+        Manifest manifest;
+        if (e.enabled && read_text(folder / e.id / "openrac-mod.json", manifest_text)
+            && parse_manifest(manifest_text, manifest, error) && manifest.vulkan_device) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void unload() {
@@ -705,6 +816,12 @@ void reset() {
     g_frame_callbacks = false;
     if (g_host != nullptr && g_host->pad_hook != nullptr) {
         *g_host->pad_hook = nullptr;
+    }
+    if (g_host != nullptr && g_host->set_views != nullptr) {
+        g_host->set_views(nullptr);
+    }
+    if (g_host != nullptr && g_host->set_vulkan_setup != nullptr) {
+        g_host->set_vulkan_setup(nullptr);
     }
     crash::set_mods(nullptr, 0);
     g_images.clear();

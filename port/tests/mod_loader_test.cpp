@@ -72,20 +72,32 @@ const char* library_name() {
 }
 
 // Installs test-<which> into `plugins`: its library copied in, its manifest.
-void install(const fs::path& plugins, const std::string& which, const char* built, const std::string& api = "1.3") {
+void install(
+    const fs::path& plugins,
+    const std::string& which,
+    const char* built,
+    const std::string& api = "1.4",
+    const std::string& extra = ""
+) {
     const fs::path dir = plugins / ("test-" + which);
     fs::create_directories(dir / "lib");
     fs::copy_file(built, dir / "lib" / library_name(), fs::copy_options::overwrite_existing);
-    write(dir / "openrac-mod.json", R"({"format": 2, "id": "test-)" + which + R"(", "name": "Test", "version": "1.0.0",
-        "api": ")" + api + R"(", "games": {"test": ["one"]}, "hooks": ["Test_Add"],
-        "plugin": {")" + std::string(mods::platform_key()) + R"(": "lib/)" + library_name() + R"("},
+    write(
+        dir / "openrac-mod.json",
+        R"({"format": 2, "id": "test-)" + which + R"(", "name": "Test", "version": "1.0.0",
+        "api": ")"
+            + api + R"(", "games": {"test": ["one"]}, "hooks": ["Test_Add"],)" + extra + R"(
+        "plugin": {")"
+            + std::string(mods::platform_key()) + R"(": "lib/)" + library_name() + R"("},
         "settings": [{"key": "tag", "name": "Tag", "type": "int", "default": 0},
                      {"key": "behaviour", "name": "Behaviour", "type": "choice", "default": "ok",
                       "choices": [{"value": "ok", "name": "OK"}, {"value": "fail", "name": "Fail"},
                                   {"value": "unknown_hook", "name": "Unknown"},
                                   {"value": "bad_signature", "name": "Bad"},
-                                  {"value": "input", "name": "Input"}]},
-                     {"key": "jump", "name": "Jump", "type": "keybind", "default": "Space"}]})");
+                                  {"value": "input", "name": "Input"},
+                                  {"value": "views", "name": "Views"}]},
+                     {"key": "jump", "name": "Jump", "type": "keybind", "default": "Space"}]})"
+    );
 }
 
 mods::Host host(const fs::path& plugins) {
@@ -213,10 +225,14 @@ void an_installed_launchers_layout(const fs::path& root) {
     const fs::path lib = fs::path("lib") / mods::platform_key() / library_name();
     fs::create_directories(mod / lib.parent_path());
     fs::copy_file(OPENRAC_TEST_MOD_A, mod / lib, fs::copy_options::overwrite_existing);
-    write(mod / "openrac-mod.json", R"({"format": 2, "id": "test-a", "name": "Test", "version": "1.0.0",
-        "api": "1.3", "games": {"test": ["one"]}, "hooks": ["Test_Add"],
-        "plugin": {")" + std::string(mods::platform_key()) + R"(": ")" + lib.generic_string() + R"("},
-        "settings": [{"key": "tag", "name": "Tag", "type": "int", "default": 0}]})");
+    write(
+        mod / "openrac-mod.json",
+        R"({"format": 2, "id": "test-a", "name": "Test", "version": "1.0.0",
+        "api": "1.4", "games": {"test": ["one"]}, "hooks": ["Test_Add"],
+        "plugin": {")"
+            + std::string(mods::platform_key()) + R"(": ")" + lib.generic_string() + R"("},
+        "settings": [{"key": "tag", "name": "Tag", "type": "int", "default": 0}]})"
+    );
     write(plugins / "plugins.json", R"({"format": 1, "mods": [{"id": "test-a", "enabled": true, "settings": {"tag": 4}}]})");
     const fs::path elsewhere = root / "somewhere-else";
     fs::create_directories(elsewhere);
@@ -276,6 +292,55 @@ void input_reaches_the_mod(const fs::path& plugins) {
     mods::reset();
 }
 
+// The views and the Vulkan device (interface 1.4): one mod has them, given to the host once load
+// is over, taken back at reset; a second mod asking is refused; the graphics are none without a
+// window; and the mods load before the window only for a manifest with "vulkan_device".
+const openrac_view_source* g_views = nullptr;
+int g_views_given = 0;
+const openrac_vulkan_setup* g_vulkan = nullptr;
+
+void views_reach_the_host(const fs::path& plugins) {
+    write(plugins / "plugins.json", R"({"format": 1, "mods": [
+        {"id": "test-a", "enabled": true, "settings": {"behaviour": "views"}},
+        {"id": "test-b", "enabled": true, "settings": {"behaviour": "views"}}]})");
+    mods::Host h = host(plugins);
+    g_views_given = 0;
+    g_records.clear();
+    h.set_views = [](const openrac_view_source* source) {
+        g_views = source;
+        ++g_views_given;
+    };
+    h.set_vulkan_setup = [](const openrac_vulkan_setup* setup) {
+        g_vulkan = setup;
+    };
+    CHECK(mods::load(h) == "test-a 1.0.0 (1 not loaded: plugins/status.json)");
+    CHECK(status_of(plugins, "test-b").second == "its load returned 6");  // the views were a's
+    CHECK(g_views_given == 1 && g_views != nullptr && g_vulkan != nullptr);
+    CHECK(
+        g_views->size == sizeof(openrac_view_source)
+        && g_vulkan->size == sizeof(openrac_vulkan_setup)
+    );
+    CHECK(g_vulkan->create_instance != nullptr && g_vulkan->physical_device == nullptr);
+
+    // A frame as the frontend draws it: begin, then end once it is submitted, then the closing.
+    openrac_view views[OPENRAC_VIEW_MAX] = {};
+    CHECK(g_views->begin(g_views->user, views, OPENRAC_VIEW_MAX) == 1);
+    CHECK(views[0].width == 64 && views[0].height == 48 && views[0].kind == OPENRAC_VIEW_FULL);
+    g_views->end(g_views->user, views, 1);
+    g_views->closing(g_views->user);
+    CHECK((g_records == std::vector<int>{2001, 4000}));
+    mods::reset();
+    CHECK(g_views == nullptr && g_vulkan == nullptr);
+
+    // Without "vulkan_device" the mods load after the window, as always; with it, before.
+    CHECK(!mods::makes_vulkan_device(plugins / "plugins.json", false));
+    install(plugins, "a", OPENRAC_TEST_MOD_A, "1.4", R"( "vulkan_device": true,)");
+    CHECK(mods::makes_vulkan_device(plugins / "plugins.json", false));
+    CHECK(!mods::makes_vulkan_device(plugins / "plugins.json", true));  // purist: none
+    CHECK(!mods::makes_vulkan_device(plugins / "nowhere.json", false));
+    install(plugins, "a", OPENRAC_TEST_MOD_A);
+}
+
 }  // namespace
 
 // A hook point renamed after a mod was written (docs/port/MODS.md, section 4): the decompilation now
@@ -328,6 +393,7 @@ int main() {
     an_installed_launchers_layout(dir);
     an_old_name_still_binds(plugins);
     input_reaches_the_mod(plugins);
+    views_reach_the_host(plugins);
     std::error_code e;
     fs::remove_all(dir, e);
     return test::result();

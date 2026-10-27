@@ -37,6 +37,7 @@
 #include "frontend.h"
 #include "game/common/frontend/geometry.h"
 #include "game/common/frontend/pacing.h"
+#include "game/common/frontend/scene_frame_internal.h"
 #include "game/common/frontend/state.h"
 #include "openrac/game_host.h"
 #include "platform/performance_hint.h"
@@ -381,6 +382,8 @@ void present_frame(FramePresentation& output) {
     draw_overlay(output);
     const stats::Scope swap_scope("swap");
     swapped(started);
+    // A mod's views were submitted with the frame: the mod may hand them on (nothing without one).
+    finish_views();
     report_frame_cost(output);
 }
 
@@ -454,7 +457,8 @@ void draw_kept(bool first) try {
     output->measure_cost = frame_cost.on;
     log_pacing(*output);
     static const bool requested = env::flag(env::Var::RenderThread);
-    const bool threaded = gl::is_vulkan() && requested;
+    // A mod's views share the queue with the mod (OpenXR): its frames are drawn on this thread.
+    const bool threaded = gl::is_vulkan() && requested && !views_wanted();
     // OpenGL contexts retain the original window-thread path.
     if (!threaded) {
         render_scene(*g, *g->kept, settings::get(), *output);

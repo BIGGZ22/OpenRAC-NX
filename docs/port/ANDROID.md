@@ -3,7 +3,7 @@
 OpenRAC runs on Android phones, tablets and handhelds with:
 
 - a 64-bit ARM CPU (arm64-v8a),
-- Android 10 (API 29) or newer,
+- Android 9 (API 28) or newer,
 - a Mali or Adreno GPU with OpenGL ES 3.2.
 
 There is no emulation. The APK holds the same translated game code as the
@@ -72,9 +72,13 @@ offers *Return to game* and *Stop the game*.
   environment (`--data`, `--levels`, `HOME`, `XDG_DATA_HOME`), so `main.cpp`
   has no Android paths.
 - **Older Android.** bionic has `backtrace()` only from Android 13 (API 33);
-  Android 10 to 12 use a replacement built on `_Unwind_Backtrace`
+  Android 9 to 12 use a replacement built on `_Unwind_Backtrace`
   (`port/android/compat`). `memfd_create` goes through `syscall` below
-  API 30.
+  API 30. Android 9 (API 28) is the floor because libadrenotools loads
+  drivers from there: below it no custom Vulkan driver, so no Enhanced
+  graphics on most phones of that age. On Android 9 uninstalling does not ask
+  to keep the app's data (`hasFragileUserData` is Android 10's), and the
+  system WebView stays at Chrome 138, which the launcher must keep working on.
 - **Refresh rate.** The game asks for the display's fastest rate while it is
   in front (`GameActivity.java`), or a 120 Hz panel can drop to 60 Hz and
   stay there.
@@ -271,6 +275,8 @@ path has three parts:
 2. **Loading** (`port/android/gpu_driver.cpp`). On Adreno the game opens it
    with `adrenotools_open_libvulkan`, and logs the driver's name and version
    or why it was refused. Elsewhere, or on failure, the system driver is used.
+   On Android 9 it writes the patched system libraries to the package's
+   `patched/` folder, as memfds are not certain there.
 3. **The Vulkan renderer** (`port/renderer/vulkan/`) carries out the small
    set of OpenGL calls the renderers use (`renderer/gl.h`,
    `renderer/world/gl_world.h`) on Vulkan 1.3: shaders through glslang,
