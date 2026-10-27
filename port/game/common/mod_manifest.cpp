@@ -532,6 +532,10 @@ bool parse_manifest(std::string_view source, Manifest& m, std::string& error) {
     if (!id_list(v["hooks"], "hooks", m.hooks, error)) {
         return false;
     }
+    // Interface 1.4: only moves the loading before the window, so it is read and never refused (the
+    // packager's and the launcher's checks know nothing of it): true on a native mod of 1.4 or later.
+    m.vulkan_device = v["vulkan_device"].boolean(false) && !m.script && m.has_api
+                      && (m.api_major > 1 || m.api_minor >= 4);
     const json::Value& settings = v["settings"];
     if (!settings.is_null()) {
         if (!settings.is_array()) {

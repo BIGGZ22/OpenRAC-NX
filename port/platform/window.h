@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -233,5 +234,45 @@ private:
 
 // True when GL_RENDERER or GL_VENDOR names a rasteriser that runs on the CPU.
 bool is_software_renderer(const std::string& renderer, const std::string& vendor);
+
+// An outside maker of the Vulkan instance and device, which then shares them (a mod's OpenXR
+// session: openrac_mod.h's openrac_vulkan_setup), for the windows opened with Vulkan from now on.
+// A null function leaves that step the port's own. Nothing in a build without Vulkan.
+struct VulkanSetup {
+    void* user = nullptr;
+    int (*create_instance)(
+        void* user, void* get_instance_proc_addr, const void* create_info, void** instance
+    ) = nullptr;
+    void* (*physical_device)(void* user, void* instance) = nullptr;
+    int (*create_device)(
+        void* user,
+        void* get_instance_proc_addr,
+        void* physical_device,
+        const void* create_info,
+        void** device
+    ) = nullptr;
+};
+
+void set_vulkan_setup(const VulkanSetup& setup);
+
+// The open Vulkan context's instance, physical device, device and queue (vkgl::Native): all null
+// without one.
+struct VulkanNative {
+    void* instance = nullptr;
+    void* physical_device = nullptr;
+    void* device = nullptr;
+    void* queue = nullptr;
+    std::uint32_t queue_family = 0;
+    std::uint32_t queue_index = 0;
+    void* get_instance_proc_addr = nullptr;
+};
+
+VulkanNative vulkan_native();
+
+// Copies GL texture `texture` of the Vulkan context into an outside VkImage of its device
+// (vkgl::copy_to_image). False without Vulkan.
+bool copy_to_vulkan_image(
+    unsigned texture, void* image, std::uint32_t layout, int width, int height
+);
 
 }  // namespace openrac::platform

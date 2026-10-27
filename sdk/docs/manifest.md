@@ -71,6 +71,7 @@ the platform it built, and `package_mod.py --merge` joins the platforms
 | `plugin` | native mods | Platform to library path inside the mod. Platforms: `macos-arm64`, `macos-x86_64`, `linux-x86_64`, `linux-aarch64`, `windows-x86_64`, `windows-arm64`. |
 | `hooks` | no | The hook points the mod takes, by id (`rac1.player.take_damage`) or alias (`Hero_TakeDamage`) ([hooks](hooks.md)). `package_mod.py` checks each against the SDK's table of the mod's games. The launcher shows which mods share a hook point. |
 | `settings` | no | Options for players ([settings](settings.md)). |
+| `vulkan_device` | no | `true` for a native mod of `api` 1.4 or later that makes the Vulkan device with the port (`setup_vulkan`, [views](views.md)): the mods then load before the window opens. Ignored otherwise. |
 | `requires` | no | Mods that must be on, and load before this one: `[{"id": "other-mod", "version": ">=1.2.0"}]` (`version` is `>=X.Y.Z`, `=X.Y.Z`, or left out). |
 | `conflicts` | no | Mods it cannot run with: `[{"id": "other-strafe", "reason": "both take L2 and R2"}]`. |
 | `load` | no | Order hints: `{"after": ["camera-tweaks"], "before": []}`. The launcher places the mod accordingly when it is switched on. |

@@ -32,6 +32,9 @@
 namespace openrac::platform {
 namespace {
 
+// set_vulkan_setup's: who makes the next Vulkan context's instance and device.
+VulkanSetup g_vulkan_setup;
+
 constexpr int kGlMajor = 4;
 constexpr int kGlMinor = 1;
 constexpr int kGlesMajor = 3;
@@ -467,6 +470,11 @@ bool Window::open_vulkan(const WindowConfig& config, std::string& error) {
     if (vk.get_instance_proc_addr == nullptr && m_vulkan_library) {
         vk.get_instance_proc_addr = reinterpret_cast<void*>(SDL_Vulkan_GetVkGetInstanceProcAddr());
     }
+    vk.setup =
+        {g_vulkan_setup.user,
+         g_vulkan_setup.create_instance,
+         g_vulkan_setup.physical_device,
+         g_vulkan_setup.create_device};
     vk.validation = config.debug_context;
     if (!vkgl::open(vk, error)) {
         SDL_DestroyWindow(m_window);
@@ -841,6 +849,43 @@ GlLoader Window::gl_loader() {
     }
 #endif
     return SDL_GL_GetProcAddress;
+}
+
+void set_vulkan_setup(const VulkanSetup& setup) {
+    g_vulkan_setup = setup;
+}
+
+VulkanNative vulkan_native() {
+    VulkanNative native;
+#if defined(OPENRAC_VULKAN)
+    if (vkgl::active()) {
+        const vkgl::Native n = vkgl::native();
+        native =
+            {n.instance,
+             n.physical_device,
+             n.device,
+             n.queue,
+             n.queue_family,
+             n.queue_index,
+             n.get_instance_proc_addr};
+    }
+#endif
+    return native;
+}
+
+bool copy_to_vulkan_image(
+    unsigned texture, void* image, std::uint32_t layout, int width, int height
+) {
+#if defined(OPENRAC_VULKAN)
+    return vkgl::active() && vkgl::copy_to_image(texture, image, layout, width, height);
+#else
+    (void)texture;
+    (void)image;
+    (void)layout;
+    (void)width;
+    (void)height;
+    return false;
+#endif
 }
 
 }  // namespace openrac::platform

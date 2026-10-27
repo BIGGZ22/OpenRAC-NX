@@ -301,8 +301,21 @@ bool make_instance(const Config& config, bool validation, std::string& error) {
     info.ppEnabledExtensionNames = extensions.data();
     info.enabledLayerCount = static_cast<std::uint32_t>(layers.size());
     info.ppEnabledLayerNames = layers.data();
-    const VkResult r = vkCreateInstance(&info, nullptr, &g->instance);
-    if (r != VK_SUCCESS) {
+    g->setup = config.setup;
+    VkResult r = VK_SUCCESS;
+
+    // An outside owner adds what it needs to the instance (OpenXR: xrCreateVulkanInstanceKHR).
+    if (g->setup.create_instance != nullptr) {
+        void* made = nullptr;
+        r = static_cast<VkResult>(g->setup.create_instance(
+            g->setup.user, reinterpret_cast<void*>(vkGetInstanceProcAddr), &info, &made
+        ));
+        g->instance = static_cast<VkInstance>(made);
+    } else {
+        r = vkCreateInstance(&info, nullptr, &g->instance);
+    }
+
+    if (r != VK_SUCCESS || g->instance == VK_NULL_HANDLE) {
         error = std::format("no Vulkan instance ({})", static_cast<int>(r));
         return false;
     }
@@ -327,6 +340,16 @@ bool pick_device(std::string& error) {
     vkEnumeratePhysicalDevices(g->instance, &n, nullptr);
     std::vector<VkPhysicalDevice> devices(n);
     vkEnumeratePhysicalDevices(g->instance, &n, devices.data());
+
+    // An outside owner names the device (OpenXR's, where the headset is): only it is considered.
+    if (g->setup.physical_device != nullptr) {
+        if (const auto chosen = static_cast<VkPhysicalDevice>(
+                g->setup.physical_device(g->setup.user, g->instance)
+            )) {
+            devices.assign(1, chosen);
+        }
+    }
+
     int best = -1;
     for (VkPhysicalDevice d : devices) {
         VkPhysicalDeviceProperties p{};
@@ -590,8 +613,20 @@ bool make_device(std::string& error) {
     info.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
     info.ppEnabledExtensionNames = extensions.data();
     info.pEnabledFeatures = &features;
-    const VkResult r = vkCreateDevice(g->physical, &info, nullptr, &g->device);
-    if (r != VK_SUCCESS) {
+    VkResult r = VK_SUCCESS;
+
+    // An outside owner adds what it needs to the device (OpenXR: xrCreateVulkanDeviceKHR).
+    if (g->setup.create_device != nullptr) {
+        void* made = nullptr;
+        r = static_cast<VkResult>(g->setup.create_device(
+            g->setup.user, reinterpret_cast<void*>(vkGetInstanceProcAddr), g->physical, &info, &made
+        ));
+        g->device = static_cast<VkDevice>(made);
+    } else {
+        r = vkCreateDevice(g->physical, &info, nullptr, &g->device);
+    }
+
+    if (r != VK_SUCCESS || g->device == VK_NULL_HANDLE) {
         error = std::format("no Vulkan device ({})", static_cast<int>(r));
         return false;
     }

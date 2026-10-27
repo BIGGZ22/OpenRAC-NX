@@ -418,6 +418,8 @@ openrac_add_test(imgui_gl LIBS openrac_renderer_ui openrac_platform openrac_imgu
 set_tests_properties(imgui_gl PROPERTIES SKIP_RETURN_CODE 77)
 
 openrac_add_test(renderer_texture LIBS openrac_renderer)
+# The view math of a mod's views (renderer/math.h): header only.
+openrac_add_test(renderer_math INCLUDES .)
 
 openrac_add_test(renderer_gif LIBS openrac_renderer)
 

@@ -120,6 +120,10 @@ The keyboard and mouse for the tick about to run (interface 1.2, openrac_input):
 | `Input input() const` | Since 1.2: returns the keyboard and mouse for the tick about to run. |
 | `void take_input(std::uint32_t devices)` | Since 1.2: takes the keyboard (OPENRAC_INPUT_KEYBOARD) and or the mouse from the port's own use of them in play: the mod presses pad 0's buttons through on_pad. Throws openrac::Error when refused. Only during load. |
 | `void capture_mouse(bool capture) const` | Since 1.2: asks for the cursor captured (hidden, motion relative) or let go. The port may let it go anyway (window not focused, overlay open). Any time. |
+| `bool has_views() const` | Since 1.4: returns whether the port offers the graphics context, views and the Vulkan device (graphics(), on_views(), setup_vulkan()): a mod that wants to run on 1.3 checks this first. |
+| `const openrac_graphics &graphics() const` | Since 1.4: returns what the port draws with (openrac_graphics); its backend is OPENRAC_GRAPHICS_NONE before the window opens. |
+| `void on_views(const openrac_view_source &source)` | Since 1.4: has the port draw the views `source` asks for each frame (openrac_view_source, sdk/docs/views.md). Throws openrac::Error when refused. Only during load. |
+| `void setup_vulkan(const openrac_vulkan_setup &setup)` | Since 1.4: has the port make its Vulkan device through `setup` (openrac_vulkan_setup); the manifest says "vulkan_device": true. Throws openrac::Error when refused. Only during load. |
 | `Memory memory() const` | Returns a view of game memory. |
 | `gaddr relocate(gaddr address) const` | Return a global's address for the code loaded now: the executable's (`relocate`) or level `level`'s program's (`relocate_level`). Ask each time, because a level moves its globals. |
 | `gaddr relocate_level(int level, gaddr address) const` |  |

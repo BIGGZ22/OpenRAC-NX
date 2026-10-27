@@ -33,6 +33,7 @@ Mods of textures, models and levels are made with the level editor instead
 7. [Install from a link](install-from-link.md): what the launcher does with your repository.
 8. [Where mods live](where-mods-live.md): the folders and files on a player's computer.
 9. [Troubleshooting](troubleshooting.md): a mod that does not load, purist mode, crash reports.
+10. [Views of the game](views.md): extra views for a VR headset or another display, with OpenGL or Vulkan (native mods, interface 1.4).
 
 ## Reference
 

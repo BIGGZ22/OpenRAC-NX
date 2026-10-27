@@ -104,12 +104,16 @@ void install_native(const fs::path& plugins) {
     const fs::path dir = plugins / "test-a";
     fs::create_directories(dir / "lib");
     fs::copy_file(OPENRAC_TEST_MOD_A, dir / "lib" / library_name(), fs::copy_options::overwrite_existing);
-    write(dir / "openrac-mod.json", R"({"format": 2, "id": "test-a", "name": "Test", "version": "1.0.0",
-        "api": "1.3", "games": {"test": ["one"]}, "hooks": ["Test_Add"],
-        "plugin": {")" + std::string(mods::platform_key()) + R"(": "lib/)" + library_name() + R"("},
+    write(
+        dir / "openrac-mod.json",
+        R"({"format": 2, "id": "test-a", "name": "Test", "version": "1.0.0",
+        "api": "1.4", "games": {"test": ["one"]}, "hooks": ["Test_Add"],
+        "plugin": {")"
+            + std::string(mods::platform_key()) + R"(": "lib/)" + library_name() + R"("},
         "settings": [{"key": "tag", "name": "Tag", "type": "int", "default": 0},
                      {"key": "behaviour", "name": "Behaviour", "type": "choice", "default": "ok",
-                      "choices": [{"value": "ok", "name": "OK"}, {"value": "fail", "name": "Fail"}]}]})");
+                      "choices": [{"value": "ok", "name": "OK"}, {"value": "fail", "name": "Fail"}]}]})"
+    );
 }
 
 void list(const fs::path& plugins, const std::string& mods_json) {

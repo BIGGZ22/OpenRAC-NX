@@ -168,6 +168,10 @@ struct State {
     // The last frame the game drew its world in: what its draw buffer still holds on a frame it
     // draws nothing in (the tick a page menu opens), and so what reading the frame back answers.
     renderer::FrameBuffer last_world;
+    // The views a mod draws (frontend/views.cpp, OPENRAC_VIEW_MAX of them): each one's picture,
+    // and with OpenGL the framebuffers made around the mod's textures it is copied into.
+    std::array<renderer::FrameBuffer, 4> views;
+    std::vector<std::pair<unsigned, unsigned>> view_targets;  // the mod's texture, its framebuffer
     scene::LevelData level;
     scene::LevelScene scene;
     int loaded = -2;  // the level whose geometry is uploaded; -2 none

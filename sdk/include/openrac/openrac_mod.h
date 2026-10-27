@@ -39,10 +39,13 @@ extern "C" {
 /* The interface's major version. Changes when anything in the table changes or goes. */
 #define OPENRAC_MOD_API_MAJOR 1
 
-/* The interface's minor version, which this header describes. It grows when something is added at
- * the end of the table. 1.1 added script mods (the table is unchanged), 1.2 the keyboard and mouse,
- * 1.3 the pointer over the game's picture (openrac_input.pointer_*). */
-#define OPENRAC_MOD_API_MINOR 3
+/* The interface's minor version, which this header describes. It grows when
+ * something is added at the end of the table. 1.1 added script mods (the table
+ * is unchanged), 1.2 the keyboard and mouse, 1.3 the pointer over the game's
+ * picture (openrac_input.pointer_*), 1.4 the graphics context, extra views of
+ * the game and a Vulkan device made with the mod (a VR headset, docs/views.md).
+ */
+#define OPENRAC_MOD_API_MINOR 4
 
 /* The interface a mod is built for, what its openrac_mod_query reports: its manifest's "api" minor,
  * which the SDK's openrac_add_mod passes in, else this header's. A mod for 1.1 built with a newer
@@ -85,6 +88,9 @@ typedef struct openrac_mod openrac_mod;
 #define OPENRAC_HOOK_SIGNATURE (-2)
 /* Hooks are taken in openrac_mod_load only. */
 #define OPENRAC_HOOK_TOO_LATE (-3)
+/* Another mod has it already: the views (on_views) and the Vulkan device
+ * (setup_vulkan) are one mod's each. Since 1.4. */
+#define OPENRAC_HOOK_TAKEN (-4)
 
 /* ------------------------------------------------------------------------------------------ *
  * Reporting to the port
@@ -177,6 +183,175 @@ typedef struct openrac_input {
     /* Padding; zero. */
     uint8_t reserved2[3];
 } openrac_input;
+
+/* ------------------------------------------------------------------------------------------
+ * * The graphics context (since 1.4)
+ * ------------------------------------------------------------------------------------------
+ */
+
+/* The values of openrac_graphics.backend. Since 1.4. */
+/* No window yet, or none at all (a test, a server). */
+#define OPENRAC_GRAPHICS_NONE 0
+/* The desktop's OpenGL 4.1 core profile. */
+#define OPENRAC_GRAPHICS_OPENGL 1
+/* OpenGL ES 3.2 (Android, or OPENRAC_GL_API=es). */
+#define OPENRAC_GRAPHICS_OPENGL_ES 2
+/* The port's Vulkan renderer (OPENRAC_GL_API=vulkan). */
+#define OPENRAC_GRAPHICS_VULKAN 3
+
+/* What the port draws with, for a mod that hands the game's pictures to another
+ * API (OpenXR). Read it through openrac_api.graphics; it is the port's, and
+ * valid while the window is open. Vulkan handles are given as pointers
+ * (VkInstance, VkPhysicalDevice, VkDevice and VkQueue are dispatchable
+ * handles), so that this header needs no Vulkan header. Since 1.4. */
+typedef struct openrac_graphics {
+  /* sizeof(openrac_graphics) as the port was built: a newer port's is larger.
+   */
+  uint32_t size;
+  /* An OPENRAC_GRAPHICS_* value. */
+  uint32_t backend;
+  /* OpenGL and OpenGL ES: the context's functions by name
+   * (SDL_GL_GetProcAddress); null for Vulkan and without a window. The context
+   * is current on the game's thread. */
+  void *(*gl_proc)(const char *name);
+  /* Vulkan: the backend's instance, physical device, device and graphics queue,
+   * its family and its index in the family, and the vkGetInstanceProcAddr they
+   * were made with; null and 0 otherwise. While a mod has views (on_views) the
+   * port submits to the queue on the game's thread only, so a mod's own use of
+   * it there (OpenXR's xrEndFrame) needs no lock. */
+  void *vk_instance;
+  void *vk_physical_device;
+  void *vk_device;
+  void *vk_queue;
+  uint32_t vk_queue_family;
+  uint32_t vk_queue_index;
+  void *vk_get_instance_proc_addr;
+} openrac_graphics;
+
+/* ------------------------------------------------------------------------------------------
+ * * Views of the game (since 1.4)
+ * ------------------------------------------------------------------------------------------
+ */
+
+/* The most views a frame draws (openrac_view_source.begin's `max`). Since 1.4.
+ */
+#define OPENRAC_VIEW_MAX 4
+
+/* The values of openrac_view.kind: what a view draws. Since 1.4. */
+/* The game's whole picture: the world, with the 2D (HUD, text, menus, fades)
+ * over it at the game's 4:3 shape in its middle. */
+#define OPENRAC_VIEW_FULL 0
+/* The world alone, without the 2D. */
+#define OPENRAC_VIEW_WORLD 1
+/* The 2D alone, over transparent black (alpha 0 where nothing is drawn): for a
+ * panel. Give it the game's 4:3 shape; the eye pose and field of view are not
+ * used. */
+#define OPENRAC_VIEW_2D 2
+
+/* One view the port draws in a frame besides the window's: an eye of a headset,
+ * a panel. The mod fills the members up to `image_layout` in
+ * openrac_view_source.begin; the port sets the ones after as it draws.
+ * Since 1.4. */
+typedef struct openrac_view {
+  /* An OPENRAC_VIEW_* value. */
+  uint32_t kind;
+  /* The picture's size in pixels, each from 1 to 8192. */
+  int32_t width;
+  int32_t height;
+  /* The eye relative to the game's camera, in the camera's view space (OpenXR's
+   * and OpenGL's: X right, Y up, looking down -Z), in the game's units: a
+   * position, and an orientation as a quaternion x, y, z, w. The identity (0 0
+   * 0, 0 0 0 1) is the game's own camera; an all-zero orientation counts as the
+   * identity. */
+  float position[3];
+  float orientation[4];
+  /* The field of view as OpenXR's XrFovf gives it: the angles of its left,
+   * right, top and bottom edges from straight ahead, in radians (left and down
+   * negative). All zero: the game's own vertical one, at the view's shape. */
+  float angle_left;
+  float angle_right;
+  float angle_up;
+  float angle_down;
+  /* Where the picture goes, in the backend's own terms (openrac_api.graphics),
+   * copied as its bytes with no conversion of colour (an sRGB image gets the
+   * game's picture as it is shown):
+   * - OpenGL: `texture`, a GL_TEXTURE_2D of the port's context, RGBA8 or
+   * SRGB8_ALPHA8, at least width by height (an OpenXR swapchain image);
+   * - Vulkan: `image`, a VkImage of the port's device, VK_FORMAT_R8G8B8A8_UNORM
+   * or _SRGB, exactly width by height, usable as a transfer destination, which
+   * the port finds in `image_layout` (a VkImageLayout) and leaves in it. Zero
+   * and null: the picture is drawn only into the port's own texture
+   * (`picture`). */
+  uint32_t texture;
+  void *image;
+  uint32_t image_layout;
+  /* Set by the port: 1 when this frame drew the view anew; 0 when it showed the
+   * last frame's picture again (a frame the port draws no world in, as the
+   * pause menu's repeated frames), and then that picture is copied again. */
+  uint32_t drawn;
+  /* Set by the port: its own GL texture holding the view (with OpenGL), until
+   * the next frame. */
+  uint32_t picture;
+  /* Padding; zero. */
+  uint32_t reserved[3];
+} openrac_view;
+
+/* The functions a mod gives on_views. The port copies the structure; `user` is
+ * passed back to each. Every function is called on the game's thread, with the
+ * graphics context current. Since 1.4. */
+typedef struct openrac_view_source {
+  /* sizeof(openrac_view_source) as the mod was built. */
+  uint32_t size;
+  void *user;
+  /* Called in each frame the port draws the game's scene (each refresh, between
+   * the game's ticks too), after the window's picture is recorded: fills
+   * views[0] to views[n - 1] (n at most `max`) and returns n; 0 draws none this
+   * frame. The place for OpenXR's xrWaitFrame, xrBeginFrame, xrLocateViews and
+   * xrAcquireSwapchainImage. Frames that show a movie or a still picture
+   * instead of the scene do not call it. */
+  int (*begin)(void *user, openrac_view *views, int max);
+  /* Called once the frame that drew them is submitted to the GPU (after the
+   * window's picture is shown), with the views `begin` gave and what the port
+   * set in them: the place for xrReleaseSwapchainImage and xrEndFrame. Called
+   * after every `begin`, even one that returned 0 or a frame that drew nothing.
+   */
+  void (*end)(void *user, const openrac_view *views, int count);
+  /* Called once before the graphics context goes (the window closes): let go of
+   * everything made with it (OpenXR's session and swapchains). Optional. */
+  void (*closing)(void *user);
+} openrac_view_source;
+
+/* What a mod gives setup_vulkan so that the port's Vulkan device is one the mod
+ * can share (OpenXR's XR_KHR_vulkan_enable2: xrCreateVulkanInstanceKHR,
+ * xrGetVulkanGraphicsDevice2KHR, xrCreateVulkanDeviceKHR). The port copies the
+ * structure; `user` is passed back to each. The functions are called when the
+ * window opens, after openrac_mod_load, on the game's thread: the mod's
+ * manifest says "vulkan_device": true so that it loads before the window.
+ * Pointers stand for the Vulkan types named, and int32_t for VkResult.
+ * Since 1.4. */
+typedef struct openrac_vulkan_setup {
+  /* sizeof(openrac_vulkan_setup) as the mod was built. */
+  uint32_t size;
+  void *user;
+  /* Makes the instance from `create_info` (a const VkInstanceCreateInfo*, the
+   * port's: the extensions and the API version it needs) in place of
+   * vkCreateInstance, through `get_instance_proc_addr` (a
+   * PFN_vkGetInstanceProcAddr), and sets `*instance`. Returns a VkResult;
+   * anything but VK_SUCCESS (0) and the port draws with OpenGL instead.
+   * Optional. */
+  int32_t (*create_instance)(void *user, void *get_instance_proc_addr,
+                             const void *create_info, void **instance);
+  /* Returns the VkPhysicalDevice to draw on, of `instance`; null lets the port
+   * choose. The port refuses a device it cannot draw with (and draws with
+   * OpenGL instead). Optional. */
+  void *(*physical_device)(void *user, void *instance);
+  /* Makes the device from `create_info` (a const VkDeviceCreateInfo*, the
+   * port's) on `physical_device` in place of vkCreateDevice, and sets
+   * `*device`. Returns a VkResult, as create_instance. Optional. */
+  int32_t (*create_device)(void *user, void *get_instance_proc_addr,
+                           void *physical_device, const void *create_info,
+                           void **device);
+} openrac_vulkan_setup;
 
 /* ------------------------------------------------------------------------------------------ *
  * Callbacks
@@ -299,6 +474,27 @@ typedef struct openrac_api {
      * The port lets it go anyway while the window is not focused or its overlay is open, and takes
      * it back when the reason is gone and the mod still asks. Since 1.2. */
     void (*capture_mouse)(openrac_mod* mod, int capture);
+
+    /* Returns what the port draws with (openrac_graphics). Never null: before
+     * the window opens, and without one, its backend is OPENRAC_GRAPHICS_NONE.
+     * Any time. Since 1.4. */
+    const openrac_graphics *(*graphics)(void);
+
+    /* Asks the port to draw views of the game besides the window's picture each
+     * frame, through `source` (openrac_view_source), with OpenGL and Vulkan.
+     * While a mod has views, the Vulkan renderer draws on the game's thread.
+     * Returns OPENRAC_HOOK_OK, OPENRAC_HOOK_TAKEN when another mod has them,
+     * OPENRAC_HOOK_UNKNOWN for a source without begin or end, or
+     * OPENRAC_HOOK_TOO_LATE after openrac_mod_load. Since 1.4. */
+    int (*on_views)(openrac_mod *mod, const openrac_view_source *source);
+
+    /* Has the port make its Vulkan device through `setup`
+     * (openrac_vulkan_setup) when the window opens, so that the mod can share
+     * it. Without Vulkan (OpenGL, a build without it) nothing is called.
+     * Returns OPENRAC_HOOK_OK, OPENRAC_HOOK_TAKEN when another mod has it,
+     * OPENRAC_HOOK_UNKNOWN for a setup too small, or OPENRAC_HOOK_TOO_LATE
+     * after openrac_mod_load. Since 1.4. */
+    int (*setup_vulkan)(openrac_mod *mod, const openrac_vulkan_setup *setup);
 } openrac_api;
 
 /* ------------------------------------------------------------------------------------------ *

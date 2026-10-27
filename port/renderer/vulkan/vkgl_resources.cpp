@@ -949,4 +949,94 @@ bool copy_buffer_to_texture(unsigned buffer, unsigned texture, int width, int he
     return true;
 }
 
+Native native() {
+    Native n;
+    if (g) {
+        n.instance = g->instance;
+        n.physical_device = g->physical;
+        n.device = g->device;
+        n.queue = g->queue;
+        n.queue_family = g->family;
+        n.queue_index = 0;
+        n.get_instance_proc_addr = reinterpret_cast<void*>(vkGetInstanceProcAddr);
+    }
+    return n;
+}
+
+bool copy_to_image(unsigned texture, void* image, std::uint32_t layout, int width, int height) {
+    if (!g || image == nullptr || width <= 0 || height <= 0) {
+        return false;
+    }
+    auto* t = g->textures.find(texture);
+    if (!t || !t->image || t->image->width != width || t->image->height != height
+        || t->image->format != VK_FORMAT_R8G8B8A8_UNORM
+        || t->image->aspect != VK_IMAGE_ASPECT_COLOR_BIT) {
+        return false;
+    }
+    Image& source = *t->image;
+    const VkCommandBuffer cmd = cmd_for(&source, true);
+    barrier(cmd, source, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+    // The outside image is not the backend's: its layout is the owner's, given and given back.
+    const auto dst = static_cast<VkImage>(image);
+    const auto kept = static_cast<VkImageLayout>(layout);
+    VkImageMemoryBarrier into{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+    into.srcAccessMask = 0;
+    into.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    into.oldLayout = kept;
+    into.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    into.srcQueueFamilyIndex = into.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    into.image = dst;
+    into.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    vkCmdPipelineBarrier(
+        cmd,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        0,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        1,
+        &into
+    );
+    count_barrier(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+    // The bytes as they are: an sRGB image gets the picture as the window shows it.
+    VkImageCopy copy{};
+    copy.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+    copy.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+    copy.extent = {static_cast<unsigned>(width), static_cast<unsigned>(height), 1};
+    vkCmdCopyImage(
+        cmd,
+        source.image,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        dst,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &copy
+    );
+    count_copy(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
+
+    VkImageMemoryBarrier back = into;
+    back.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    back.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+    back.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    back.newLayout = kept;
+    vkCmdPipelineBarrier(
+        cmd,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        0,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        1,
+        &back
+    );
+    count_barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+    return true;
+}
+
 }  // namespace openrac::vkgl

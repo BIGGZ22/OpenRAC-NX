@@ -418,6 +418,9 @@ OPENRAC_MOD_EXPORT void openrac_mod_unload(void);                        /* opti
 | `input()->pointer_x/y`, `pointer_inside` (1.3) | where the cursor is over the game's 4:3 picture (the middle of a wider one), 0..1 each way: `x * 512`, `y * 416` is the game's 2D pixel, for a mod that lets the mouse point at the game's menus. Check `size` first |
 | `take_input(mod, devices)` (1.2) | during load: `OPENRAC_INPUT_KEYBOARD` stops the port's own keyboard table driving pad 0 (WASD, Space, ...), so the mod presses the pad's buttons through `on_pad`; a gamepad goes on as before, the port's window keys stay its own |
 | `capture_mouse(mod, capture)` (1.2) | any time: ask for the cursor captured (hidden, held in the window, relative motion) or let go. The port lets it go anyway while the window has no focus or its overlay or debug menu is open |
+| `graphics()` (1.4) | any time: what the port draws with (`openrac_graphics`): OpenGL with its `gl_proc`, or Vulkan with its instance, device and queue. Backend none before the window opens |
+| `on_views(mod, &source)` (1.4) | during load, one mod: draw views of the game besides the window's each frame (a headset's eyes, a 2D panel) and copy them into the mod's GL texture or VkImage; `begin` before, `end` once the frame is submitted, `closing` before the context goes ([sdk/docs/views.md](../../sdk/docs/views.md)). While a mod has views, Vulkan renders on the game's thread |
+| `setup_vulkan(mod, &setup)` (1.4) | during load, one mod: make the Vulkan instance and device through the mod (OpenXR's `xrCreateVulkanInstanceKHR`, `xrCreateVulkanDeviceKHR`). The mod's manifest says `"vulkan_device": true`, so the mods load before the window; otherwise they load after it, as before |
 
 A mod for several discs carries its own table of the addresses and names it
 uses on each, as the port's `rac1_version.h` does, and picks it by
@@ -439,7 +442,10 @@ not the SDK's: `openrac_add_mod` passes it in (`OPENRAC_MOD_TARGET_MINOR`), so
 a 1.1 mod rebuilt with SDK 1.2 still loads on a port of 1.1. 1.2 (SDK 1.2.0)
 added the keyboard and mouse (`input`, `take_input`, `capture_mouse`, the
 `keybind` setting and manifest presets); 1.3 (SDK 1.3.0) the pointer over
-the game's picture (`openrac_input.pointer_*`, appended to the state). The
+the game's picture (`openrac_input.pointer_*`, appended to the state); 1.4
+(SDK 1.4.0) the graphics context, views of the game and a Vulkan device made
+with the mod (`graphics`, `on_views`, `setup_vulkan`, the manifest's
+`vulkan_device`), for a VR mod. The
 port's own readers of the pad (the movie player) and its Start skip take the
 report the mods leave, so a key a mod binds to Start skips as the pad's
 does. The port keeps every hook point it has had, with its
