@@ -10,7 +10,6 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_L00_002D8898`](shared/func_L00_002D8898.c) | shared | 2052 | BYTES 34/2052 | 98.3% |
 | [`func_L08_002F7318`](l08_batalia/func_L08_002F7318.c) | l08_batalia | 4676 | BYTES 225/4676 | 95.2% |
 | [`func_L00_002A62D0`](shared/func_L00_002A62D0.c) | shared | 1896 | BYTES 721/1896 | 62.0% |
-| [`func_L00_002B8AE8`](shared/func_L00_002B8AE8.c) | shared | 2624 | BYTES 1051/2624 | 60.0% |
 | [`func_L00_002BA7C8`](shared/func_L00_002BA7C8.c) | shared | 5292 | BYTES 3888/5292 | 26.5% |
 | [`func_001150D4`](functional/func_001150D4.c) | functional | 0 | ? | - |
 | [`func_001151B4`](core/func_001151B4.c) | core | 0 | ? | - |
@@ -233,7 +232,6 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_L00_002003C8`](functional/func_L00_002003C8.c) | functional | 240 | ? | - |
 | [`func_L00_00203F08`](functional/func_L00_00203F08.c) | functional | 24 | ? | - |
 | [`func_L00_0020E3B8`](functional/func_L00_0020E3B8.c) | functional | 1596 | ? | - |
-| [`func_L00_0020FC18`](shared/func_L00_0020FC18.c) | shared | 1828 | SIZE ours 1776 / retail 1828 | - |
 | [`func_L00_00232EF0`](game/func_L00_00232EF0.c) | game | 1312 | ? | - |
 | [`func_L00_00248EF8`](shared/func_L00_00248EF8.c) | shared | 1808 | SIZE ours 1804 / retail 1808 | - |
 | [`func_L00_0024DFC4`](functional/func_L00_0024DFC4.c) | functional | 96 | ? | - |
@@ -267,7 +265,6 @@ Each file is the best attempt so far at a level function that isn't exact yet.
 | [`func_L00_002963D8`](functional/func_L00_002963D8.c) | functional | 584 | ? | - |
 | [`func_L00_002D2E60`](game/func_L00_002D2E60.c) | game | 1228 | ? | - |
 | [`func_L00_002D6610`](shared/func_L00_002D6610.c) | shared | 868 | SIZE ours 876 / retail 868 | - |
-| [`func_L00_002DF410`](shared/func_L00_002DF410.c) | shared | 4220 | SIZE ours 4208 / retail 4220 | - |
 | [`func_L00_002E17D4`](functional/func_L00_002E17D4.c) | functional | 28 | ? | - |
 | [`func_L01_0021F9C8`](functional/func_L01_0021F9C8.c) | functional | 784 | ? | - |
 | [`func_L01_00262BC0`](functional/func_L01_00262BC0.c) | functional | 360 | ? | - |

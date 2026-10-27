@@ -1915,6 +1915,7 @@ func_L00_0020EDC0	src/overlays/shared/help_0020CDF0.c	match	00:0020E270	808	100.
 func_L00_0020F118	src/overlays/shared/help_0020CDF0.c	match	00:0020E5C8	1592	100.00
 func_L00_0020F750	src/overlays/shared/help_0020CDF0.c	match	00:0020EC00	168	100.00
 func_L00_0020F7F8	src/overlays/shared/help_0020CDF0.c	match	00:0020ECA8	1056	100.00
+func_L00_0020FC18	src/overlays/shared/help_0020CDF0.c	match	00:0020F0C8	1828	100.00
 func_L00_00210340	src/overlays/shared/help_0020CDF0.c	match	00:0020F7F0	212	100.00
 func_L00_00210418	src/overlays/shared/help_0020CDF0.c	match	00:0020F8C8	96	100.00
 func_L00_00210478	src/overlays/shared/help_0020CDF0.c	match	00:0020F928	76	100.00
@@ -2733,6 +2734,7 @@ func_L00_002B7EC0	src/overlays/shared/vendor_002B33E8.c	match	00:002B6570	840	10
 func_L00_002B8208	src/overlays/shared/vendor_002B33E8.c	match	00:002B68B8	1160	100.00
 func_L00_002B8690	src/overlays/shared/vendor_002B33E8.c	match	00:002B6D40	460	100.00
 func_L00_002B8860	src/overlays/shared/vendor_002B33E8.c	match	00:002B6F10	648	100.00
+func_L00_002B8AE8	src/overlays/shared/vendor_002B33E8.c	match	00:002B7198	2624	100.00
 func_L00_002B9528	src/overlays/shared/vendor_002B33E8.c	match	00:002B7BD8	520	100.00
 func_L00_002B9730	src/overlays/shared/vendor_002B33E8.c	match	00:002B7DE0	864	100.00
 func_L00_002B9A90	src/overlays/shared/vendor_002B33E8.c	match	00:002B8140	24	100.00
@@ -2884,6 +2886,7 @@ func_L00_002DDEA0	src/overlays/shared/vendor_002D9438.c	match	00:002DC398	3828	1
 func_L00_002DED98	src/overlays/shared/vendor_002D9438.c	match	00:002DD290	948	100.00
 func_L00_002DF150	src/overlays/shared/vendor_002D9438.c	match	00:002DD648	24	100.00
 func_L00_002DF168	src/overlays/shared/vendor_002D9438.c	match	00:002DD660	680	100.00
+func_L00_002DF410	src/overlays/shared/vendor_002D9438.c	match	00:002DD908	4220	100.00
 func_L00_002E0490	src/overlays/shared/vendor_002D9438.c	match	00:002DE988	104	100.00
 func_L00_002E04F8	src/overlays/shared/vendor_002D9438.c	match	00:002DE9F0	408	100.00
 func_L00_002E0690	src/overlays/shared/vendor_002D9438.c	match	00:002DEB88	500	100.00

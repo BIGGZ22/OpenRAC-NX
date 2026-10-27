@@ -1,5 +1,18 @@
 # Third-party notices
 
+## Targeted PAL ports
+
+Three functions are adapted from [OpenRAC/rac1-decomp, commit 9bf26d6227af](https://github.com/OpenRAC/rac1-decomp/commit/9bf26d6227afeadb6dca904d3114534dc1339834)
+(GPL-3.0), originally ported there from the [NTSC decomp](https://github.com/lombyte-project/Lombyte)
+at `c6ba2e9c2a95e69615540aa8ff04c197b8948a8c`:
+
+- `src/overlays/shared/help_0020CDF0.c`: `func_L00_0020FC18`, from `src/overlays/shared/hero_animation_slots.c`.
+- `src/overlays/shared/vendor_002B33E8.c`: `func_L00_002B8AE8`, from `src/overlays/shared/visibomb_and_pyrocitor.c`.
+- `src/overlays/shared/vendor_002D9438.c`: `func_L00_002DF410`, from `src/overlays/shared/nanotech_ball_and_suck_cannon.c`.
+
+Only these functions and their result rows are carried over; the existing file names,
+shared structures and upstream snapshot pin are unchanged.
+
 ## Lombyte
 
 The following functions adapt source from

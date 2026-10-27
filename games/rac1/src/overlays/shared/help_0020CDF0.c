@@ -1210,7 +1210,230 @@ void update_hero_item_rotation_from_history(char *arg, void *mat) {
     }
     matrix_to_euler(vv, out);
 }
-INCLUDE_ASM("asm/overlays", func_L00_0020FC18);
+/* Adapted from OpenRAC/rac1-decomp (GPL-3.0), commit 9bf26d6227af,
+ * src/overlays/shared/hero_animation_slots.c; originally ported from the NTSC decomp. */
+typedef struct {
+    u8 pad0[0xC];
+    s32 joint;          /* 0x0C */
+    u8 pad10[0x8];
+    s32 unk18;          /* 0x18 */
+    u8 pad1C[0x4C - 0x1C];
+} ItemDef_FC18;
+extern struct HeroEase D_L00_0017A780[];
+extern int D_L00_0015F6A8 MACRO_ADDR;
+extern short D_L00_0015F770 MACRO_ADDR;
+extern s32 D_L00_0015F6B0 MACRO_ADDR;
+extern u8 D_0015EEB4[] MACRO_ADDR;
+extern u8 D_L00_0017A6C0[];
+extern u8 D_L00_0017C580[];
+extern u8 D_L00_0017A708[];
+extern u8 D_L00_0017C780[];
+extern u8 D_L00_0015F788[];
+extern u8 D_L00_0017A750[];
+extern u8 D_L00_0017C980[];
+extern u8 D_L00_0017A768[];
+extern u8 D_L00_0017CA80[];
+extern u8 D_L00_0017AA60[];
+extern void func_L00_002514B8(void *);
+extern void func_L00_00251E30(void *);
+extern void func_0020EEE8(void *);
+extern void func_L00_00209940(void *, void *, s32, s32, s32);
+extern void func_001F9CA0(void *, void *, void *);
+extern void func_0020DAF8(void *, s32, void *);
+extern void func_L00_00208318(void);
+extern s32 func_001FA898(f32);
+
+void func_L00_0020FC18(void)
+{
+    union
+    {
+        f32 direction[4];
+        VecQuad saved[2];
+    } scratch __attribute__((aligned(16)));
+    f32 mtx[4][4] __attribute__((aligned(16)));
+    s32 i;
+    s32 j;
+    s32 joint;
+    s32 first;
+    s32 second;
+    s32 third;
+    s32 random_range;
+    s32 item_id;
+    u8 *slot_vec;
+    u8 *joint_mtx;
+    s32 color_red;
+    s32 red;
+    s32 color_green;
+    s32 color_blue;
+    u8 *moby;
+    s32 slot_offset;
+    u8 *slot;
+    u8 *effect;
+    u8 *created;
+    f32 angle;
+    for (i = 0; i < 7; i++)
+    {
+        if (((D_L00_0015F6A8 == 2) || (D_L00_0015F6A8 == 6)) && (i != 4) && (i != 5))
+            continue;
+        slot_offset = i * 0x50;
+        joint_mtx = (u8 *) (D_0013E633 + 0x18DD);
+        for (j = 0; j < 2; j++)
+        {
+            if ((j > 0) && (i != 1) && (i != 3) && (i != 4))
+                break;
+            slot = ((u8 *) (D_0013E633 + 0xE1D)) + slot_offset;
+            moby = *((u8 **) (slot + 0x1090));
+            if (j == 1)
+                moby = *((u8 **) (slot + 0x1094));
+            if (moby != 0)
+            {
+                *((u64 *) (moby + 0x38)) = *((u64 *) ((*((u8 **) (((u8 *) (D_0013E633 + 0xE1D)) + 0x2080))) + 0x38));
+                item_id = *((s32 *) (slot + 0x10b8));
+                joint = ((struct { ItemDef_FC18 a[1]; } *) D_L00_00179BC0)->a[item_id].joint;
+                if ((i == 1) && (j == 1))
+                    joint = 3;
+                if ((*((u8 *) (slot + 0x10aa))) != 0)
+                {
+                    slot_vec = (((u8 *) (D_0013E633 + 0xE1D)) + 0x1070) + slot_offset;
+                    qcopy(slot_vec, (((u8 *) (D_0013E633 + 0xE1D)) + 0xaf0) + (joint * 0x40));
+                    slot_vec = (((u8 *) (D_0013E633 + 0xE1D)) + 0x1080) + slot_offset;
+                    func_002153E8(((u8 *) (D_0013E633 + 0x18DD)) + (joint * 0x40), slot_vec);
+                    func_L00_002514B8(moby);
+                    func_L00_00251E30(moby);
+                    *((u16 *) (moby + 0x34)) &= 0xfffb;
+                }
+                else
+                {
+                    qcopy(moby + 0x10, (((u8 *) (D_0013E633 + 0xE1D)) + 0xaf0) + (joint * 0x40));
+                    if (((*(int *) &D_L00_0015F770) == 0) || (((struct { ItemDef_FC18 a[1]; } *) D_L00_00179BC0)->a[item_id].unk18 == 0))
+                    {
+                        first = func_L00_0020DB68(i);
+                        second = func_L00_0020DBB0(i);
+                        third = func_L00_0020DBD8(i);
+                        if (((first == 0) && (second == 0)) && (third == 0))
+                            func_L00_002514B8(moby);
+                        func_L00_00251E30(moby);
+                        func_001FA480(moby + 0xc0, ((u8 *) (D_0013E633 + 0x18DD)) + (joint * 0x40));
+                        if (((first == 0) && (second == 0)) && (third == 0))
+                            func_00214F78(moby + 0xc0);
+                        scratch.direction[0] = 1.0f;
+                        scratch.direction[1] = 0.0f;
+                        scratch.direction[2] = 0.0f;
+                        func_001F9EC0(scratch.direction, scratch.direction, moby + 0xc0);
+                        *((f32 *) (moby + 0x44)) = -func_L00_001FF860(func_001F9CE8(scratch.direction), scratch.direction[2]);
+                        *((f32 *) (moby + 0x48)) = func_L00_001FF860(scratch.direction[0], scratch.direction[1]);
+                        func_0020EEE8(moby);
+                        *((u16 *) (moby + 0x34)) |= 6;
+                        if (first != 0)
+                        {
+                            func_L00_00209940(D_L00_0017A6C0, D_L00_0017C580, *((s32 *) (moby + 0x24)), 0, 0);
+                            *((s32 *) (moby + 0x54)) = 0;
+                            *((s32 *) (moby + 0x50)) = 0;
+                            *((void **) (moby + 0x68)) = D_L00_0017C580;
+                            *((void **) (moby + 0x6c)) = D_L00_0017C580;
+                        }
+                        else if (second != 0)
+                        {
+                            if ((*((s16 *) (moby + 0xa6))) == 0x1b1)
+                                func_L00_00209940(D_L00_0017A708, D_L00_0017C780, *((s32 *) (moby + 0x24)), 6, 0);
+                            else
+                                func_L00_00209940(D_L00_0015F788, D_L00_0017C780, *((s32 *) (moby + 0x24)), 0, 0);
+                            *((s32 *) (moby + 0x54)) = 0;
+                            *((void **) (moby + 0x68)) = D_L00_0017C780;
+                            *((void **) (moby + 0x6c)) = D_L00_0017C780;
+                            *((s32 *) (moby + 0x50)) = 0;
+                        }
+                        else if (third != 0)
+                        {
+                            scratch.saved[0] = *((VecQuad *) D_L00_0017AA60);
+                            scratch.saved[1] = *((VecQuad *) (D_L00_0017AA60 + 0xb0));
+                            D_L00_0017A780[4].scale3.f[0] = 1.0f;
+                            D_L00_0017A780[4].scale3.f[1] = 1.0f;
+                            D_L00_0017A780[4].scale3.f[2] = 1.0f;
+                            D_L00_0017A780[5].scale3.f[0] = 1.0f;
+                            D_L00_0017A780[5].scale3.f[1] = 1.0f;
+                            D_L00_0017A780[5].scale3.f[2] = 1.0f;
+                            if (j == 0)
+                            {
+                                func_L00_00209940(D_L00_0017A750, D_L00_0017C980, *((s32 *) (moby + 0x24)), 0, 0);
+                                *((void **) (moby + 0x68)) = D_L00_0017C980;
+                                *((void **) (moby + 0x6c)) = D_L00_0017C980;
+                            }
+                            else
+                            {
+                                func_L00_00209940(D_L00_0017A768, D_L00_0017CA80, *((s32 *) (moby + 0x24)), 0, 0);
+                                *((void **) (moby + 0x68)) = D_L00_0017CA80;
+                                *((void **) (moby + 0x6c)) = D_L00_0017CA80;
+                            }
+                            *((s32 *) (moby + 0x54)) = 0;
+                            *((s32 *) (moby + 0x50)) = 0;
+                            *((VecQuad *) D_L00_0017AA60) = scratch.saved[0];
+                            *((VecQuad *) (D_L00_0017AA60 + 0xb0)) = scratch.saved[1];
+                        }
+                    }
+                    else
+                    {
+                        func_L00_002514B8(moby);
+                        if (((*(int *) &D_L00_0015F770) == 0) || (i != 0))
+                            func_002153E8(((u8 *) (D_0013E633 + 0x18DD)) + (joint * 0x40), moby + 0x40);
+                        else
+                            func_L00_0020F7F8((char *) moby, (u8 *) ((joint * 0x40) + ((s32) joint_mtx)));
+                        func_L00_00251E30(moby);
+                        if (D_0015EEB4[1])
+                            func_001F9CA0(moby + 0xe0, moby + 0xc0, moby + 0xd0);
+                        func_0020EEE8(moby);
+                        *((u16 *) (moby + 0x34)) |= 6;
+                    }
+                }
+            }
+            if ((i == 3) && (j == 1) && (moby != 0))
+            {
+                struct Hero *p = (struct Hero *) (D_0013E633 + 0xE1D);
+                if ((*((s32 *) (((u8 *) p) + 0x118c))) == 0)
+                {
+                    *((s32 *) (((u8 *) p) + 0x118c)) = (s32) func_0020D348(0x4b4);
+                    if ((*((s32 *) (((u8 *) p) + 0x118c))) != 0)
+                    {
+                    *((u32 *) (((u8 *) (*((s32 *) (((u8 *) p) + 0x118c)))) + 0x90)) = 0x801432d7;
+                    created = (u8 *) (*((s32 *) (((u8 *) p) + 0x118c)));
+                    qcopy(created + 0x10, &p->motion.pos);
+                    qcopy(created + 0x40, &p->motion.rot);
+                    *((u16 *) (created + 0x32)) = 0x40;
+                    *((u8 *) (((u8 *) (*((s32 *) (((u8 *) p) + 0x118c)))) + 0x31)) = 1;
+                    *((u8 *) (((u8 *) (*((s32 *) (((u8 *) p) + 0x118c)))) + 0x30)) = 0;
+                    *((u16 *) (((u8 *) (*((s32 *) (((u8 *) p) + 0x118c)))) + 0x34)) = 0;
+                    *((f32 *) (((u8 *) (*((s32 *) (((u8 *) p) + 0x118c)))) + 0x2c)) *= 1.3f;
+                    func_L00_00251E30((u8 *) (*((s32 *) (((u8 *) p) + 0x118c))));
+                    }
+                }
+                if ((*((s32 *) (((u8 *) p) + 0x118c))) != 0)
+                {
+                    effect = (u8 *) (*((s32 *) (((u8 *) p) + 0x118c)));
+                    if ((((*((u16 *) (effect + 0x34))) ^ 1) & 1) != 0)
+                    {
+                        func_0020DAF8(moby, 6, mtx);
+                        qcopy(((u8 *) p) + 0x1d80, mtx[3]);
+                        func_L00_00208318();
+                        qcopy(effect + 0x10, mtx[3]);
+                        func_001FA480(effect + 0xc0, mtx);
+                        func_L00_00251E30(effect);
+                        *((u64 *) (effect + 0x38)) = *((u64 *) (((u8 *) p->moby) + 0x38));
+                        random_range = func_001F9850(0x78);
+                        angle = func_001F9FA8((((((f32) (D_L00_0015F6B0 % random_range)) / func_001FA888(random_range)) * 2.0f) * 3.1415927f) + (-3.1415927f));
+                        color_red = func_001FA898(angle * 90.0f);
+                        color_green = func_001FA898(angle * 50.0f);
+                        color_blue = func_001FA898(angle * 10.0f);
+                        red = color_red + 0xd7;
+                        if (red > 0xff)
+                            red = 0xff;
+                        *((u16 *) (effect + 0x34)) |= 0x10;
+                        *((u32 *) (effect + 0x90)) = (((color_blue + 0x14) << 16) | (0x80000000 | ((color_green + 0x32) << 8))) | red;
+                    }
+                }
+            }
+        }
+    }
+}
 extern char D_0013E633[];
 extern void func_0020D678(void *);
 

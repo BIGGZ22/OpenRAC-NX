@@ -2520,7 +2520,244 @@ void SuckBeam_Build(char *a, char *b) {
         for (j = 199; j >= 0; j--) D_L00_001E4FD0_x[j].f14 = 0;
     }
 }
-INCLUDE_ASM("asm/overlays", func_L00_002DF410);
+/* Adapted from OpenRAC/rac1-decomp (GPL-3.0), commit 9bf26d6227af,
+ * src/overlays/shared/nanotech_ball_and_suck_cannon.c; originally ported from the NTSC decomp. */
+typedef unsigned int Q41 __attribute__((mode(TI)));
+typedef union { struct { float x,y,z,w; } f; Q41 q; } V41 __attribute__((aligned(16)));
+typedef struct {
+    u8 pad0[0x34]; u16 flags; u8 pad36[0x8A]; V41 basis[3];
+} M41;
+typedef struct {
+    u8 pad0[0x640]; V41 matrix[3]; u8 pad670[0x1A10];
+    M41 *moby; int camera_mode; u8 pad2088[0x240]; s16 special;
+} Hero41;
+typedef struct {
+    float unknown0; int mode; u8 pad8[2]; u8 r,g; u8 padC[4];
+    V41 velocity; float acceleration;
+} Tail41;
+typedef struct Particle41 {
+    u8 pad0[0xA]; s16 life; float size; V41 pos; Tail41 tail;
+} Particle41;
+typedef struct { short idx; short angle; float f; float phase; float phase_step; float speed; char *p; } E04_pt3;
+
+extern V41 D_L00_001E4E90[];
+extern float D_L00_001E6330[];
+extern char D_L00_00173F60[];
+extern float func_L00_001EB6A8(void *,float,float,float,float,float);
+extern float func_001FA748(float, float);
+extern float func_001F9FA8(float);
+extern float func_001FA790(float, float);
+extern void func_L00_0025C710(void *,void *,void *,float);
+extern void func_L00_002688A8(void *);
+extern void func_001F9C08(void *, void *, void *, float);
+extern Particle41 *func_L00_0026DEA0(void *,float,float,float,int,void *,float,int);
+
+void func_L00_002DF410(void *moby,void *position) {
+    extern E04_pt3 D_L00_001E4FD0[];
+    V41 step,up,orient[3],ray_end,start,end,axis,tmp_a,tmp_b,
+        frame[3],tmp_c,motion,tmp_d,tmp_e,interp,cross_c,basis_c,tmp_f,unused_a,unused_b;
+    V41 *orientation;
+    int i,j,n,segment,next_ring;
+    float t,angle,turn,delta,dot,length,amount,speed;
+    Particle41 *p;
+    V41 *anchor,*previous,*source;
+
+    func_L00_002DF168(moby,position);
+    if((((Hero41 *)(D_0013E633+0xE1D))->camera_mode==30 || ((Hero41 *)(D_0013E633+0xE1D))->camera_mode==1) && (((Hero41 *)(D_0013E633+0xE1D))->moby->flags&1)) {
+        qcopy(&orient[0],D_L00_001670D0);
+        qcopy(&orient[1],D_L00_001670D0+16);
+        qcopy(&orient[2],D_L00_001670D0+32);
+        orientation=&orient[0];
+    } else if(((Hero41 *)(D_0013E633+0xE1D))->special==1) {
+        func_001F9C30(&orient[0],&((M41 *)moby)->basis[1],-1.0f);
+        { M41 *m=moby;
+        qcopy_nc(&orient[1],&m->basis[0]);
+        qcopy_nc(&orient[2],&m->basis[2]); }
+        orientation=&orient[0];
+    } else {
+        qcopy(&orient[0],&((Hero41 *)(D_0013E633+0xE1D))->matrix[0]);
+        qcopy(&orient[1],&((Hero41 *)(D_0013E633+0xE1D))->matrix[1]);
+        qcopy(&orient[2],&((Hero41 *)(D_0013E633+0xE1D))->matrix[2]);
+        orientation=&orient[0];
+    }
+    func_L00_001FF4B0(&step,orientation,D_L00_00161C54);
+    func_L00_001FF4B0(&up,&orient[2],1.0f);
+    qcopy(D_L00_001E6290,position);
+    func_L00_001FF4B0(&ray_end,orientation,D_L00_00161C54*10.0f);
+    func_001F9BD8(&ray_end,&ray_end,position);
+    if(func_L00_001EFFF0(position,&ray_end,20,(int)((Hero41 *)(D_0013E633+0xE1D))->moby,0)) {
+        int n,i,k;
+        n=func_001FA898(func_001F9D48(D_L00_00173F60,position)/D_L00_00161C54);
+        for(i=n;i<10;i++) {
+            if(D_L00_001E6358[i]>64)D_L00_001E6358[i]=64;
+            D_L00_001E6358[i]=(u16)D_L00_001E6358[i]-4;
+            if(D_L00_001E6358[i]<0)D_L00_001E6358[i]=0;
+        }
+        for(k=n-1;k>=0;k--)D_L00_001E6358[k]=D_L00_001E6358[k+1]+32;
+    } else {
+        int i;
+        D_L00_001E6358[0]=(u16)D_L00_001E6358[0]+4;
+        for(i=1;i<10;i++)D_L00_001E6358[i]=D_L00_001E6358[i-1]-32;
+    }
+    func_001F9EC0(&start,&(*(V41 *)D_L00_00161C30),orientation);
+    func_001F9BD8(&start,&start,&step);
+    func_001F9EC0(&end,&(*(V41 *)D_L00_00161C40),orientation);
+    func_001F9BD8(&end,&end,&step);
+    t=(float)(*(int *)&D_L00_00161C24)/func_001FA888(func_001F9850(60));
+    (*(int *)&D_L00_00161C24)++;
+    step.f.x=start.f.x+(end.f.x-start.f.x)*t;
+    step.f.y=start.f.y+(end.f.y-start.f.y)*t;
+    step.f.z=start.f.z+(end.f.z-start.f.z)*t;
+    if((*(int *)&D_L00_00161C24)>=func_001F9850(60)) {
+        qcopy(&(*(V41 *)D_L00_00161C30),&(*(V41 *)D_L00_00161C40));
+        func_L00_001FF4B0(&axis,orientation,D_L00_00161C54);
+        tmp_a.q=0; tmp_b.q=0;
+        tmp_a.f.z=0.1f; tmp_a.f.w=1.0f;
+        tmp_b.f.x=1.0f; tmp_b.f.w=1.0f;
+        angle=func_001FA748(D_L00_00161C50,func_002140F8(45.0f,315.0f)*0.0174532924f);
+        func_002156E0(&(*(V41 *)D_L00_00161C40),&tmp_a,angle,&tmp_b);
+        D_L00_00161C50=angle;
+        (*(int *)&D_L00_00161C24)=0;
+    }
+    (*(float *)&D_L00_00161C28)=func_001FA748((*(float *)&D_L00_00161C28),0.1f);
+    qcopy(&axis,&orient[2]);
+    qcopy(&frame[2],&axis);
+    func_001F9CA0(&frame[1],&step,&frame[2]);
+    func_L00_001FF4B0(&frame[1],&frame[1],1.0f);
+    func_001F9CA0(&frame[0],&frame[2],&frame[1]);
+    { int k;
+    for(k=0;k<20;k++) {
+        func_001F9C30(&tmp_a,&D_L00_001E4E90[k],0.1f);
+        func_001F9EC0(&tmp_a,&tmp_a,frame);
+        func_001F9BD8(&((V41 *)D_L00_001E6370)[k],D_L00_001E6290,&tmp_a);
+    }
+    }
+    { int i;
+    for(i=1;i<10;i++) {
+        anchor=(V41 *)(D_L00_001E6290+i*16);
+        previous=(V41 *)(D_L00_001E6280+i*16);
+        func_001F9BF0(&tmp_a,anchor,previous);
+        qcopy(&tmp_b,&step);
+        func_001F9CA0(&tmp_c,&tmp_b,&tmp_a);
+        dot=func_001F9C78(&tmp_a,&tmp_b);
+        { float target=1.5707964f-func_001F9FC0(dot/(func_001F9CB8(&tmp_a)*D_L00_00161C54));
+        turn=func_L00_001EB6A8(&D_L00_001E6330[i],0.0f,target,0.06f,0.2f,0.0f);
+        delta=func_001FA790(target,turn); }
+        if(func_001F9B88(delta)>0.31415927f)turn=func_001FA748(turn,func_001FA790(delta,0.31415927f));
+        func_002156E0(&motion,&tmp_a,turn,&tmp_c);
+        func_L00_001FF4B0(&tmp_d,&motion,D_L00_00161C54);
+        func_001F9C08(&motion,&motion,&tmp_d,1.0f);
+        { float len=func_001F9CB8(&motion);
+        if(len>2.0f)func_001F9C30(&motion,&motion,2.0f/len); }
+        if(i>=6)func_001F9C08(&motion,&motion,&tmp_a,(float)i/func_001FA888(10)+0.0f);
+        func_001F9BD8(anchor,previous,&motion);
+        qcopy_nc(&tmp_e,&step);
+        qcopy_nc(&basis_c,&axis);
+        func_L00_001FF4B0(&interp,&tmp_e,1.0f);
+        func_001F9CA0(&cross_c,&interp,&basis_c);
+        func_L00_001FF4B0(&cross_c,&cross_c,1.0f);
+        func_001F9CA0(&basis_c,&cross_c,&interp);
+        qcopy(&axis,&basis_c);
+        { int j;
+        for(j=0;j<20;j++) {
+            angle=(float)i*0.3f+0.1f;
+            angle+=func_001F9FA8(func_001FA748((*(float *)&D_L00_00161C28)+(float)i*0.7f,0.0f))*0.1f;
+            func_001F9C30(&tmp_f,&D_L00_001E4E90[j],angle);
+            func_001F9EC0(&tmp_f,&tmp_f,&interp);
+            func_001F9BD8(&((V41 (*)[20])D_L00_001E6370)[i][j],D_L00_001E6290+i*16,&tmp_f);
+        }
+        }
+        func_L00_001FF4B0(&step,&motion,D_L00_00161C54);
+    }
+    }
+    func_001F49B0(func_L00_002DED98,(int)moby);
+    { int count,sparks;
+    count=0; sparks=0;
+    for(i=0;i<200;i++) {
+        if(!D_L00_001E4FD0[i].p && count<5) {
+            for(segment=9;segment>=0 && D_L00_001E6358[segment]<64;segment--);
+            if(segment>0) {
+                if(segment>=2 && sparks<2) {
+                    { int k=func_002140B0(20);
+                    V41 *ring;
+                    amount=func_002140F8(0.2f,1.0f);
+                    ring=(V41 *)D_L00_001E6370+k;
+                    func_001F9C08(&tmp_a,ring,ring+segment*20,amount); }
+                    func_001F9C08(&tmp_c,D_L00_001E6290,D_L00_001E6290+segment*16,amount);
+                    speed=func_002140F8(60000.0f,180000.0f);
+                    p=func_L00_0026DEA0(&tmp_a,0.0f,1.0f,1.03f,func_002140B0(5)+1,&tmp_b,speed,0x404040);
+                    if(p) {
+                        Tail41 *tail=&p->tail;
+                        func_001F9BF0(&motion,&tmp_a,&tmp_c);
+                        sparks++;
+                        func_L00_001FF4B0(&tail->velocity,&motion,0.01f);
+                        tail->velocity.f.z+=0.02f;
+                    }
+                }
+                qcopy(&tmp_a,D_L00_001E6290+segment*16);
+                func_001F9BC0(&tmp_b);
+                speed=func_002140F8(60000.0f,180000.0f);
+                { Particle41 *main=func_L00_0026DEA0(&tmp_a,0.0f,1.0f,1.0f,6,&tmp_b,speed,0x7F404040);
+                D_L00_001E4FD0[i].p=(char *)main;
+                if(main) { Tail41 *tail=&main->tail; main->life=200; tail->mode=2; count++; tail->r=127; tail->g=200; } }
+                D_L00_001E4FD0[i].idx=segment;
+                D_L00_001E4FD0[i].f=0;
+                D_L00_001E4FD0[i].phase=0;
+                D_L00_001E4FD0[i].angle=func_002140B0(20);
+                D_L00_001E4FD0[i].phase_step=func_002140F8(0.1f,0.8f);
+                D_L00_001E4FD0[i].speed=func_002140F8(0.1f,0.4f);
+            }
+        }
+        if(D_L00_001E4FD0[i].p) {
+
+            func_001F9BF0(&tmp_a,D_L00_001E6280+D_L00_001E4FD0[i].idx*16,D_L00_001E6290+D_L00_001E4FD0[i].idx*16);
+            length=func_001F9CB8(&tmp_a);
+            D_L00_001E4FD0[i].f+=D_L00_001E4FD0[i].speed;
+            ((Particle41 *)D_L00_001E4FD0[i].p)->life=200;
+            if(length<D_L00_001E4FD0[i].f) {
+                D_L00_001E4FD0[i].idx=(u16)D_L00_001E4FD0[i].idx-1;
+                if(D_L00_001E4FD0[i].idx<=0) { func_L00_002688A8(D_L00_001E4FD0[i].p); D_L00_001E4FD0[i].p=0; }
+                else {
+                    D_L00_001E4FD0[i].f-=length;
+                    func_001F9BF0(&tmp_a,D_L00_001E6280+D_L00_001E4FD0[i].idx*16,D_L00_001E6290+D_L00_001E4FD0[i].idx*16);
+                    length=func_001F9CB8(&tmp_a);
+                }
+            }
+                if(D_L00_001E4FD0[i].p) {
+
+                amount=D_L00_001E4FD0[i].f/length;
+                if(D_L00_001E4FD0[i].idx==2)((Particle41 *)D_L00_001E4FD0[i].p)->life=100;
+                else if(D_L00_001E4FD0[i].idx<2) {
+                    ((Particle41 *)D_L00_001E4FD0[i].p)->life=func_001FA898((1.0f-amount)*100.0f);
+                    if(((Particle41 *)D_L00_001E4FD0[i].p)->life<61)((Particle41 *)D_L00_001E4FD0[i].p)->life=60;
+                }
+
+                if(D_L00_001E4FD0[i].idx==1) {
+                    func_001F9BF0(&tmp_b,position,&((Particle41 *)D_L00_001E4FD0[i].p)->pos);
+                    func_L00_001FF4B0(&tmp_b,&tmp_b,D_L00_001E4FD0[i].speed);
+                    func_001F9BD8(&((Particle41 *)D_L00_001E4FD0[i].p)->pos,&((Particle41 *)D_L00_001E4FD0[i].p)->pos,&tmp_b);
+                    ((Particle41 *)D_L00_001E4FD0[i].p)->size*=1.0f+D_0015EE60*-0.0500000119f;
+                } else {
+                    func_001F9C30(&tmp_a,&tmp_a,amount);
+                    func_001F9BD8(&((Particle41 *)D_L00_001E4FD0[i].p)->pos,D_L00_001E6290+D_L00_001E4FD0[i].idx*16,&tmp_a);
+                    j=D_L00_001E4FD0[i].angle;
+                    func_001F9BF0(&tmp_b,(char *)((V41 *)D_L00_001E6370)+D_L00_001E4FD0[i].idx*320+j*16,D_L00_001E6290+D_L00_001E4FD0[i].idx*16);
+                    func_001F9BF0(&tmp_c,(char *)((V41 *)D_L00_001E6230)+D_L00_001E4FD0[i].idx*320+j*16,D_L00_001E6280+D_L00_001E4FD0[i].idx*16);
+                    func_L00_0025C710(&motion,&tmp_b,&tmp_c,amount);
+                    j=(j+19)%20;
+                    func_001F9BF0(&tmp_d,(char *)((V41 *)D_L00_001E6370)+D_L00_001E4FD0[i].idx*320+j*16,D_L00_001E6290+D_L00_001E4FD0[i].idx*16);
+                    func_001F9BF0(&tmp_e,(char *)((V41 *)D_L00_001E6230)+D_L00_001E4FD0[i].idx*320+j*16,D_L00_001E6280+D_L00_001E4FD0[i].idx*16);
+                    func_L00_0025C710(&interp,&tmp_d,&tmp_e,amount);
+                    func_L00_0025C710(&motion,&motion,&interp,D_L00_001E4FD0[i].phase);
+                    D_L00_001E4FD0[i].phase+=D_L00_001E4FD0[i].phase_step;
+                    if(D_L00_001E4FD0[i].phase>=1.0f) { D_L00_001E4FD0[i].phase-=1.0f; D_L00_001E4FD0[i].angle=j; }
+                    func_001F9BD8(&((Particle41 *)D_L00_001E4FD0[i].p)->pos,&((Particle41 *)D_L00_001E4FD0[i].p)->pos,&motion);
+                }
+            }
+        }
+    }
+}
+}
 extern void func_L00_002DED98(void);
 extern void func_001F49B0(void (*)(void), int);
 
