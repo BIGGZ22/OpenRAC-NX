@@ -478,7 +478,7 @@ void draw(
             continue;
         }
         if (image->layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-            end_rendering();
+            end_rendering(PassEnd::Sample);
             barrier(frame().main, *image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         }
         image->touched = g->recording;
@@ -496,9 +496,7 @@ void draw(
         }
         const Attribute& attr = va.attributes[static_cast<std::size_t>(a.location)];
         Buffer* b = attr.enabled ? g->buffers.find(attr.buffer) : nullptr;
-        const VkFormat format =
-            attr.enabled ? vertex_format(attr.type, attr.size, attr.normalized, attr.integer)
-                         : VK_FORMAT_UNDEFINED;
+        const VkFormat format = attr.enabled ? attr.format : VK_FORMAT_UNDEFINED;
         if (b != nullptr && format != VK_FORMAT_UNDEFINED) {
             // Small persistent instance buffers corrupt vertex fetches on the
             // AMD Windows driver. Keep instance data in the frame ring; large

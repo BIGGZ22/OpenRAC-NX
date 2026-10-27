@@ -198,6 +198,24 @@ struct State {
     // for the renderer that holds them.
     std::unordered_map<std::uint64_t, std::uint32_t> particle_textures;
     const void* particle_textures_for = nullptr;
+    // The effect textures decoded so far (effect_textures), as particle_textures: pixels and CLUT
+    // hash -> pool key. Each effect quad the game drew since the last frame whose texture has a
+    // source in game memory: its index in `effects` and that hash (effect_quad).
+    std::unordered_map<std::uint64_t, std::uint32_t> effect_textures;
+    const void* effect_textures_for = nullptr;
+
+    struct EffectTextureId {
+        std::size_t effect;
+        std::uint64_t pixels, clut;  // the hashes of each
+    };
+
+    std::vector<EffectTextureId> effect_texture_ids;
+    // This frame's sources hashed so far: pixels, CLUT, width << 16 | height -> their hashes.
+    std::vector<std::pair<std::array<std::uint32_t, 3>, std::pair<std::uint64_t, std::uint64_t>>>
+        effect_hashed;
+    // Since the last frame, for the capture's gauges (effect_textures): the effect quads by where
+    // their texture's source was found (none, the paging records, remembered).
+    std::array<int, 3> effect_sources{};
     // The sky sprites the game drew since the last frame (sky_sprite): record, TEX0.
     std::vector<std::pair<std::array<std::uint8_t, 0x20>, std::uint64_t>> sky_sprites;
     // The 2D layer's quads drawn natively since the last frame (ui_quad), by marker index.
@@ -373,6 +391,8 @@ void sky_sprite_quads(const host::GameState& state);
 // The particles the game drew since the last frame, as effect quads back to front, seen from
 // `state`'s camera; their textures read from `ram` (frontend/world.cpp).
 void particle_quads(std::span<const std::uint8_t> ram, const host::GameState& state);
+// The effect quads' textures at keys of their own, by content, and a capture's gauges of them.
+void effect_textures();
 
 // Whether the frame cap lets a frame start now (frontend/interpolation.cpp).
 bool frame_due(std::chrono::steady_clock::time_point now);

@@ -105,6 +105,7 @@ enum class Var : std::uint16_t {
     OverlayShot,
     Pacing,
     PauseAt,
+    PerfCapture,
     Press,
     ProbeBacklight,
     ProbeComputeOff,

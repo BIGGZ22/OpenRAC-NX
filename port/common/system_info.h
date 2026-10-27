@@ -17,4 +17,14 @@ std::string cpu();
 // "36.0 GB".
 std::string memory();
 
+// The processor's clocks now, cores of the same clock and top clock together, where the system
+// lets them be read (Linux, Android): "cpu0-3 1.80/1.80 GHz, cpu4-7 1.21/2.80 GHz" (now/top). A
+// phone that is hot runs below its top. Empty elsewhere.
+std::string cpu_clocks();
+
+// The system's thermal state, where it says (Android 11 on): "none", "light", "moderate",
+// "severe", ..., with the headroom (Android 12 on: 1.0 is where the system starts to throttle).
+// Empty elsewhere.
+std::string thermal();
+
 }  // namespace openrac::system_info

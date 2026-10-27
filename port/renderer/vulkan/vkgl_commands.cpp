@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <format>
 #include <functional>
 #include <utility>
 #include <volk.h>
@@ -423,7 +424,7 @@ void end_deferred(const Target& t) {
 }
 
 void begin_rendering(const Target& t, const Clear& clear) {
-    end_rendering();
+    end_rendering(PassEnd::Target);
 
     // The operations chosen at the pass's end, or as it begins (the reference path).
     if (!render_opt::enabled(render_opt::Opt::AttachmentDiscard) || !begin_deferred(t, clear)) {
@@ -536,9 +537,27 @@ VkCommandBuffer upload_cmd() {
     return frame().upload;
 }
 
-void end_rendering() {
+void count_where(std::string_view event) {
+    std::string section = stats::open_section();
+    g->where[std::format("{} in {}", event, section.empty() ? "frame" : section)] += 1.0;
+}
+
+void end_rendering(PassEnd why) {
     gpu_flush_draws();
     if (g->rendering) {
+        if (stats::enabled()) {
+            constexpr std::array<std::string_view, 8> kWhy = {
+                "vk_pass_end target",
+                "vk_pass_end copy",
+                "vk_pass_end sample",
+                "vk_pass_end compute",
+                "vk_pass_end barrier",
+                "vk_pass_end submit",
+                "vk_pass_end present",
+                "vk_pass_end other",
+            };
+            count_where(kWhy[static_cast<std::size_t>(why)]);
+        }
         // Not rendering from here on: the poison of a deferred pass's end records outside it.
         g->rendering = false;
         g->bound_pipeline = VK_NULL_HANDLE;
@@ -560,7 +579,7 @@ VkCommandBuffer cmd_for(Image* image, bool force_main) {
     if (!force_main && image != nullptr && image->touched != g->recording) {
         return upload_cmd();
     }
-    end_rendering();
+    end_rendering(PassEnd::Copy);
     if (image != nullptr) {
         image->touched = g->recording;
     }
@@ -610,9 +629,21 @@ void begin_buffers() {
     begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vkBeginCommandBuffer(f.upload, &begin);
     vkBeginCommandBuffer(f.main, &begin);
-    if (f.timestamps != VK_NULL_HANDLE && f.timestamp_used == 0) {
-        vkCmdResetQueryPool(f.upload, f.timestamps, 0, 512);
+    const bool reset = f.timestamps != VK_NULL_HANDLE && f.timestamp_used == 0;
+    if (reset) {
+        vkCmdResetQueryPool(f.upload, f.timestamps, 0, kTimestamps);
         count_command(Command::Query);
+        f.frame_timing = Frame::FrameTiming::None;  // a start the pool held is gone with it
+    }
+    // The whole frame's GPU time from here to the end of `main` (stats::gpu_frame_begin). Only
+    // into a pool reset just now: buffers begun again after a submit within the frame (its
+    // sections' queries still in use) would write the frame's queries a second time unreset.
+    if (reset && g->timestamp_bits != 0 && stats::enabled()) {
+        vkCmdWriteTimestamp(
+            f.upload, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, f.timestamps, kFrameTimestamp
+        );
+        count_command(Command::Query);
+        f.frame_timing = Frame::FrameTiming::Started;
     }
     g->upload_used = false;
     f.secondary_at = 0;
@@ -628,7 +659,7 @@ bool timing_begin(std::uint64_t serial, int section) {
     }
     gpu_flush_draws();
     auto& f = frame();
-    if (f.active_timing >= 0 || f.timestamp_used + 2 > 512) {
+    if (f.active_timing >= 0 || f.timestamp_used + 2 > kFrameTimestamp) {
         return false;
     }
     f.active_timing = static_cast<int>(f.timings.size());
@@ -690,6 +721,28 @@ void timing_end() {
 
 void timing_results(Frame& f) {
     gpu_results(f);
+    const auto mask =
+        g->timestamp_bits == 64 ? UINT64_MAX : (std::uint64_t{1} << g->timestamp_bits) - 1;
+    if (f.frame_timing == Frame::FrameTiming::Ended) {
+        std::uint64_t values[2]{};
+        if (f.frame_serial != stats::kNoFrame
+            && vkGetQueryPoolResults(
+                   g->device,
+                   f.timestamps,
+                   kFrameTimestamp,
+                   2,
+                   sizeof(values),
+                   values,
+                   sizeof(std::uint64_t),
+                   VK_QUERY_RESULT_64_BIT
+               ) == VK_SUCCESS) {
+            const double ticks = static_cast<double>((values[1] - values[0]) & mask);
+            stats::gpu_frame_result(
+                f.frame_serial, ticks * g->properties.limits.timestampPeriod / 1e6
+            );
+        }
+    }
+    f.frame_timing = Frame::FrameTiming::None;
     for (auto& timing : f.timings) {
         if (!timing.complete || timing.reported) {
             continue;
@@ -706,8 +759,6 @@ void timing_results(Frame& f) {
                 VK_QUERY_RESULT_64_BIT
             )
             == VK_SUCCESS) {
-            const auto mask =
-                g->timestamp_bits == 64 ? UINT64_MAX : (std::uint64_t{1} << g->timestamp_bits) - 1;
             const double ticks = static_cast<double>((values[1] - values[0]) & mask);
             stats::gpu_result(
                 timing.serial, timing.section, ticks * g->properties.limits.timestampPeriod / 1e6
@@ -718,7 +769,7 @@ void timing_results(Frame& f) {
 }
 
 void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait, VkCommandBuffer present) {
-    end_rendering();
+    end_rendering(PassEnd::Submit);
     Frame& f = frame();
     gpu_record();
     const bool tight = render_opt::enabled(render_opt::Opt::VkTightSync);
@@ -746,6 +797,15 @@ void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait, VkCommand
 
     vkCmdPipelineBarrier(f.upload, source, destination, 0, 1, &m, 0, nullptr, 0, nullptr);
     count_barrier(source, destination);
+    // The frame's work ends here, outside any render pass (end_rendering above).
+    if (f.frame_timing == Frame::FrameTiming::Started) {
+        vkCmdWriteTimestamp(
+            f.main, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, f.timestamps, kFrameTimestamp + 1
+        );
+        count_command(Command::Query);
+        f.frame_timing = Frame::FrameTiming::Ended;
+        f.frame_serial = stats::gpu_frame_begin();
+    }
     vkEndCommandBuffer(f.upload);
     vkEndCommandBuffer(f.main);
     const VkCommandBuffer buffers[] = {f.upload, f.main};

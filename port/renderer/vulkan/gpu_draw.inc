@@ -513,14 +513,45 @@ bool gpu_register(unsigned buffer, std::span<const renderer::GpuCullBounds> boun
     }
 
     auto& resident = g->gpu.resident;
-    const std::size_t first = resident.words.size();
+    auto known = resident.groups.find(buffer);
+    std::size_t first = resident.words.size();
+    std::uint32_t room = count;
 
-    // The culling names a resident word with 31 bits.
-    if (first + std::size_t{count} * kGpuCandidateWords >= kGpuResidentBit) {
-        return false;
+    // Registered again (a static layer grouped anew, LevelScene::choose_scenery): into its own
+    // words while they have room, else to the end, the old ones left unused.
+    if (known != resident.groups.end() && known->second.room >= count) {
+        first = known->second.first;
+        room = known->second.room;
+    } else {
+        if (known != resident.groups.end()) {
+            resident.unused += std::size_t{known->second.room} * kGpuCandidateWords;
+            resident.groups.erase(known);
+        }
+
+        // Mostly unused: the groups packed together again, so that the words stay bounded.
+        if (resident.unused > resident.words.size() / 2) {
+            std::vector<std::uint32_t> packed;
+            packed.reserve(resident.words.size() - resident.unused);
+            for (auto& [name, held] : resident.groups) {
+                const auto from = resident.words.begin() + held.first;
+                held.first = static_cast<std::uint32_t>(packed.size());
+                packed.insert(
+                    packed.end(), from, from + std::ptrdiff_t{held.room} * kGpuCandidateWords
+                );
+            }
+            resident.words = std::move(packed);
+            resident.unused = 0;
+            resident.dirty = true;
+        }
+        first = resident.words.size();
+
+        // The culling names a resident word with 31 bits.
+        if (first + std::size_t{count} * kGpuCandidateWords >= kGpuResidentBit) {
+            return false;
+        }
+
+        resident.words.resize(first + std::size_t{count} * kGpuCandidateWords);
     }
-
-    resident.words.resize(first + std::size_t{count} * kGpuCandidateWords);
 
     // Each instance as a candidate of the payload is laid out: its bounds, then its data.
     for (unsigned i = 0; i < count; ++i) {
@@ -533,7 +564,7 @@ bool gpu_register(unsigned buffer, std::span<const renderer::GpuCullBounds> boun
         );
     }
 
-    resident.groups[buffer] = {static_cast<std::uint32_t>(first), count, source->version};
+    resident.groups[buffer] = {static_cast<std::uint32_t>(first), count, room, source->version};
     resident.dirty = true;
     return true;
 }

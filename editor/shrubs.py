@@ -6,9 +6,9 @@ Layouts follow Wrench's shrub reader and recovery (games/rac1/docs/ASSETS.md).
 import math
 import struct
 
-from formats import FormatError, span, unpack
+from formats import FormatError, gs_clamp, span, unpack
 import games
-from mesh import Mesh, unit_normal
+from mesh import Mesh, texture_key, unit_normal
 from terrain import STCYCL, STMOD, program
 from ties import placement
 
@@ -90,7 +90,8 @@ def shrub_mesh(data: bytes, remap: bytes, name: str) -> Mesh:
                 slot, = unpack("<I", records[mi], 48)  # TEX0 data, patched at load time.
                 if slot >= len(remap) or remap[slot] == 255:
                     raise FormatError("shrub material has no texture")
-                texture = ("shrub", remap[slot])
+                # CLAMP, the second of the setup's A+D quadwords (SHRUB_SKY.md).
+                texture = texture_key("shrub", remap[slot], gs_clamp(records[mi], 16))
                 mi += 1
                 address += 5
             elif vi < vertex_count and positions[vi][3] == address:
@@ -145,6 +146,24 @@ def shrub_class_normals(level) -> dict[int, list[tuple[int, int, int]]]:
         at, = unpack("<I", data, 0x2c)
         result[class_id] = [unpack("<3h", data, at + 8 * j) for j in range(24)]
     return result
+
+
+def billboard_fade(data: bytes) -> int:
+    """A class's billboard fade distance F as ShrubProc reads it, trunc(fade) & 0xff (0: billboard
+    only), from the billboard record the class header's 0x1c points to; -1 for a class without one
+    (or a fade that is not a finite number). The loader raises its instances' draw distance to at
+    least F + 24, and beyond F + 8 the game draws the billboard in place of the mesh."""
+    at, = unpack("<i", data, 0x1c)
+    if at <= 0:
+        return -1
+    fade, = unpack("<f", data, at)
+    return math.trunc(fade) & 0xff if math.isfinite(fade) else -1
+
+
+def shrub_billboard_fades(level) -> dict[int, int]:
+    """Class ID -> billboard_fade of its class block (-1: no billboard)."""
+    return {class_id: billboard_fade(level.block(start))
+            for start, class_id in (unpack("<II", entry) for entry in level.table(0x28, 48)) if start}
 
 
 def shrub_instances(gameplay: bytes, classes, fmt: games.Format = games.RAC1,

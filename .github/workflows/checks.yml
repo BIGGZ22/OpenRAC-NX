@@ -168,8 +168,23 @@ jobs:
       - name: Tauri's system libraries
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev
+          apt=(sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+          packages=(libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev)
+          "${apt[@]}" update
+          # As launcher.yml: the downloads first, within five minutes (the runner's Azure mirror has
+          # sent packages at 90 kB/s), then once more from Ubuntu's own archive.
+          fetch() { timeout 300 "${apt[@]}" install -y --no-install-recommends --download-only "${packages[@]}"; }
+          if ! fetch; then
+            echo "::warning::the packages did not come within five minutes: once more without the Azure mirror"
+            if [ -f /etc/apt/apt-mirrors.txt ]; then
+              sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+              grep -q '^http' /etc/apt/apt-mirrors.txt \
+                || echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt
+            fi
+            "${apt[@]}" update
+            "${apt[@]}" install -y --no-install-recommends --download-only "${packages[@]}"
+          fi
+          "${apt[@]}" install -y --no-install-recommends "${packages[@]}"
 
       - name: UI (svelte-check, ESLint, Prettier, Vitest)
         run: |

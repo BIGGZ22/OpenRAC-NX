@@ -234,13 +234,28 @@ jobs:
           mkdir -p ~/apt-archives/partial
           apt=(sudo apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
             -o Dir::Cache::Archives="$HOME/apt-archives")
+          packages=(clang-19 lld-19 llvm-19 libc++-19-dev libc++abi-19-dev
+            ninja-build pkg-config
+            libgl1-mesa-dev libegl1-mesa-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev
+            libxss-dev libxfixes-dev libwayland-dev wayland-protocols libxkbcommon-dev libdecor-0-dev
+            libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev libdrm-dev libgbm-dev
+            libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev patchelf rpm file)
           "${apt[@]}" update
-          "${apt[@]}" install -y --no-install-recommends clang-19 lld-19 llvm-19 libc++-19-dev libc++abi-19-dev \
-            ninja-build pkg-config \
-            libgl1-mesa-dev libegl1-mesa-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
-            libxss-dev libxfixes-dev libwayland-dev wayland-protocols libxkbcommon-dev libdecor-0-dev \
-            libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev libdrm-dev libgbm-dev \
-            libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libsoup-3.0-dev patchelf rpm file
+          # The downloads first, within five minutes: the runner's Azure mirror has sent the packages
+          # at 90 kB/s, slow enough never to time out (25 minutes for 138 MB). Then once more from
+          # Ubuntu's own archive, keeping what came already.
+          fetch() { timeout 300 "${apt[@]}" install -y --no-install-recommends --download-only "${packages[@]}"; }
+          if ! fetch; then
+            echo "::warning::the packages did not come within five minutes: once more without the Azure mirror"
+            if [ -f /etc/apt/apt-mirrors.txt ]; then
+              sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+              grep -q '^http' /etc/apt/apt-mirrors.txt \
+                || echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt
+            fi
+            "${apt[@]}" update
+            "${apt[@]}" install -y --no-install-recommends --download-only "${packages[@]}"
+          fi
+          "${apt[@]}" install -y --no-install-recommends "${packages[@]}"
           "${apt[@]}" install -y libfuse2t64 || "${apt[@]}" install -y libfuse2 || true
           # The cache saves only the packages, readable by the runner (apt's partial folder is _apt's).
           sudo find ~/apt-archives -maxdepth 1 -name '*.deb' -exec chmod a+r {} +
@@ -549,8 +564,11 @@ jobs:
   # branch's rolling pre-release `launcher-dev-<branch>`, made again each time, where the
   # launchers built from that branch look for their updates (Build the installers, above). Only
   # with the update key: a launcher installs no update without its signature.
+  # Also when a system's build failed (a macOS job that got no runner, say): the systems built
+  # still get their update, and latest.json leaves out the one that did not. Not when the run was
+  # cancelled (a newer one of the branch took its place).
   dev-release:
-    if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' }}
+    if: ${{ !cancelled() && !startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request' }}
     needs: build
     runs-on: ubuntu-26.04
     timeout-minutes: 15

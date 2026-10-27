@@ -58,6 +58,17 @@ class GltfTests(unittest.TestCase):
         self.assertEqual(gltf.material("a", "a.png"), gltf.material("a", "a.png"))
         self.assertNotEqual(gltf.material("a", "a.png"), gltf.material("a", "a.png", cutout=True))
 
+    def test_clamped_materials_sample_clamped(self):
+        gltf = Gltf()
+        doc = gltf.doc
+        wraps = []
+        for clamp in (0, 1, 2, 3, 1):
+            texture = doc["materials"][gltf.material("a", "a.png", clamp=clamp)]["pbrMetallicRoughness"]
+            sampler = doc["samplers"][doc["textures"][texture["baseColorTexture"]["index"]]["sampler"]]
+            wraps.append((sampler["wrapS"], sampler["wrapT"]))
+        self.assertEqual(wraps, [(10497, 10497), (33071, 10497), (10497, 33071), (33071, 33071), (33071, 10497)])
+        self.assertEqual(len(doc["samplers"]), 4)
+
 
 class SceneTests(unittest.TestCase):
     def test_numbers_round_trip_as_float32(self):

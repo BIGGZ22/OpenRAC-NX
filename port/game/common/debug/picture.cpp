@@ -119,7 +119,8 @@ void status_badge() {
             keys ? std::format("SPEED 1/{}    F8 faster    F7 slower", static_cast<int>(s.stretch))
                  : std::format("SPEED 1/{}", static_cast<int>(s.stretch));
     }
-    if (line.empty() && s.toast.empty() && s.notice.empty()) {
+    const std::string capture = capture_badge();
+    if (line.empty() && s.toast.empty() && s.notice.empty() && capture.empty()) {
         return;
     }
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -134,6 +135,9 @@ void status_badge() {
         | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing
         | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs;
     if (ImGui::Begin("OpenRAC status", nullptr, flags)) {
+        if (!capture.empty()) {
+            text_coloured(kRed, "{}", capture);
+        }
         if (!line.empty()) {
             text_coloured(s.paused ? kRed : kYellow, "{}", line);
         }

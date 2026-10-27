@@ -4,17 +4,21 @@
 #include "renderer/texture_pool.h"
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <format>
+#include <functional>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "common/env.h"
 #include "common/log.h"
+#include "common/parallel.h"
+#include "common/stats.h"
 #include "renderer/gl.h"
 #include "renderer/shader.h"
 
@@ -49,12 +53,27 @@ std::size_t chain_bytes(int width, int height) {
 }  // namespace
 
 std::uint64_t hash_bytes(const std::uint8_t* data, std::size_t size) {
-    std::uint64_t h = 0xcbf29ce484222325ull;
-    for (std::size_t i = 0; i < size; ++i) {
-        h ^= data[i];
-        h *= 0x100000001b3ull;
+    // Eight bytes a step (a byte a step made it one of the render thread's costliest functions on
+    // a phone), each word mixed in by a multiply and a rotate, and the whole finished by
+    // splitmix64's mix so that every input bit reaches every output bit.
+    constexpr std::uint64_t kMul = 0x9E3779B97F4A7C15ull;
+    std::uint64_t h = 0xcbf29ce484222325ull ^ (size * kMul);
+    std::size_t i = 0;
+    for (; i + 8 <= size; i += 8) {
+        std::uint64_t w;
+        std::memcpy(&w, data + i, 8);
+        h = std::rotl(h ^ (w * kMul), 29) * 0xBF58476D1CE4E5B9ull;
     }
-    return h;
+    if (i < size) {
+        std::uint64_t w = 0;
+        std::memcpy(&w, data + i, size - i);
+        h = std::rotl(h ^ (w * kMul), 29) * 0xBF58476D1CE4E5B9ull;
+    }
+    h ^= h >> 30;
+    h *= 0xBF58476D1CE4E5B9ull;
+    h ^= h >> 27;
+    h *= 0x94D049BB133111EBull;
+    return h ^ (h >> 31);
 }
 
 std::size_t TexturePool::KeyHash::operator()(const Key& key) const {
@@ -123,7 +142,30 @@ void TexturePool::clear_placements() {
 
 // ---- Source uploads ----
 
+bool TexturePool::repeat_upload(const ImageUpload& upload) {
+    auto found = m_uploads.find(upload.dbp);
+    if (found == m_uploads.end()) {
+        return false;
+    }
+    Stored& stored = found->second;
+    const ImageUpload& old = stored.upload;
+    if (old.dbw != upload.dbw || old.dpsm != upload.dpsm || old.x != upload.x || old.y != upload.y
+        || old.width != upload.width || old.height != upload.height || old.data != upload.data) {
+        return false;
+    }
+    // Even unchanged transfers are ordering events. A later overlapping upload must not hide this
+    // one, nor can a placement survive it.
+    stored.sequence = ++m_sequence;
+    m_placed.erase(upload.dbp);
+    return true;
+}
+
 void TexturePool::upload(ImageUpload upload) {
+    // The same transfer again (the 2D layer sends its pages every frame): only its order changes,
+    // without hashing the bytes again.
+    if (repeat_upload(upload)) {
+        return;
+    }
     Stored stored;
     const std::uint64_t shape[] = {upload.width, upload.height, upload.dpsm, upload.dbw, upload.x, upload.y};
     stored.hash = hash_bytes(upload.data.data(), upload.data.size())
@@ -143,18 +185,8 @@ void TexturePool::upload(ImageUpload upload) {
 }
 
 bool TexturePool::upload_cached(const ImageUpload& upload) {
-    if (auto found = m_uploads.find(upload.dbp); found != m_uploads.end()) {
-        auto& stored = found->second;
-        const auto& old = stored.upload;
-        if (old.dbw == upload.dbw && old.dpsm == upload.dpsm && old.x == upload.x
-            && old.y == upload.y && old.width == upload.width && old.height == upload.height
-            && old.data == upload.data) {
-            // Even unchanged transfers are ordering events. A later overlapping
-            // upload must not hide this one, nor can a placement survive it.
-            stored.sequence = ++m_sequence;
-            m_placed.erase(upload.dbp);
-            return true;
-        }
+    if (repeat_upload(upload)) {
+        return true;
     }
     this->upload(upload);
     return false;
@@ -280,36 +312,29 @@ void TexturePool::load_clut(const gs::Tex0& tex0) {
     }
 }
 
-std::vector<std::uint32_t> TexturePool::palette(
-    const gs::Tex0& tex0, const gs::Texa& texa, std::uint64_t& hash
-) {
+const TexturePool::Clut* TexturePool::palette_clut(const gs::Tex0& tex0, Clut& now) {
     const int entries = palette_entries(tex0.psm);
-    hash = 0;
-    if (entries == 0) {
-        return {};
-    }
     if (tex0.csm) {
         // CSM2 (a CLUT as one row of a larger image, placed by TEXCLUT) is
         // not used by the games read so far.
         log::debug("CSM2 CLUT at block {:#x} read as CSM1", tex0.cbp);
     }
     // The CLUT as last loaded from this block, else as memory holds it now.
-    Clut now;
-    const Clut* clut = nullptr;
     if (auto it = m_cluts.find(tex0.cbp); it != m_cluts.end() && it->second.entries >= entries) {
-        clut = &it->second;
-    } else if (clut_in_memory(tex0, now)) {
-        clut = &now;
+        return &it->second;
     }
-    if (clut == nullptr) {
-        static log::Capped told(50);
-        if (log::verbose_on() && told()) {
-            log::verbose("2D: no CLUT at block {:#x} for the texture at {:#x}: drawn transparent", tex0.cbp, tex0.tbp0);
-        }
-        return std::vector<std::uint32_t>(static_cast<std::size_t>(entries), 0);
+    if (clut_in_memory(tex0, now)) {
+        return &now;
     }
-    hash = clut->hash;
-    return clut_csm1(clut->data, clut->cpsm, clut->width, entries, texa);
+    static log::Capped told(50);
+    if (log::verbose_on() && told()) {
+        log::verbose(
+            "2D: no CLUT at block {:#x} for the texture at {:#x}: drawn transparent",
+            tex0.cbp,
+            tex0.tbp0
+        );
+    }
+    return nullptr;
 }
 
 TextureHandle TexturePool::convert_upload(const gs::Tex0& tex0, const gs::Texa& texa) {
@@ -326,12 +351,12 @@ TextureHandle TexturePool::convert_upload(const gs::Tex0& tex0, const gs::Texa& 
     if (stored == nullptr) {
         return 0;
     }
-    std::uint64_t clut_hash = 0;
-    std::vector<std::uint32_t> colours;
-    const bool indexed = palette_entries(tex0.psm) != 0;
-    if (indexed) {
-        colours = palette(tex0, texa, clut_hash);
-    }
+    // The palette's identity is part of the key; its colours are worked out only for a conversion.
+    const int entries = palette_entries(tex0.psm);
+    const bool indexed = entries != 0;
+    Clut now;
+    const Clut* clut = indexed ? palette_clut(tex0, now) : nullptr;
+    const std::uint64_t clut_hash = clut != nullptr ? clut->hash : 0;
     const Key key{
         tex0.tbp0,
         tex0.tbw,
@@ -346,6 +371,12 @@ TextureHandle TexturePool::convert_upload(const gs::Tex0& tex0, const gs::Texa& 
     };
     if (auto found = m_converted.find(key); found != m_converted.end()) {
         return found->second;
+    }
+    std::vector<std::uint32_t> colours;
+    if (indexed) {
+        colours = clut != nullptr
+                      ? clut_csm1(clut->data, clut->cpsm, clut->width, entries, texa)
+                      : std::vector<std::uint32_t>(static_cast<std::size_t>(entries), 0);
     }
     const std::vector<std::uint8_t> raster = texture_raster(*stored, tex0);
     Rgba8Image image =
@@ -472,6 +503,7 @@ PreparedTextures TexturePool::prepare(std::span<const TextureHandle> textures) {
 
 void TexturePool::create_gl(Entry& e) {
     glGenTextures(1, &e.gl);
+    e.wrap = 0;  // a new texture repeats (set_wrap)
     glBindTexture(GL_TEXTURE_2D, e.gl);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);  // rows of whole RGBA8 texels, four bytes each
     glTexImage2D(
@@ -509,6 +541,21 @@ void TexturePool::create_gl(Entry& e) {
     }
 }
 
+// The bound texture `e`'s wrap, set only when it changes: a material clamps or repeats its
+// texture as the game's GS setup does, and materials share textures.
+void TexturePool::set_wrap(Entry& e, bool repeat_s, bool repeat_t) {
+    const std::uint8_t wrap = (repeat_s ? 0 : 1) | (repeat_t ? 0 : 2);
+    if (e.wrap == wrap) {
+        return;
+    }
+    const auto mode = [](bool repeat) {
+        return static_cast<GLint>(repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE);
+    };
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mode(repeat_s));
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mode(repeat_t));
+    e.wrap = wrap;
+}
+
 // ---- Optional colour reconstruction ----
 
 void TexturePool::set_upscaled_texture_colours(std::unique_ptr<UpscaledTextureColours> source) {
@@ -523,8 +570,11 @@ void TexturePool::bind_upscaled_texture_colours(
 ) {
     glActiveTexture(GL_TEXTURE0);
     const unsigned source = gl_texture(texture);
+    glBindTexture(GL_TEXTURE_2D, source);
+    if (texture != 0 && texture <= m_entries.size()) {
+        set_wrap(m_entries[texture - 1], repeat_s, repeat_t);
+    }
     if (!m_upscaled_texture_colours) {
-        glBindTexture(GL_TEXTURE_2D, source);
         glUniform1i(shader.uniform("upscaled_texture_colours_ready"), 0);
         return;
     }
@@ -610,6 +660,11 @@ void TexturePool::end_frame() {
             if (auto it = m_distance_fields.find(e.field_hash); it != m_distance_fields.end() && it->second == handle) {
                 m_distance_fields.erase(it);
             }
+            // Its texels rest a while, in case the text comes back (kRestingFields).
+            if (m_resting_fields.size() == kRestingFields) {
+                m_resting_fields.erase(m_resting_fields.begin());
+            }
+            m_resting_fields.push_back({e.field_hash, std::move(e.image), std::move(e.name)});
             std::erase_if(m_field_of_handle, [&](const auto& seen) { return seen.second.second == handle; });
         }
         // The handle goes to the next conversion, and the field found by it (distance_field) with
@@ -633,58 +688,85 @@ namespace openrac::renderer {
 
 namespace {
 
-// Squared Euclidean distance transform of one row or column (Felzenszwalb and Huttenlocher):
-// f in, d out, both n long; f is 0 at feature texels and a large value elsewhere.
-void distance_1d(const float* f, float* d, int n, int* v, float* z) {
-    int k = 0;
-    v[0] = 0;
-    z[0] = -1e20f;
-    z[1] = 1e20f;
-    for (int q = 1; q < n; ++q) {
-        float s = ((f[q] + static_cast<float>(q * q)) - (f[v[k]] + static_cast<float>(v[k] * v[k])))
-                  / static_cast<float>(2 * q - 2 * v[k]);
-        while (s <= z[k]) {
-            --k;
-            s = ((f[q] + static_cast<float>(q * q)) - (f[v[k]] + static_cast<float>(v[k] * v[k])))
-                / static_cast<float>(2 * q - 2 * v[k]);
+// Runs body(begin, end) over [0, n) in bands, on the threads of common/parallel.h.
+void in_bands(int n, const std::function<void(int, int)>& body) {
+    constexpr int kBands = 16;
+    parallel::for_each(kBands, [&](std::size_t band) {
+        const int begin =
+            static_cast<int>(static_cast<long long>(n) * static_cast<int>(band) / kBands);
+        const int end =
+            static_cast<int>(static_cast<long long>(n) * (static_cast<int>(band) + 1) / kBands);
+        if (begin < end) {
+            body(begin, end);
         }
-        ++k;
-        v[k] = q;
-        z[k] = s;
-        z[k + 1] = 1e20f;
-    }
-    k = 0;
-    for (int q = 0; q < n; ++q) {
-        while (z[k + 1] < static_cast<float>(q)) {
-            ++k;
-        }
-        const float dq = static_cast<float>(q - v[k]);
-        d[q] = dq * dq + f[v[k]];
-    }
+    });
 }
 
-// The squared distance of every texel to the nearest texel where `inside` is set.
-std::vector<float> distance_2d(const std::vector<std::uint8_t>& inside, int w, int h) {
-    const int n = std::max(w, h);
+// The squared distance of every texel to the nearest texel where `inside` is set, exact up to
+// `reach` texels; a farther one is (reach + 1)^2, only known to be farther. The field needs no more
+// (its value is clamped there), and bounding it costs a few operations a texel where the full
+// transform (Felzenszwalb and Huttenlocher) took about 20 ms for a 1024 x 512 field. A texel's
+// distance is the least dx^2 + dy^2 over the set texels, so the columns' nearest dy^2 first, then
+// the least dx^2 + column within reach along each row: whole numbers, the same as the full one.
+std::vector<float> distance_2d(const std::vector<std::uint8_t>& inside, int w, int h, int reach) {
+    const int far = reach + 1;
+    std::vector<int> column(static_cast<std::size_t>(w * h));
+    // Columns, a band of them on each thread: down, then up.
+    in_bands(w, [&](int x0, int x1) {
+        std::vector<int> run(static_cast<std::size_t>(x1 - x0), far);
+        for (int y = 0; y < h; ++y) {
+            for (int x = x0; x < x1; ++x) {
+                const std::size_t i = static_cast<std::size_t>(y * w + x);
+                int& r = run[static_cast<std::size_t>(x - x0)];
+                r = inside[i] ? 0 : std::min(r + 1, far);
+                column[i] = r;
+            }
+        }
+        std::fill(run.begin(), run.end(), far);
+        for (int y = h - 1; y >= 0; --y) {
+            for (int x = x0; x < x1; ++x) {
+                const std::size_t i = static_cast<std::size_t>(y * w + x);
+                int& r = run[static_cast<std::size_t>(x - x0)];
+                r = inside[i] ? 0 : std::min(r + 1, far);
+                const int dy = std::min(column[i], r);
+                column[i] = dy * dy;
+            }
+        }
+    });
+    // Rows, a band of them on each thread.
     std::vector<float> grid(static_cast<std::size_t>(w * h));
-    for (std::size_t i = 0; i < grid.size(); ++i) {
-        grid[i] = inside[i] ? 0.0f : 1e20f;
-    }
-    std::vector<float> f(static_cast<std::size_t>(n)), d(static_cast<std::size_t>(n)), z(static_cast<std::size_t>(n + 1));
-    std::vector<int> v(static_cast<std::size_t>(n));
-    for (int x = 0; x < w; ++x) {
-        for (int y = 0; y < h; ++y) {
-            f[static_cast<std::size_t>(y)] = grid[static_cast<std::size_t>(y * w + x)];
+    in_bands(h, [&](int y0, int y1) {
+        std::vector<int> gap(static_cast<std::size_t>(w));  // to the nearest column within reach
+        for (int y = y0; y < y1; ++y) {
+            const int* row = &column[static_cast<std::size_t>(y * w)];
+            int last = far;
+            for (int x = 0; x < w; ++x) {
+                last = row[x] < far * far ? 0 : std::min(last + 1, far);
+                gap[static_cast<std::size_t>(x)] = last;
+            }
+            last = far;
+            for (int x = w - 1; x >= 0; --x) {
+                last = row[x] < far * far ? 0 : std::min(last + 1, far);
+                gap[static_cast<std::size_t>(x)] = std::min(gap[static_cast<std::size_t>(x)], last);
+            }
+            for (int x = 0; x < w; ++x) {
+                int best = row[x];
+                if (gap[static_cast<std::size_t>(x)] == far) {
+                    grid[static_cast<std::size_t>(y * w + x)] = static_cast<float>(best);
+                    continue;  // no set texel within reach
+                }
+                for (int dx = 1; dx <= reach && dx * dx < best; ++dx) {
+                    if (x >= dx) {
+                        best = std::min(best, dx * dx + row[x - dx]);
+                    }
+                    if (x + dx < w) {
+                        best = std::min(best, dx * dx + row[x + dx]);
+                    }
+                }
+                grid[static_cast<std::size_t>(y * w + x)] = static_cast<float>(best);
+            }
         }
-        distance_1d(f.data(), d.data(), h, v.data(), z.data());
-        for (int y = 0; y < h; ++y) {
-            grid[static_cast<std::size_t>(y * w + x)] = d[static_cast<std::size_t>(y)];
-        }
-    }
-    for (int y = 0; y < h; ++y) {
-        distance_1d(&grid[static_cast<std::size_t>(y * w)], d.data(), w, v.data(), z.data());
-        std::copy(d.begin(), d.begin() + w, grid.begin() + y * w);
-    }
+    });
     return grid;
 }
 
@@ -719,6 +801,19 @@ TextureHandle TexturePool::distance_field(TextureHandle source) {
         m_entries[it->second - 1].last_used = m_frame;
         return it->second;
     }
+    // Dropped a little while ago: its texels are kept.
+    const auto resting = std::find_if(
+        m_resting_fields.begin(), m_resting_fields.end(), [hash](const RestingField& field) {
+            return field.hash == hash;
+        }
+    );
+    if (resting != m_resting_fields.end()) {
+        RestingField field = std::move(*resting);
+        m_resting_fields.erase(resting);
+        return add_field(std::move(field.image), std::move(field.name), hash, sample, source);
+    }
+    // Timed apart in a capture: the HUD's frame that makes one is a hitch.
+    const stats::Scope timing("distance field");
     constexpr int kScale = 4;
     const int w = src.width * kScale;
     const int h = src.height * kScale;
@@ -750,48 +845,73 @@ TextureHandle TexturePool::distance_field(TextureHandle source) {
     };
     Rgba8Image out(w, h);
     std::vector<std::uint8_t> inside(static_cast<std::size_t>(w * h)), outside(static_cast<std::size_t>(w * h));
-    for (int y = 0; y < h; ++y) {
-        const float sy = (static_cast<float>(y) + 0.5f) / kScale - 0.5f;
-        const int y0 = static_cast<int>(std::floor(sy));
-        const float fy = sy - static_cast<float>(y0);
-        for (int x = 0; x < w; ++x) {
-            const float sx = (static_cast<float>(x) + 0.5f) / kScale - 0.5f;
-            const int x0 = static_cast<int>(std::floor(sx));
-            const float fx = sx - static_cast<float>(x0);
-            float c[4];
-            for (int k = 0; k < 4; ++k) {
-                const float top = texel(x0, y0, k) * (1.0f - fx) + texel(x0 + 1, y0, k) * fx;
-                const float bottom = texel(x0, y0 + 1, k) * (1.0f - fx) + texel(x0 + 1, y0 + 1, k) * fx;
-                c[k] = top * (1.0f - fy) + bottom * fy;
+    // Each field column's two source columns and its weight, the same in every row.
+    std::vector<int> column0(static_cast<std::size_t>(w));
+    std::vector<float> column_weight(static_cast<std::size_t>(w));
+    for (int x = 0; x < w; ++x) {
+        const float sx = (static_cast<float>(x) + 0.5f) / kScale - 0.5f;
+        column0[static_cast<std::size_t>(x)] = static_cast<int>(std::floor(sx));
+        column_weight[static_cast<std::size_t>(x)] = sx - std::floor(sx);
+    }
+    in_bands(h, [&](int band_begin, int band_end) {
+        for (int y = band_begin; y < band_end; ++y) {
+            const float sy = (static_cast<float>(y) + 0.5f) / kScale - 0.5f;
+            const int y0 = static_cast<int>(std::floor(sy));
+            const float fy = sy - static_cast<float>(y0);
+            for (int x = 0; x < w; ++x) {
+                const int x0 = column0[static_cast<std::size_t>(x)];
+                const float fx = column_weight[static_cast<std::size_t>(x)];
+                // Only the alpha is filtered: the field is made from it alone.
+                const float a00 = texel(x0, y0, 3), a10 = texel(x0 + 1, y0, 3);
+                const float a01 = texel(x0, y0 + 1, 3), a11 = texel(x0 + 1, y0 + 1, 3);
+                const float alpha = (a00 * (1.0f - fx) + a10 * fx) * (1.0f - fy)
+                                    + (a01 * (1.0f - fx) + a11 * fx) * fy;
+                const std::size_t i = static_cast<std::size_t>(y * w + x);
+                // R: the glyph's own opacity here, from the nearest opaque-enough texel of the four (so
+                // it holds up to the edge instead of fading with the filter), 0..1 as 0..255.
+                const float near_alpha = std::max(std::max(a00, a10), std::max(a01, a11));
+                const float near_local =
+                    (local_at(x0, y0) * (1.0f - fx) + local_at(x0 + 1, y0) * fx) * (1.0f - fy)
+                    + (local_at(x0, y0 + 1) * (1.0f - fx) + local_at(x0 + 1, y0 + 1) * fx) * fy;
+                const float edge = std::max(near_local * 0.5f, opaque / 32.0f);
+                const float own = alpha >= edge
+                                      ? std::max(alpha, std::min(near_alpha, alpha * 2.0f))
+                                      : near_alpha;
+                out.pixels[i * 4 + 0] =
+                    static_cast<std::uint8_t>(std::clamp(own / opaque, 0.0f, 1.0f) * 255.0f + 0.5f);
+                out.pixels[i * 4 + 1] = 0;
+                out.pixels[i * 4 + 2] = 0;
+                inside[i] = alpha >= edge;
+                outside[i] = !inside[i];
             }
-            const std::size_t i = static_cast<std::size_t>(y * w + x);
-            // R: the glyph's own opacity here, from the nearest opaque-enough texel of the four (so
-            // it holds up to the edge instead of fading with the filter), 0..1 as 0..255.
-            float near_alpha = 0.0f;
-            for (int k = 0; k < 4; ++k) {
-                const float a = texel(x0 + (k & 1), y0 + (k >> 1), 3);
-                near_alpha = std::max(near_alpha, a);
-            }
-            const float near_local = (local_at(x0, y0) * (1.0f - fx) + local_at(x0 + 1, y0) * fx) * (1.0f - fy)
-                                     + (local_at(x0, y0 + 1) * (1.0f - fx) + local_at(x0 + 1, y0 + 1) * fx) * fy;
-            const float edge = std::max(near_local * 0.5f, opaque / 32.0f);
-            const float own = c[3] >= edge ? std::max(c[3], std::min(near_alpha, c[3] * 2.0f)) : near_alpha;
-            out.pixels[i * 4 + 0] = static_cast<std::uint8_t>(std::clamp(own / opaque, 0.0f, 1.0f) * 255.0f + 0.5f);
-            out.pixels[i * 4 + 1] = 0;
-            out.pixels[i * 4 + 2] = 0;
-            inside[i] = c[3] >= edge;
-            outside[i] = !inside[i];
         }
-    }
-    const std::vector<float> to_inside = distance_2d(inside, w, h);
-    const std::vector<float> to_outside = distance_2d(outside, w, h);
+    });
     const float spread = 2.0f * kScale;  // two source texels either side of the edge
-    for (std::size_t i = 0; i < inside.size(); ++i) {
-        const float signed_distance = inside[i] ? std::sqrt(to_outside[i]) : -std::sqrt(to_inside[i]);
-        const float value = 0.5f + signed_distance / (2.0f * spread);
-        out.pixels[i * 4 + 3] = static_cast<std::uint8_t>(std::clamp(value, 0.0f, 1.0f) * 255.0f + 0.5f);
-    }
-    const TextureHandle handle = add(std::move(out), AlphaScale::Full, name(source) + " (distance field)");
+    const std::vector<float> to_inside = distance_2d(inside, w, h, 2 * kScale);
+    const std::vector<float> to_outside = distance_2d(outside, w, h, 2 * kScale);
+    in_bands(h, [&](int band_begin, int band_end) {
+        for (std::size_t i = static_cast<std::size_t>(band_begin * w);
+             i < static_cast<std::size_t>(band_end * w);
+             ++i) {
+            const float signed_distance =
+                inside[i] ? std::sqrt(to_outside[i]) : -std::sqrt(to_inside[i]);
+            const float value = 0.5f + signed_distance / (2.0f * spread);
+            out.pixels[i * 4 + 3] =
+                static_cast<std::uint8_t>(std::clamp(value, 0.0f, 1.0f) * 255.0f + 0.5f);
+        }
+    });
+    ++m_fields_made;
+    return add_field(std::move(out), name(source) + " (distance field)", hash, sample, source);
+}
+
+TextureHandle TexturePool::add_field(
+    Rgba8Image image,
+    std::string name,
+    std::uint64_t hash,
+    std::uint64_t sample,
+    TextureHandle source
+) {
+    const TextureHandle handle = add(std::move(image), AlphaScale::Full, std::move(name));
     m_entries[handle - 1].field = true;
     m_entries[handle - 1].field_hash = hash;
     m_distance_fields.emplace(hash, handle);

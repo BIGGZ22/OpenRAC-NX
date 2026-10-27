@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <format>
 #include <set>
 #include <vector>
 
@@ -374,6 +375,42 @@ void glyph_fields() {
     CHECK(textures.image(letters_field).texel(43 * 4, 66 * 4) >> 24 > 0x80);  // inside the new glyph
 }
 
+// Text that comes back after a pause (a counter shown again): its field was dropped with the
+// texture, and making it again was a hitch of its own. The field's texels rest a while, so it comes
+// back the same without being made again; the oldest rest goes once kRestingFields have.
+void resting_fields() {
+    TexturePool textures;
+    auto font = [&textures](int glyph_x) {
+        Rgba8Image image(16, 8);
+        image.set_texel(glyph_x, 3, rgba(0x80, 0x80, 0x80, 0x80));
+        return textures.add(image, AlphaScale::Gs, std::format("font {}", glyph_x));
+    };
+    auto drop_all = [&textures] {
+        for (std::uint32_t i = 0; i <= TexturePool::kKeepFrames; ++i) {
+            textures.end_frame();
+        }
+    };
+    const TextureHandle first = font(2);
+    const Rgba8Image made = textures.image(textures.distance_field(first));
+    CHECK(textures.fields_made() == 1);
+    drop_all();
+
+    const TextureHandle again = textures.distance_field(first);
+    CHECK(textures.fields_made() == 1);  // taken from the rest, not made again
+    CHECK(textures.image(again).pixels == made.pixels);
+    CHECK(textures.name(again) == "font 2 (distance field)");
+
+    // More pages than rest: the first one's field is made again.
+    drop_all();
+    for (int x = 4; x < 4 + static_cast<int>(TexturePool::kRestingFields); ++x) {
+        textures.distance_field(font(x));
+        drop_all();
+    }
+    const std::size_t before = textures.fields_made();
+    CHECK(textures.image(textures.distance_field(first)).pixels == made.pixels);
+    CHECK(textures.fields_made() == before + 1);
+}
+
 // Sizes no texture the chip samples can have: an empty image, not an allocation. In 0.8.0 a
 // garbage TEX0 (an unknown format, 32768 x 16384 texels) reached convert(), whose blank image for
 // an unknown format computed w * h * 4 in int: -2^31, which operator new was asked for as
@@ -670,6 +707,7 @@ int main() {
     layout();
     pool();
     glyph_fields();
+    resting_fields();
     absurd_sizes();
     long_session();
     inside_and_loaded();

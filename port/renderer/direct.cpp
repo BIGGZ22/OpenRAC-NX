@@ -12,6 +12,7 @@
 
 #include "common/env.h"
 #include "common/log.h"
+#include "common/stats.h"
 #include "renderer/gl.h"
 #include "renderer_shaders.h"
 
@@ -1515,7 +1516,11 @@ void DirectRenderer::render(const FrameInput& input, RenderState& state) {
     m_interpreter->set_ui_quads(input.ui_quads);
     m_interpreter->set_picture(state.target.picture_scale_x, state.target.wide_2d);
     m_frame = &input;
-    submit(packets);
+    {
+        const stats::Scope decode("2d decode");
+        submit(packets);
+    }
+    const stats::Scope draws("2d draws");
     flush(state);
 }
 

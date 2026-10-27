@@ -91,6 +91,15 @@ public:
     // Replaces a layer's instances (live mobys, each frame).
     void set_instances(Layer layer, const std::vector<Instance>& instances);
 
+    // "Scenery detail: Original" (settings.h), from the camera at `eye` seeing through
+    // `projection`: the ties and shrubs beyond their draw distances (LevelData::draw_distances) left
+    // out, every one drawn at its most detailed LOD. A layer is grouped again only when one of its
+    // instances changes, so the test holds back by a few units: an instance leaves only some way
+    // past its distance, by straight-line distance however the camera turns; it comes back as soon
+    // as the game would draw it. Off, the instances as loaded: never set again unless the setting
+    // was on, so the default draws the level's resident ties and shrubs untouched.
+    void choose_scenery(bool original, const renderer::Vec3& eye, const renderer::Mat4& projection);
+
     // Draws depth-tested rigid and skinned velocities into the caller's target, without changing history.
     void draw_motion(
         const renderer::Shader& shader,
@@ -342,6 +351,20 @@ private:
     );
 
     std::vector<Model> m_models;
+
+    // choose_scenery: per layer (the ties, the shrubs) the instances as loaded, their draw
+    // distances, their bounds' world centres and whether each is drawn now, 1 or 0 (empty while
+    // the setting is off). A layer whose export has no distances keeps an empty source and is
+    // never chosen.
+    struct Scenery {
+        std::vector<Instance> source;
+        std::vector<float> distances;
+        std::vector<renderer::Vec3> centres;
+        std::vector<std::uint8_t> drawn;
+    };
+
+    static constexpr std::array<Layer, 2> kSceneryLayers{Layer::Ties, Layer::Shrubs};
+    std::array<Scenery, kSceneryLayers.size()> m_scenery;
     std::vector<std::vector<bool>> m_shadow_solid_primitives;
 
     Group m_shadow_compact;

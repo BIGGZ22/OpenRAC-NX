@@ -1,0 +1,8 @@
+# Windows links with LLVM's linker, which rustup ships with every toolchain (rust-lld), in place of
+# MSVC's link.exe: several times faster on the launcher's program and library, which take in all of
+# Tauri. Linux on x86-64 already links with it (Rust's default since 1.90); macOS's ld is fast.
+[target.x86_64-pc-windows-msvc]
+linker = "rust-lld.exe"
+
+[target.aarch64-pc-windows-msvc]
+linker = "rust-lld.exe"

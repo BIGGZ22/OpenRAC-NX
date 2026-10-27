@@ -51,10 +51,11 @@ enum class Opt : std::uint8_t {
     VkPersistentDescriptors,
     VkLastPipeline,  // vk-last-pipeline: a program's last pipeline taken again by its key
     FsrMotionBatch,  // fsr-motion-batch: FSR object motion drawn in pose-buffer batches
+    MobyGlowSkip,    // moby-glow-skip: the glow pass leaves out primitives with no glow vertex
 };
 
-// The number of entries: FsrMotionBatch is the last enumerator of Opt.
-inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::FsrMotionBatch) + 1;
+// The number of entries: MobyGlowSkip is the last enumerator of Opt.
+inline constexpr std::size_t kOptCount = static_cast<std::size_t>(Opt::MobyGlowSkip) + 1;
 
 // How far the frames an optimisation draws may differ from its reference path's. The default,
 // zero, is byte-identical frames; anything else is a tolerance the maintainers accepted, named in

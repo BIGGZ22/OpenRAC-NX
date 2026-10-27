@@ -291,7 +291,7 @@ export function playerState(game: GameView, v: VersionView): PlayerState {
     return {
       ...base,
       kind: "levels",
-      label: read ? "Check the levels and play" : "Get the levels and play",
+      label: read ? "Check and play" : "Get levels and play",
       icon: "disc",
       hint: read
         ? "Makes sure every level was read from your disc whole (reading them again if not), then starts the game. A few seconds."

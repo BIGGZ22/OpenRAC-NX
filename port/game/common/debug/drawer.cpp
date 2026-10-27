@@ -16,7 +16,9 @@
 
 #include <SDL3/SDL.h>
 
+#include "common/slow_cpu.h"
 #include "debug/overlay.h"
+#include "enhanced/fsr3/fsr3.h"
 #include "fixes.h"
 #include "frontend.h"
 #include "options_menu.h"
@@ -393,6 +395,35 @@ void drawer_enhanced() {
                 changed = true;
             }
         }
+        // AMD FSR's temporal upscaling (enhanced/fsr3): its preset, and its sharpening while on
+        // (the launcher's steps of 0.05).
+        if (enhanced::Fsr3::available()) {
+            constexpr int kModes = static_cast<int>(renderer::TemporalQuality::Count);
+            const int mode = static_cast<int>(set.temporal_quality);
+            if (const int by = drawer_choice(
+                    "FSR upscaling", renderer::kTemporalNames[mode], mode > 0, mode < kModes - 1
+                )) {
+                set.temporal_quality =
+                    static_cast<renderer::TemporalQuality>(std::clamp(mode + by, 0, kModes - 1));
+                changed = true;
+            }
+            if (set.temporal_quality != renderer::TemporalQuality::Off) {
+                const float sharp = set.temporal_sharpness;
+                if (const int by = drawer_choice(
+                        "FSR sharpening",
+                        std::format("{:.0f}%", sharp * 100.0f),
+                        sharp > 0.025f,
+                        sharp < 0.975f
+                    )) {
+                    set.temporal_sharpness = std::clamp(
+                        std::round((sharp + 0.05f * static_cast<float>(by)) * 20.0f) / 20.0f,
+                        0.0f,
+                        1.0f
+                    );
+                    changed = true;
+                }
+            }
+        }
     }
     card_end();
     if (changed) {
@@ -516,6 +547,7 @@ void drawer(const Shown& shown) {
         setting_row(options_menu::kRenderScale);
         setting_row(options_menu::kMsaa);
         setting_row(options_menu::kAnisotropy);
+        setting_row(options_menu::kSceneryDetail);
         setting_row(options_menu::kFrameRate);
         setting_row(options_menu::kVSync);
         if (const int by = drawer_choice(
@@ -603,6 +635,27 @@ void drawer(const Shown& shown) {
             if (drawer_row("Screenshot")) {
                 s.shot_when_shut = true;
                 set_drawer(false);
+            }
+            // A performance capture: starts a moment after the drawer has gone; opening it again
+            // ends the capture, whose report is copied and saved (debug/capture.cpp).
+            if (const int by =
+                    drawer_choice("Recording length", capture_length_name(), true, true)) {
+                step_capture_length(by);
+            }
+            if (drawer_row(
+                    capture_pending() ? "Cancel recording diagnostics" : "Record diagnostics"
+                )) {
+                const bool starts = !capture_pending();
+                toggle_capture(true);
+                if (starts) {
+                    set_drawer(false);
+                }
+            }
+            // A weaker device's processor, for testing how the game copes (common/slow_cpu.h).
+            if (slow_cpu::available()) {
+                if (const int by = drawer_choice("Simulate slow CPU", slow_cpu_name())) {
+                    step_slow_cpu(by);
+                }
             }
             if (s.developer && drawer_row("Level select")) {
                 set_drawer(false);

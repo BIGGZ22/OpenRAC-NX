@@ -110,6 +110,7 @@ class WriterTests(unittest.TestCase):
                 mock.patch.object(port, "tie_instances", lambda gameplay, classes, *_: tie_placements), \
                 mock.patch.object(port, "shrub_classes", lambda level: shrubs), \
                 mock.patch.object(port, "shrub_instances", lambda gameplay, classes, *_: shrub_placements), \
+                mock.patch.object(port, "shrub_billboard_fades", lambda level: {6: 40}), \
                 mock.patch.object(port, "moby_classes", lambda level: mobys), \
                 mock.patch.object(port, "moby_instances", lambda gameplay, *_: moby_placements), \
                 mock.patch.object(godot, "decode", lambda block: empty_collision):
@@ -137,11 +138,13 @@ class WriterTests(unittest.TestCase):
                                      "textures/shrub_0002.png", "textures/sky_0000.png",
                                      "textures/terrain_0000.png", "textures/tie_0001.png", "ties/tie_5.glb"])
             manifest = json.loads((level / "manifest.json").read_text())
-            self.assertEqual((manifest["format"], manifest["level"], manifest["game"]), (3, 3, "rac1"))
+            self.assertEqual((manifest["format"], manifest["level"], manifest["game"]), (4, 3, "rac1"))
             self.assertEqual(manifest["terrain"], "terrain.glb")
             self.assertIsNone(manifest["collision"])
             self.assertEqual(manifest["sky"], {"mesh": "sky.glb", "panorama": "sky.png", "background": [10, 20, 30]})
             self.assertEqual(manifest["classes"]["tie"], {"5": {"mesh": "ties/tie_5.glb"}})
+            self.assertEqual(manifest["classes"]["shrub"]["6"]["billboard_fade"], 40)
+            self.assertEqual(stats["shrub_billboards"], 1)
             names = moby_class_names()
             for class_id, mesh, scale in ((7, "mobys/moby_7.glb", 0.25), (8, None, 1.0)):
                 entry = manifest["classes"]["moby"][str(class_id)]
@@ -154,7 +157,7 @@ class WriterTests(unittest.TestCase):
             self.assertEqual(stats["sky"]["shells"], 2)
 
             placements = json.loads((level / "placements.json").read_text())
-            self.assertEqual(placements["format"], 3)
+            self.assertEqual(placements["format"], 4)
             ties = placements["ties"]
             self.assertEqual([t["class"] for t in ties], [5, 5])
             self.assertEqual(ties[0]["matrix"], translated(10, 20, 30))

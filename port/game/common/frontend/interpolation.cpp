@@ -28,6 +28,8 @@
 
 #include "common/env.h"
 #include "common/log.h"
+#include "common/sampler.h"
+#include "common/slow_cpu.h"
 #include "common/stats.h"
 #include "debug_menu.h"
 #include "debug_overlay.h"
@@ -299,6 +301,10 @@ void queue_frame(const std::shared_ptr<FramePresentation>& output) {
     const bool queued = g->render_worker->submit(
         [&owner, snapshot = std::move(snapshot)] {
             render_scene(owner, *snapshot->scene, snapshot->graphics, *snapshot->presentation);
+            sampler::note_thread("render");  // [debug tools] sampled while a capture runs
+            // [debug tools] The render thread's share of a simulated slow processor.
+            const stats::Scope slow("simulated slow cpu");
+            slow_cpu::pad();
         },
         error
     );
@@ -354,14 +360,24 @@ void present_frame(FramePresentation& output) {
     frame_cost.submit += output.record_seconds;
     frame_cost.gpu += output.gpu_seconds;
     frame_cost.mark = resumed;
-    debug_menu::draw(shown, width, height);
-    if (settings::get().show_fps != settings::FrameCounter::Off) {
-        renderer::ui::fps_counter::draw(shown, width, height);
+    // The window thread's own parts of a frame, measured apart (performance captures).
+    {
+        const stats::Scope menus("menus");
+        debug_menu::draw(shown, width, height);
+        if (settings::get().show_fps != settings::FrameCounter::Off) {
+            renderer::ui::fps_counter::draw(shown, width, height);
+        }
     }
-    capture_frame(output);
-    slow_frame();
+    {
+        const stats::Scope capture("capture");
+        capture_frame(output);
+        slow_frame();
+    }
     present(shown, width, height, window_width, window_height, false, aspect);
-    draw_touch_pad(window_width, window_height);
+    {
+        const stats::Scope touch("touch pad");
+        draw_touch_pad(window_width, window_height);
+    }
     draw_overlay(output);
     const stats::Scope swap_scope("swap");
     swapped(started);
@@ -375,6 +391,18 @@ bool render_pending() {
 }
 
 bool finish_render() try {
+    // [debug tools] A simulated slow processor (common/slow_cpu.h): the window thread's work since
+    // it last waited (the game's tick, the next frame's preparation, the frame it hands over),
+    // padded before it waits for the render thread, as a slower processor would still be busy
+    // while the render thread draws. Measured only when no render job holds the profiler's
+    // section stack.
+    {
+        std::optional<stats::Scope> slow;
+        if (!render_pending()) {
+            slow.emplace("simulated slow cpu");
+        }
+        slow_cpu::pad();
+    }
     // Synchronous frames and initialisation have no handoff to drain.
     if (!render_pending()) {
         return !g || !g->render_failed;
@@ -407,7 +435,9 @@ bool finish_render() try {
 }
 
 void draw_kept(bool first) try {
-    // One in-flight snapshot bounds both latency and ownership of the current scene.
+    sampler::note_thread("window");  // [debug tools] sampled while a capture runs
+    // One in-flight snapshot bounds both latency and ownership of the current scene (and the
+    // simulated slow processor's share of the window thread is spent there).
     if (!finish_render()) {
         return;
     }
@@ -510,16 +540,19 @@ int between(std::chrono::steady_clock::time_point next_tick) {
     if (!pacing.first_pending && pacing.last_alpha >= 1.0f && alpha_at(display) >= 1.0f) {
         return 0;
     }
-    SDL_Event event;
-    while (platform::poll_event(event)) {
-        if (event.type == SDL_EVENT_QUIT) {
-            return -1;
+    {
+        const stats::Scope events("events");
+        SDL_Event event;
+        while (platform::poll_event(event)) {
+            if (event.type == SDL_EVENT_QUIT) {
+                return -1;
+            }
+            if (window_key(event) || debug_overlay::event(event)
+                || debug_menu::event(event, openrac_game_loaded_overlay())) {
+                continue;
+            }
+            g->input.handle_event(event);
         }
-        if (window_key(event) || debug_overlay::event(event)
-            || debug_menu::event(event, openrac_game_loaded_overlay())) {
-            continue;
-        }
-        g->input.handle_event(event);
     }
     const bool dump = renderer::g_dump_draws;
     renderer::g_dump_draws = false;

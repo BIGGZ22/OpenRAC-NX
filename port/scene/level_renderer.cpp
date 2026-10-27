@@ -278,6 +278,43 @@ bool LevelScene::upload(
         }
     }
     m_models = level.models;
+    for (std::size_t k = 0; k < m_scenery.size(); ++k) {
+        Scenery& scenery = m_scenery[k];
+        const auto layer = static_cast<std::size_t>(kSceneryLayers[k]);
+        const auto& distances = level.draw_distances[layer];
+        const bool sized = distances.size() == level.instances[layer].size();
+        const bool chosen = sized && !distances.empty();
+        scenery.source = chosen ? level.instances[layer] : std::vector<Instance>{};
+        scenery.distances = chosen ? distances : std::vector<float>{};
+        scenery.centres.clear();
+        for (const Instance& instance : scenery.source) {
+            scenery.centres.push_back(
+                instance.model < level.models.size()
+                    ? bounds_centre(level.models[instance.model], instance.matrix)
+                    : Vec3{instance.matrix[12], instance.matrix[13], instance.matrix[14]}
+            );
+        }
+        scenery.drawn.clear();
+    }
+    // A glow packet's vertex (light slot -2, mesh.vert); an index past the vertices counts as one,
+    // so that a broken primitive is still drawn.
+    const auto glow_vertex = [&level](std::uint32_t i) {
+        return i >= level.vertices.size() || level.vertices[i].light_slot < -1.5f;
+    };
+    // The primitives without a glow packet's vertex, which the mobys' glow pass would draw only to
+    // discard every fragment (mesh.frag: v_glow != glow_pass): left out of it (draw_layer).
+    for (Model& model : m_models) {
+        for (Primitive& p : model.primitives) {
+            if (static_cast<std::size_t>(p.first_index) + p.index_count > level.indices.size()) {
+                continue;  // kept as drawn
+            }
+            p.glow_vertices = std::any_of(
+                level.indices.begin() + p.first_index,
+                level.indices.begin() + p.first_index + p.index_count,
+                glow_vertex
+            );
+        }
+    }
     m_materials = level.materials;
     m_light_sets = level.light_sets;
     renderer::Rgba8Image white(1, 1);
@@ -338,6 +375,33 @@ bool LevelScene::upload(
         }
         m_opaque[m] = static_cast<std::uint32_t>(m_models.size());
         m_models.push_back(std::move(sorted));
+    }
+
+    // The glow primitives' triangles with a glow vertex, copied after the rest: a triangle without
+    // one has v_glow 0 at its provoking vertex, whichever that is, so the glow pass discards all of
+    // it (mesh.frag). The kept triangles keep their order, so what the pass draws is unchanged.
+    for (Model& model : m_models) {
+        for (Primitive& p : model.primitives) {
+            const std::size_t end = static_cast<std::size_t>(p.first_index) + p.index_count;
+            if (!p.glow_vertices || p.index_count % 3 != 0 || end > level.indices.size()) {
+                continue;
+            }
+            const auto first = static_cast<std::uint32_t>(indices.size());
+            for (std::size_t t = p.first_index; t < end; t += 3) {
+                const auto triangle = level.indices.begin() + static_cast<std::ptrdiff_t>(t);
+                if (std::any_of(triangle, triangle + 3, glow_vertex)) {
+                    indices.insert(indices.end(), triangle, triangle + 3);
+                }
+            }
+            const auto count = static_cast<std::uint32_t>(indices.size()) - first;
+            // Every triangle glows: the primitive's own indices serve.
+            if (count == p.index_count) {
+                indices.resize(first);
+                continue;
+            }
+            p.glow_first = first;
+            p.glow_count = count;
+        }
     }
 
     if (gl::is_vulkan()) {
@@ -744,8 +808,8 @@ void LevelScene::build_groups(Layer layer, const std::vector<Instance>& instance
         }
 
 #if defined(OPENRAC_VULKAN)
-        // A static group's instances never change after the upload: registered once, a view's
-        // GPU batch of them sends only the view (gpu-resident-instances, RENDER_PERF.md).
+        // A static group's instances change only when the layer is set again: registered then, a
+        // view's GPU batch of them sends only the view (gpu-resident-instances, RENDER_PERF.md).
         if (!live && native_gpu_bounds
             && renderer::render_opt::enabled(renderer::render_opt::Opt::GpuResidentInstances)) {
             vkgl::gpu_register_instances(g.instances, g.gpu_bounds);
@@ -834,11 +898,74 @@ void LevelScene::set_instances(Layer layer, const std::vector<Instance>& instanc
         idle.end(), std::make_move_iterator(groups.begin()), std::make_move_iterator(groups.end())
     );
     groups.clear();
-    build_groups(layer, instances, true);
+    // A static layer set again (choose_scenery) keeps its bounds and resident instances.
+    build_groups(layer, instances, layer == Layer::Mobys);
 
     // The moby groups as build_groups made them: where each instance went, for the next call.
     if (layer == Layer::Mobys) {
         remember_mobys(instances);
+    }
+}
+
+void LevelScene::choose_scenery(
+    bool original, const renderer::Vec3& eye, const renderer::Mat4& projection
+) {
+    // How much farther than its depth a point in the view can be: 1 / the cosine of the view's
+    // corner, from the projection's tangents. Within it, a straight-line distance below this times
+    // the draw distance holds every instance the game draws.
+    const float tx = projection[0] != 0.0f ? 1.0f / projection[0] : 0.0f;
+    const float ty = projection[5] != 0.0f ? 1.0f / projection[5] : 0.0f;
+    const float reach = std::sqrt(1.0f + tx * tx + ty * ty);
+    constexpr float kLeaveMargin = 8.0f;  // game units past its distance before one is left out
+    bool rebuilt = false;
+    for (std::size_t k = 0; k < m_scenery.size(); ++k) {
+        Scenery& scenery = m_scenery[k];
+        const Layer layer = kSceneryLayers[k];
+        if (scenery.source.empty()) {
+            continue;
+        }
+        // Off again after being on: the instances as loaded, once.
+        if (!original) {
+            if (!scenery.drawn.empty()) {
+                scenery.drawn.clear();
+                set_instances(layer, scenery.source);
+            }
+            continue;
+        }
+        const bool first = scenery.drawn.empty();
+        scenery.drawn.resize(scenery.source.size(), 1);
+        bool changed = first;
+        for (std::size_t i = 0; i < scenery.source.size(); ++i) {
+            const Vec3& centre = scenery.centres[i];
+            const Vec3 to{centre[0] - eye[0], centre[1] - eye[1], centre[2] - eye[2]};
+            const bool was = !first && scenery.drawn[i] != 0;
+            // Squared, so that the test needs no root: limit and limit + margin, both positive.
+            const float limit = scenery.distances[i] * reach;
+            const float reach_to = was ? limit + kLeaveMargin : limit;
+            const float away = to[0] * to[0] + to[1] * to[1] + to[2] * to[2];
+            const bool shown =
+                limit > 0.0f && (was ? away <= reach_to * reach_to : away < reach_to * reach_to);
+            const std::uint8_t drawn = shown ? 1 : 0;
+            changed = changed || scenery.drawn[i] != drawn;
+            scenery.drawn[i] = drawn;
+        }
+        if (!changed) {
+            continue;
+        }
+        std::vector<Instance> chosen;
+        chosen.reserve(scenery.source.size());
+        for (std::size_t i = 0; i < scenery.source.size(); ++i) {
+            if (scenery.drawn[i] == 0) {
+                continue;
+            }
+            chosen.push_back(scenery.source[i]);
+        }
+        set_instances(layer, chosen);
+        rebuilt = true;
+    }
+    // How often the layers are grouped again (a frame's average: the share of frames).
+    if (stats::enabled()) {
+        stats::gauge("scenery regroups", rebuilt ? 1 : 0);
     }
 }
 
@@ -1885,6 +2012,8 @@ void LevelScene::release() {
     }
     m_pvs_models.clear();
     m_cpu_indices.clear();
+    // Nothing to choose from until the next level (choose_scenery).
+    m_scenery = {};
     m_sky.release();
 }
 
@@ -1925,7 +2054,9 @@ void LevelScene::draw_sky(const renderer::FrameInput& input, renderer::RenderSta
             const Material& m = m_materials[static_cast<std::size_t>(p.material)];
             const renderer::TextureHandle texture =
                 m.image >= 0 ? m_textures[static_cast<std::size_t>(m.image)] : m_white;
-            state.textures.bind_upscaled_texture_colours(texture, m_sky, input.texture_filter);
+            state.textures.bind_upscaled_texture_colours(
+                texture, m_sky, input.texture_filter, !m.clamp_s, !m.clamp_t
+            );
             // The shell's matrix as the game drew it this tick; its translation is in the game's
             // sky units, the vertices were exported in 1/1024ths of them (editor/sky.py).
             renderer::Mat4 shell = renderer::identity();
@@ -2356,6 +2487,7 @@ void LevelScene::draw_layer(
     // The material state the program holds now (flush): none yet.
     int set_material = -1;
     renderer::TextureHandle set_texture = 0;  // bound on unit 0 (and its colours) for `program`
+    int set_wrap = -1;                        // and its clamp: bit 0 across, bit 1 down
     unsigned set_emission_texture = 0;
     int set_cutout = -1;
     decltype(Material::colour) set_colour{};
@@ -2439,6 +2571,7 @@ void LevelScene::draw_layer(
             program_depth_matched = depth_matched;
             set_material = -1;
             set_texture = 0;
+            set_wrap = -1;
             set_cutout = -1;
             colour_set = false;
         }
@@ -2539,11 +2672,14 @@ void LevelScene::draw_layer(
                     const renderer::TextureHandle texture =
                         m.image >= 0 ? m_textures[static_cast<std::size_t>(m.image)] : m_white;
                     // Materials share textures: rebinding one the program already samples costs
-                    // driver calls for nothing.
-                    if (texture != set_texture) {
-                        state.textures
-                            .bind_upscaled_texture_colours(texture, *program, input.texture_filter);
+                    // driver calls for nothing. A texture's clamp is its material's.
+                    const int wrap = (m.clamp_s ? 1 : 0) | (m.clamp_t ? 2 : 0);
+                    if (texture != set_texture || wrap != set_wrap) {
+                        state.textures.bind_upscaled_texture_colours(
+                            texture, *program, input.texture_filter, !m.clamp_s, !m.clamp_t
+                        );
                         set_texture = texture;
+                        set_wrap = wrap;
                     }
                     if (static_cast<int>(m.cutout) != set_cutout) {
                         glUniform1i(cutout, m.cutout ? 1 : 0);
@@ -2617,6 +2753,11 @@ void LevelScene::draw_layer(
                 if (is_metal != metal) {
                     continue;
                 }
+                // The glow pass draws a glow packet's faces only: the rest would be discarded.
+                if (mobys && pass == kMobyGlow && !p.glow_vertices
+                    && renderer::render_opt::enabled(renderer::render_opt::Opt::MobyGlowSkip)) {
+                    continue;
+                }
                 const bool is_cutout = m_materials[static_cast<std::size_t>(p.material)].cutout;
                 if ((translucent || cutouts) && !is_cutout) {
                     continue;
@@ -2624,14 +2765,23 @@ void LevelScene::draw_layer(
                 if (solid && is_cutout) {
                     continue;
                 }
+                // Only its glowing triangles there, from the level's own index buffer (a
+                // PVS-compacted one holds the whole primitives alone).
+                std::uint32_t first = p.first_index;
+                std::uint32_t count = p.index_count;
+                if (mobys && pass == kMobyGlow && p.glow_count != 0 && !compact_indices
+                    && renderer::render_opt::enabled(renderer::render_opt::Opt::MobyGlowSkip)) {
+                    first = p.glow_first;
+                    count = p.glow_count;
+                }
                 if (run_count != 0 && (p.material == run_material || (state.depth_prepass && solid))
-                    && p.first_index == run_first + run_count) {
-                    run_count += p.index_count;
+                    && first == run_first + run_count) {
+                    run_count += count;
                     continue;
                 }
                 flush();
-                run_first = p.first_index;
-                run_count = p.index_count;
+                run_first = first;
+                run_count = count;
                 run_material = p.material;
             }
             flush();

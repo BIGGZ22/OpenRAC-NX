@@ -57,6 +57,8 @@ constexpr int kTitleWorld = 99;
 constexpr int kFlightWorld = 98;
 // Where the sky's textures are placed in the texture pool, past the GS's 14-bit blocks.
 constexpr std::uint32_t kSkyTextureKey = 0x20000;
+// Where the effect quads' textures are placed (effect_textures), past the particles' (0x30000).
+constexpr std::uint32_t kEffectTextureKey = 0x40000;
 
 }  // namespace
 
@@ -227,6 +229,9 @@ void use_level(int number) {
 }
 
 void effect_quad(std::span<const std::uint8_t> ram, const openrac_game_quad& quad) {
+    if (quad.source < g->effect_sources.size()) {
+        ++g->effect_sources[quad.source];
+    }
     renderer::EffectQuad q;
     std::memcpy(q.corner, quad.corner, sizeof(q.corner));
     std::memcpy(q.rgba, quad.rgba, sizeof(q.rgba));
@@ -260,6 +265,28 @@ void effect_quad(std::span<const std::uint8_t> ram, const openrac_game_quad& qua
         image.height = height;
         image.data.assign(ram.data() + pixels, ram.data() + pixels + width * height);
         q.uploads = static_cast<int>(g->effect_uploads.size());
+        // An 8-bit texture with a 32-bit CLUT (the paging's own) is drawn from a texture of its own,
+        // by content (effect_textures): its GS blocks are shared with other effect textures in the
+        // frame, and the pool holds only the last upload at a block when the quads are drawn.
+        const renderer::gs::Tex0 t = renderer::gs::Tex0::decode(quad.tex0);
+        if (t.psm == 0x13 && t.cpsm == 0x00 && !t.csm) {
+            const std::array<std::uint32_t, 3> source{pixels, clut, width << 16 | height};
+            auto hashed =
+                std::find_if(g->effect_hashed.begin(), g->effect_hashed.end(), [&](const auto& h) {
+                    return h.first == source;
+                });
+            if (hashed == g->effect_hashed.end()) {
+                g->effect_hashed.push_back(
+                    {source,
+                     {renderer::hash_bytes(image.data.data(), image.data.size()),
+                      renderer::hash_bytes(palette.data.data(), palette.data.size())}}
+                );
+                hashed = std::prev(g->effect_hashed.end());
+            }
+            g->effect_texture_ids.push_back(
+                {g->effects.size(), hashed->second.first, hashed->second.second}
+            );
+        }
         g->effect_uploads.push_back(std::move(palette));
         g->effect_uploads.push_back(std::move(image));
         g->effects.push_back(q);
@@ -269,6 +296,59 @@ void effect_quad(std::span<const std::uint8_t> ram, const openrac_game_quad& qua
         // renderer leaves the quad out when nothing is there.
         g->effects.push_back(q);
     }
+}
+
+void effect_textures() {
+    // A new renderer (a level loaded): a new pool.
+    if (g->effect_textures_for != g->renderer.get()) {
+        g->effect_textures.clear();
+        g->effect_textures_for = g->renderer.get();
+    }
+    const renderer::gs::Texa texa{0, false, 0x80};
+    for (const State::EffectTextureId& e : g->effect_texture_ids) {
+        renderer::EffectQuad& q = g->effects[e.effect];
+        const auto at = static_cast<std::size_t>(q.uploads);
+        if (!g->renderer || at + 1 >= g->effect_uploads.size()) {
+            continue;
+        }
+        const renderer::ImageUpload& palette = g->effect_uploads[at];
+        const renderer::ImageUpload& image = g->effect_uploads[at + 1];
+        const std::uint64_t id = e.pixels ^ (e.clut * 0x9E3779B97F4A7C15ull)
+                                 ^ (static_cast<std::uint64_t>(image.width) << 48
+                                    | static_cast<std::uint64_t>(image.height) << 32);
+        std::uint32_t& key = g->effect_textures[id];
+        if (key == 0) {
+            // As the pool converts the two uploads (convert_upload): the pixels as they lie, the
+            // CLUT in CSM1, in the chip's alpha units.
+            const std::vector<std::uint32_t> colours =
+                renderer::clut_csm1(palette.data, 0x00, 16, 256, texa);
+            renderer::Rgba8Image texture = renderer::convert_t8(
+                image.data,
+                static_cast<int>(image.width),
+                static_cast<int>(image.height),
+                colours,
+                renderer::AlphaScale::Gs
+            );
+            const renderer::TextureHandle h = g->renderer->textures().add(
+                std::move(texture),
+                renderer::AlphaScale::Gs,
+                std::format("effect {:#x}/{:#x}", image.dbp, palette.dbp)
+            );
+            key = kEffectTextureKey + static_cast<std::uint32_t>(g->effect_textures.size() - 1);
+            g->renderer->textures().place(key, h);
+        }
+        q.tbp = key;
+        q.cbp = 0;
+    }
+    // For a capture: the effect quads by where their texture's source was found (effect_quad).
+    if (stats::enabled()) {
+        stats::gauge("effect quads without texture source", g->effect_sources[0]);
+        stats::gauge("effect quads paged this frame", g->effect_sources[1]);
+        stats::gauge("effect quads paged before", g->effect_sources[2]);
+    }
+    g->effect_texture_ids.clear();
+    g->effect_hashed.clear();
+    g->effect_sources = {};
 }
 
 void sky_shell(int shell, const float* matrix) {
@@ -423,7 +503,8 @@ namespace {
 // uploads at keys handed out per frame in pool order: a key named one texture this frame and
 // another the next, and the conversions the pool kept mixed them up (the nanotech crates' orbs as
 // white squares). 0 when the addresses are not in memory.
-// Refactor note: other effect textures (effect_quad) still go through uploads at their GS blocks.
+// Refactor note: effect textures without a source in game memory (effect_quad) still go through
+// the pool at their GS blocks.
 std::uint32_t particle_texture(
     std::span<const std::uint8_t> ram, std::uint32_t pixels, std::uint32_t clut
 ) {

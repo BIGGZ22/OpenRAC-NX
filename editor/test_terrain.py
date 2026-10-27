@@ -14,8 +14,9 @@ def command(code, immediate=0, data=b"", count=0):
     return struct.pack("<I", code << 24 | count << 16 | immediate) + data + bytes(-len(data) % 4)
 
 
-def fixture():
-    # A four-corner plane with a repeated seam vertex and translated origin.
+def fixture(clamp=b""):
+    # A four-corner plane with a repeated seam vertex and translated origin; clamp, when given, is
+    # material 0's CLAMP_1 quadword.
     vu = [0] * 20
     vu[0], vu[6], vu[7], vu[13], vu[18] = 4, 24, 40, 60, 64
     low = (command(0x30, data=struct.pack("<4I", 40, 40, 40, 40))
@@ -23,7 +24,7 @@ def fixture():
            + command(0x6e, 0xc03c, bytes((0, 1, 2, 3)), 1)
            + command(5)
            + command(0x6e, 0x8040, bytes((132, 0, 0, 0, 0, 0, 0, 0)), 2))
-    textures = bytes(80)  # material 0
+    textures = bytes(32) + clamp.ljust(16, b"\0") + bytes(32)  # material 0
     infos = [(0, 0, 4096, 0), (4096, 0, 4096, 2), (0, 4096, 4096, 4),
              (4096, 4096, 4096, 6), (-4096, 8192, 4096, 0)]
     positions = [(0, 0, 0), (1024, 0, 0), (0, 1024, 0), (1024, 1024, 0)]
@@ -118,6 +119,15 @@ class TerrainTests(unittest.TestCase):
             self.assertEqual(mesh.faces, {("terrain", 0): [(0, 5, 6)]})
             self.assertEqual(len(mesh.positions), 7)
             self.assertEqual(mesh.bounds(), ((2, -1, 3), (3, 0, 4)))
+
+    def test_clamped_texture_keys(self):
+        # CLAMP_1 (address 8) with WMS 1: clamped across; another register's quadword is not read.
+        for quadword, key in ((struct.pack("<iiB", 1, 0, 8), ("terrain", 0, 1)),
+                              (struct.pack("<iiB", 1, 1, 8), ("terrain", 0, 3)),
+                              (struct.pack("<iiB", 0, 0, 8), ("terrain", 0)),
+                              (struct.pack("<iiB", 1, 1, 9), ("terrain", 0))):
+            mesh, = terrain(fixture(quadword), 2)
+            self.assertEqual(list(mesh.faces), [key])
 
     def test_fine_without_refinements_and_coarse_compatibility(self):
         mesh, = terrain(fine_fixture(empty=True), 0)

@@ -9,9 +9,9 @@ from dataclasses import dataclass
 import math
 import struct
 
-from formats import FormatError, span, unpack
+from formats import FormatError, gs_clamp, span, unpack
 import lighting
-from mesh import Mesh, spherical_normal
+from mesh import Mesh, spherical_normal, texture_key
 
 FRAGMENT_SIZE = 0x40
 # VIF UNPACK element sizes: V3-16, V4-32, V4-16, V4-8.
@@ -215,6 +215,8 @@ def fragment(data: bytes, table_offset: int, header: bytes, lod: int, name: str,
     # Five-qword GS primitives; the first word is the texture index until
     # func_00204340 patches it at load time.
     textures = [unpack("<I", common[1].data, i * 80)[0] for i in range(materials)]
+    # CLAMP_1, the third: whether the GS clamps the texture on either axis (TFRAG.md, section 5).
+    clamps = [gs_clamp(common[1].data, i * 80 + 32) for i in range(materials)]
     positions = list(struct.iter_unpack("<3h", common[7].data))
     origin = unpack("<4i", common[5].data)[:3]
     infos = list(struct.iter_unpack("<4h", common[4].data))
@@ -256,7 +258,7 @@ def fragment(data: bytes, table_offset: int, header: bytes, lod: int, name: str,
     for material, face in strip_faces(indices, strips, materials):
         if max(face) >= len(mesh.positions):
             raise FormatError("terrain face index outside the vertex infos")
-        mesh.add_face(("terrain", textures[material]), face)
+        mesh.add_face(texture_key("terrain", textures[material], clamps[material]), face)
     return mesh
 
 

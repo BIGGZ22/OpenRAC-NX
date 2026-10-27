@@ -67,12 +67,81 @@ inline std::array<f32, 4> to_floats(const V4& v) {
     return {to_float(v[0]), to_float(v[1]), to_float(v[2]), to_float(v[3])};
 }
 
+// The pieces mul() and add() share, defined here so the hot callers (the animation evaluator, the
+// lighting) can inline them.
+namespace detail {
+
+inline int exponent(u32 x) {
+    return static_cast<int>((x >> 23) & 0xff);
+}
+
+inline u64 mantissa(u32 x) {
+    return (x & 0x7f'ffff) | 0x80'0000;
+}
+
+// Packs sign * mag * 2^lsb_exp (mag > 0; lsb_exp is the biased exponent of
+// mag's bit 23), truncating to 24 significant bits.
+inline u32 pack(u32 sign, u64 mag, int lsb_exp) {
+    const int k = 63 - std::countl_zero(mag);
+    const int e = lsb_exp + (k - 23);
+    const u64 m = k >= 23 ? mag >> (k - 23) : mag << (23 - k);
+    if (e > 255) {
+        return sign | kMax;
+    }
+    if (e < 1) {
+        return sign;
+    }
+    return sign | static_cast<u32>(e) << 23 | (static_cast<u32>(m) & 0x7f'ffff);
+}
+
+}  // namespace detail
+
 // Returns a * b as the multiplier gives it: the product truncated toward zero.
-u32 mul(u32 a, u32 b);
+inline u32 mul(u32 a, u32 b) {
+    using detail::exponent, detail::mantissa;
+    const u32 sign = (a ^ b) & kSign;
+    if (exponent(a) == 0 || exponent(b) == 0) {
+        return sign;
+    }
+    // The 48-bit product has its binary point at bit 46; bit 23 of (p >> 23)
+    // is worth 2^(ea + eb - 254).
+    return detail::pack(sign, (mantissa(a) * mantissa(b)) >> 23, exponent(a) + exponent(b) - 127);
+}
 
 // Returns a + b as the adder gives it: the smaller operand's bits more than one place below the
 // larger one's last bit dropped first, then the sum truncated toward zero.
-u32 add(u32 a, u32 b);
+inline u32 add(u32 a, u32 b) {
+    using detail::exponent, detail::mantissa;
+    const int ea = exponent(a);
+    const int eb = exponent(b);
+    if (ea == 0 || eb == 0) {
+        if (ea != 0) {
+            return a;
+        }
+        if (eb != 0) {
+            return b;
+        }
+        return (a & b & kSign) != 0 ? kSign : 0;
+    }
+    const u32 hi = ea >= eb ? a : b;
+    u32 lo = ea >= eb ? b : a;
+    const int d = exponent(hi) - exponent(lo);
+    if (d >= 25) {
+        return hi;
+    }
+    if (d >= 1) {
+        lo &= ~u32{0} << (d - 1);
+    }
+    auto signed_value = [](u32 x, u64 m) {
+        return (x & kSign) != 0 ? -static_cast<s64>(m) : static_cast<s64>(m);
+    };
+    const s64 sum = signed_value(hi, mantissa(hi) << d) + signed_value(lo, mantissa(lo));
+    if (sum == 0) {
+        return 0;
+    }
+    const u64 magnitude = sum < 0 ? static_cast<u64>(-sum) : static_cast<u64>(sum);
+    return detail::pack(sum < 0 ? kSign : 0, magnitude, exponent(lo));
+}
 
 // Returns a - b: the sum with b's sign turned, as the adder forms it.
 inline u32 sub(u32 a, u32 b) {

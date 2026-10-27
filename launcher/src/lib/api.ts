@@ -61,13 +61,19 @@ import type { WriteResult } from "./generated/WriteResult";
 
 export const inTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
+/** Whether a user agent is Android's WebView. WebKitGTK on a Linux tablet or handheld (a mobile
+ *  chassis) says "Linux; like Android 4.4" to get websites' mobile pages: that is a desktop. */
+export function androidUserAgent(ua: string): boolean {
+  return /\bandroid\b/i.test(ua) && !/\blike android\b/i.test(ua);
+}
+
 /** The Android launcher (docs/port/ANDROID.md): files come from the system's picker, which gives
  *  no folders and no paths, and the GPU driver packages are its own. `?android` in the browser
  *  preview shows its pages. */
 export const onAndroid =
   typeof navigator !== "undefined" &&
   (inTauri
-    ? /android/i.test(navigator.userAgent)
+    ? androidUserAgent(navigator.userAgent)
     : typeof location !== "undefined" && new URLSearchParams(location.search).has("android"));
 
 export type { ActionArea };

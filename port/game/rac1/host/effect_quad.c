@@ -10,9 +10,10 @@
  * its upload records this frame (D_0018D140, D_0015F558 of them; +0 the CLUT's address, +6 its
  * block, +8 the pixels' address, +0xE their block), which the game's texture paging turns into GS
  * uploads; a TEX0 seen before keeps the sources it had then (the game caches the word and records
- * the upload only when it pages the texture in).
+ * the upload only when it pages the texture in). 1 when found in the records, 2 when remembered, 0
+ * when neither.
  */
-static void effect_texture_source(uint64_t tex0, uint32_t* pixels, uint32_t* clut) {
+static uint32_t effect_texture_source(uint64_t tex0, uint32_t* pixels, uint32_t* clut) {
     static struct {
         uint64_t tex0;
         uint32_t pixels, clut;
@@ -31,23 +32,24 @@ static void effect_texture_source(uint64_t tex0, uint32_t* pixels, uint32_t* clu
                 if (known[k].tex0 == tex0) {
                     known[k].pixels = *pixels;
                     known[k].clut = *clut;
-                    return;
+                    return 1;
                 }
             }
             known[next].tex0 = tex0;
             known[next].pixels = *pixels;
             known[next].clut = *clut;
             next = (next + 1) & 255;
-            return;
+            return 1;
         }
     }
     for (int k = 0; k < 256; ++k) {
         if (known[k].tex0 == tex0 && tex0 != 0) {
             *pixels = known[k].pixels;
             *clut = known[k].clut;
-            return;
+            return 2;
         }
     }
+    return 0;
 }
 
 /*
@@ -81,7 +83,7 @@ void func_001F7EF8(gaddr a0, int a1, int a2) {
     memcpy(&q.alpha, r + 0x88, 8);
     q.pixels = 0;
     q.clut = 0;
-    effect_texture_source(q.tex0, &q.pixels, &q.clut);
+    q.source = effect_texture_source(q.tex0, &q.pixels, &q.clut);
     openrac_game_effect_quad(&q);
 }
 

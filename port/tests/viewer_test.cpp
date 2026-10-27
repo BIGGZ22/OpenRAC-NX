@@ -185,7 +185,7 @@ void write_level(const fs::path& dir) {
     write_square(dir / "terrain.glb.gltf", 20.0f, 0.0f, "textures/terrain_0000.png");
     write_square(dir / "ties" / "tie_5.gltf", 2.0f, 0.0f, "../textures/tie_0001.png");
     write_text(dir / "manifest.json", R"({
-  "format": 3, "game": "rac1", "version": "pal", "level": 3,
+  "format": 4, "game": "rac1", "version": "pal", "level": 3,
   "terrain": "terrain.glb.gltf",
   "sky": {"background": [10, 20, 30], "mesh": null, "panorama": "sky.png"},
   "classes": {
@@ -196,12 +196,76 @@ void write_level(const fs::path& dir) {
   "placements": "placements.json"
 })");
     write_text(dir / "placements.json", R"({
-  "format": 3,
+  "format": 4,
   "ties": [{"index": 0, "class": 5, "matrix": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,1,1], "draw_distance": 100}],
   "shrubs": [],
   "mobys": [{"index": 0, "class": 7, "matrix": [2,0,0,0, 0,2,0,0, 0,0,2,0, 6,6,0,1], "colour": [128, 128, 128]},
             {"index": 1, "class": 99, "matrix": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]}]
 })");
+}
+
+// The ties' and shrubs' draw distances "Scenery detail: Original" keeps to, as the game's loader
+// and renderer leave them.
+void draw_distances(const fs::path& dir) {
+    const fs::path ties = dir / "tie-distances";
+    write_level(ties);
+    const std::string manifest = R"({
+  "format": 4, "game": "rac1", "version": "pal", "level": 3,
+  "terrain": "terrain.glb.gltf",
+  "sky": {"background": [10, 20, 30], "mesh": null, "panorama": "sky.png"},
+  "classes": {
+    "tie": {"5": {"mesh": "ties/tie_5.gltf"}},
+    "shrub": {},
+    "moby": {}
+  },
+  "placements": "placements.json"
+})";
+    write_text(ties / "manifest.json", manifest);
+    scene::LevelData level;
+    std::string error;
+    CHECK(scene::load_level(ties, level, error));
+    // The tie's own (100, under the cap of 720); no shrub limits without the shrub classes'
+    // billboard fades.
+    CHECK(
+        (level.draw_distances[static_cast<std::size_t>(scene::Layer::Ties)]
+         == std::vector<float>{100.0f})
+    );
+    CHECK(level.draw_distances[static_cast<std::size_t>(scene::Layer::Shrubs)].empty());
+
+    // Shrubs: raised to 16, and to a billboard class's fade distance + 24; capped at 500.
+    const fs::path shrubs = dir / "shrub-distances";
+    write_level(shrubs);
+    write_square(shrubs / "shrubs" / "shrub_6.gltf", 2.0f, 0.0f, "../textures/tie_0001.png");
+    write_square(shrubs / "shrubs" / "shrub_7.gltf", 2.0f, 0.0f, "../textures/tie_0001.png");
+    std::string with_shrubs = manifest;
+    with_shrubs.replace(
+        with_shrubs.find(R"("shrub": {})"),
+        std::strlen(R"("shrub": {})"),
+        R"("shrub": {"6": {"mesh": "shrubs/shrub_6.gltf", "billboard_fade": -1},
+                    "7": {"mesh": "shrubs/shrub_7.gltf", "billboard_fade": 40}})"
+    );
+    write_text(shrubs / "manifest.json", with_shrubs);
+    write_text(shrubs / "placements.json", R"({
+  "format": 4,
+  "ties": [{"index": 0, "class": 5, "matrix": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,1,1], "draw_distance": 0}],
+  "shrubs": [
+    {"index": 0, "class": 6, "matrix": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1], "draw_distance": 8},
+    {"index": 1, "class": 6, "matrix": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1], "draw_distance": 32},
+    {"index": 2, "class": 7, "matrix": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1], "draw_distance": 32},
+    {"index": 3, "class": 6, "matrix": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1], "draw_distance": 900}
+  ],
+  "mobys": []
+})");
+    scene::LevelData limited;
+    CHECK(scene::load_level(shrubs, limited, error));
+    CHECK(
+        (limited.draw_distances[static_cast<std::size_t>(scene::Layer::Shrubs)]
+         == std::vector<float>{16.0f, 32.0f, 64.0f, 500.0f})
+    );
+    CHECK(
+        (limited.draw_distances[static_cast<std::size_t>(scene::Layer::Ties)]
+         == std::vector<float>{0.0f})
+    );  // never drawn by the game
 }
 
 void json_reader() {
@@ -258,7 +322,7 @@ void loader(const fs::path& dir, scene::LevelData& level) {
         write_png(ooze_dir / "textures/terrain_0012.png", 80, 220, 30);
         write_square(ooze_dir / "terrain.glb.gltf", 20, 0, "textures/terrain_0012.png");
         write_text(ooze_dir / "manifest.json", R"({
-          "format":3,"game":"rac1","version":"ntsc","level":10,
+          "format":4,"game":"rac1","version":"ntsc","level":10,
           "terrain":"terrain.glb.gltf","placements":"placements.json",
           "classes":{"tie":{"5":{"mesh":"ties/tie_5.gltf"}}}
         })");
@@ -289,7 +353,7 @@ void loader(const fs::path& dir, scene::LevelData& level) {
         write_square(ooze_dir / "lava.gltf", 20, 0, "textures/probe_gaspar_lava.png");
         write_png(ooze_dir / "textures/probe_gaspar_lava.png", 255, 255, 255);
         write_text(ooze_dir / "manifest.json", R"({
-          "format":3,"game":"rac1","version":"ntsc","level":9,
+          "format":4,"game":"rac1","version":"ntsc","level":9,
           "terrain":"terrain.glb.gltf","placements":"placements.json"
         })");
         write_text(ooze_dir / "probe-emission.json", R"({"surfaces":[{"mesh":"lava.gltf"}]})");
@@ -310,7 +374,7 @@ void loader(const fs::path& dir, scene::LevelData& level) {
         const auto selection_dir = dir / "bake-selection";
         write_level(selection_dir);
         write_text(selection_dir / "manifest.json", R"({
-          "format":3,"game":"rac1","version":"ntsc","level":3,
+          "format":4,"game":"rac1","version":"ntsc","level":3,
           "terrain":"terrain.glb.gltf","placements":"placements.json",
           "classes":{"moby":{
             "817":{"mesh":"ties/tie_5.gltf"},
@@ -420,10 +484,9 @@ int draw(scene::LevelData& level) {
     CHECK(terrain[0] > 150 && terrain[1] < 60 && terrain[2] < 60);
     const std::uint8_t* tie = at(64, 64);
     CHECK(tie[2] > 150 && tie[0] < 60);
-    // Terrain and tie each draw once. Mobys also submit their glow pass, in two draws split at
-    // the GS's alpha reference (scene/moby_passes.h); this fixture has no glow faces, so they
-    // discard all their fragments.
-    CHECK(renderer.last_stats().draw_calls == 5);
+    // Terrain, tie and moby each draw once. The mobys' glow pass leaves out primitives without a
+    // glow face (moby-glow-skip, scene/moby_passes.h): this fixture has none, so it draws nothing.
+    CHECK(renderer.last_stats().draw_calls == 3);
 
     // Removing the moby layer removes its solid and glow submissions.
     renderer.renderers()[static_cast<std::size_t>(scene::Layer::Mobys)]->enabled = false;
@@ -461,7 +524,7 @@ int draw(scene::LevelData& level) {
     input.camera.view = camera.view();
     input.camera.position = camera.position;
     renderer.render(input, {frame.id(), 128, 128});
-    CHECK(renderer.last_stats().draw_calls == (gl::is_vulkan() ? 2 : 5));
+    CHECK(renderer.last_stats().draw_calls == (gl::is_vulkan() ? 2 : 3));
     auto pvs_pixels = frame.read_rgba();
     if (gl::is_vulkan()) {
         CHECK(pvs_pixels[(64 * 128 + 64) * 4] > 150);  // hidden blue tie exposes red terrain
@@ -472,12 +535,12 @@ int draw(scene::LevelData& level) {
     input.camera.position = camera.position;
     input.camera.view = camera.view();
     renderer.render(input, {frame.id(), 128, 128});
-    CHECK(renderer.last_stats().draw_calls == 5);  // alternate fragment, tie and moby survive
+    CHECK(renderer.last_stats().draw_calls == 3);  // alternate fragment, tie and moby survive
     camera.position[0] = 0;
     input.camera.position = camera.position;
     input.camera.view = camera.view();
     renderer.render(input, {frame.id(), 128, 128});
-    CHECK(renderer.last_stats().draw_calls == (gl::is_vulkan() ? 2 : 5));  // camera cache refresh
+    CHECK(renderer.last_stats().draw_calls == (gl::is_vulkan() ? 2 : 3));  // camera cache refresh
 
     if (gl::is_vulkan()) {
         stats::set_enabled(stats::Client::Overlay, true);
@@ -722,6 +785,59 @@ int draw(scene::LevelData& level) {
     }
 #endif
 
+    // The mobys' glow pass draws only a primitive's triangles with a glow vertex (moby-glow-skip):
+    // one triangle of the moby given glow vertices of its own adds that one triangle to each of the
+    // pass's two draws, not the whole primitive.
+    {
+        auto glowing = level;
+        const std::uint32_t moby_model =
+            glowing.instances[static_cast<std::size_t>(scene::Layer::Mobys)][0].model;
+        const auto& moby = glowing.models[moby_model];
+        CHECK(!moby.primitives.empty() && moby.primitives[0].index_count >= 6);
+        const std::uint32_t first = moby.primitives[0].first_index;
+        for (std::uint32_t k = 0; k < 3; ++k) {
+            scene::Vertex vertex = glowing.vertices[glowing.indices[first + k]];
+            vertex.light_slot = -2.0f;
+            glowing.indices[first + k] = static_cast<std::uint32_t>(glowing.vertices.size());
+            glowing.vertices.push_back(vertex);
+        }
+        camera.position = {0.0f, 0.0f, 30.0f};
+        input.camera.position = camera.position;
+        input.camera.view = camera.view();
+        std::uint64_t triangles[2]{};
+        std::uint64_t draws[2]{};
+        for (int with_glow = 0; with_glow < 2; ++with_glow) {
+            scene.release();
+            CHECK(scene.upload(with_glow != 0 ? glowing : level, renderer.textures(), error));
+            scene.lighting = false;
+            renderer.render(input, {frame.id(), 128, 128});
+            triangles[with_glow] = renderer.last_stats().triangles;
+            draws[with_glow] = renderer.last_stats().draw_calls;
+        }
+        CHECK(draws[1] == draws[0] + 2);
+        CHECK(triangles[1] == triangles[0] + 2);
+    }
+
+    // Scenery detail: Original leaves out the tie (draw distance 100) for an eye 300 units away,
+    // and the setting off brings it back.
+    {
+        scene.release();
+        CHECK(scene.upload(level, renderer.textures(), error));
+        scene.lighting = false;
+        renderer.render(input, {frame.id(), 128, 128});
+        const auto all = renderer.last_stats().draw_calls;
+        scene.choose_scenery(true, {0.0f, 0.0f, 300.0f}, input.camera.projection);
+        renderer.render(input, {frame.id(), 128, 128});
+        CHECK(renderer.last_stats().draw_calls == all - 1);
+        scene.choose_scenery(true, {0.0f, 0.0f, 30.0f}, input.camera.projection);
+        renderer.render(input, {frame.id(), 128, 128});
+        CHECK(renderer.last_stats().draw_calls == all);
+        scene.choose_scenery(true, {0.0f, 0.0f, 300.0f}, input.camera.projection);
+        scene.choose_scenery(false, {}, input.camera.projection);
+        renderer.render(input, {frame.id(), 128, 128});
+        CHECK(renderer.last_stats().draw_calls == all);
+    }
+
     frame.release();
     scene.release();
     renderer.release();
@@ -955,6 +1071,7 @@ int main(int argc, char** argv) {
     denser_terrain(dir);
     translucent_texels(dir);
     pvs_loader(dir);
+    draw_distances(dir);
     if (openrac::test::failures() != 0) {
         return openrac::test::result();
     }

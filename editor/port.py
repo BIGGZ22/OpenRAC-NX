@@ -40,7 +40,7 @@ from lighting import light_bank, light_shrub_instance, light_tie_instance
 from mesh import Mesh
 from moby_class import MobyClass, moby_classes
 from mobys import moby_class_names, moby_instances
-from shrubs import shrub_class_normals, shrub_classes, shrub_instances
+from shrubs import shrub_billboard_fades, shrub_class_normals, shrub_classes, shrub_instances
 from sky import Sky, panorama, sky
 from terrain import terrain
 from occlusion import export_pvs
@@ -49,8 +49,9 @@ from ties import tie_classes, tie_instances, tie_slot_normals
 # The export's format: the port reads only its own (viewer/level.h kManifestFormat), and its level
 # check names the format in the stamp the launcher waits for, so levels exported before a change
 # are read from the disc again. 2: the mobys' metal packets and the chrome and glass maps. 3: the
-# gadget classes whose bind pose collapses a joint (the Blaster, the Pyrocitor).
-FORMAT = 3
+# gadget classes whose bind pose collapses a joint (the Blaster, the Pyrocitor). 4: the textures the
+# game clamps (terrain, ties, shrubs, the sky) have clamping samplers.
+FORMAT = 4
 
 
 def sky_glb(data: Sky, texture_uri) -> bytes:
@@ -74,7 +75,8 @@ def sky_glb(data: Sky, texture_uri) -> bytes:
                     untextured = len(gltf.doc["materials"]) - 1
                 material = untextured
             else:
-                material = gltf.material(f"sky_{key[1]:04}", texture_uri(key[1]))
+                # The GS draws the sky's textures clamped (SHRUB_SKY.md, section 7).
+                material = gltf.material(f"sky_{key[1]:04}", texture_uri(key[1]), clamp=3)
                 gltf.doc["materials"][material]["alphaMode"] = "BLEND"
             attributes = {"POSITION": gltf.floats([shell.positions[v] for v in corners], bounds=True),
                           "TEXCOORD_0": gltf.floats([shell.uvs[v] for v in corners]),
@@ -160,6 +162,7 @@ class PortLevelWriter(LevelWriter):
                                            p["directional_lights"], lights[0])
                 p["colours"] = [r | g << 8 | b << 16 | a << 24 for r, g, b, a in lit]
         self.write_objects("shrub", shrubs, shrub_placements)
+        self.write_shrub_billboards(shrub_billboard_fades(level))
         # The level's own classes, and the ones the loader adds (the ships, spaceships.py).
         self.write_mobys(moby_instances(level.gameplay, fmt),
                          {**getattr(level, "extra_moby_classes", {}), **moby_classes(level)})
@@ -172,6 +175,14 @@ class PortLevelWriter(LevelWriter):
         super().write_objects(family, classes, placements)
         self.classes[family] = {str(c): {"mesh": f"{family}s/{family}_{c}.glb"} for c in sorted(classes)}
         self.placements[f"{family}s"] = [placement(p) for p in placements]
+
+    def write_shrub_billboards(self, fades: dict[int, int]) -> None:
+        """Each shrub class's billboard fade distance in the class table ("billboard_fade", -1 for
+        none): with the instances' draw distances, how far the game draws the class (its loader
+        raises a billboard class's to F + 24), for the port's Scenery detail: Original."""
+        for class_id, entry in self.classes["shrub"].items():
+            entry["billboard_fade"] = fades.get(int(class_id), -1)
+        self.stats["shrub_billboards"] = sum(1 for f in fades.values() if f >= 0)
 
     def write_mobys(self, placements: list[dict], classes: dict[int, MobyClass | None]) -> None:
         """One GLB per class with a mesh, and the class table: mesh (or null

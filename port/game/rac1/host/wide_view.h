@@ -12,8 +12,8 @@
 
 /*
  * How much wider the sphere test's view is opened: `lists` how many draw callback lists run (their
- * `list_wider`), `effects` how many updates run whose test only decides what they draw (their
- * `effect_wider`: the nanotech cluster's). 0 where the test sees the game's own 4:3 view: outside
+ * `list_wider`), `effects` how many updates run whose test stands for what the player sees
+ * (their `effect_wider`: the nanotech cluster's, Kerwan's air traffic's). 0 where the test sees the game's own 4:3 view: outside
  * both, where it serves the game's logic too, and in a picture no wider than 4:3.
  */
 static inline float wide_sphere_wider(int lists, float list_wider, int effects, float effect_wider) {

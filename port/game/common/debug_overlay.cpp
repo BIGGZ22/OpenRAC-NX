@@ -374,6 +374,10 @@ void panel(const Shown& shown) {
                 s.message = "frame dump closed";
             }
         }
+        ImGui::SameLine();
+        if (ImGui::Button(keys ? "record diagnostics (Ctrl+F3)" : "record diagnostics")) {
+            toggle_capture(false);
+        }
         if (!s.message.empty()) {
             ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + dp(420.0f));
             text_coloured(kDim, "{}", s.message);
@@ -501,6 +505,10 @@ bool event(const SDL_Event& e) {
         return true;
     }
     if (e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
+        if (e.key.key == SDLK_F3 && (e.key.mod & SDL_KMOD_CTRL) != 0) {
+            toggle_capture(false);
+            return true;
+        }
         if (e.key.key == SDLK_F3) {
             set_visible(!s.visible);
             s.wanted = false;
@@ -589,6 +597,8 @@ void tick(const Tick& t) {
     stats::gauge("packet_bytes", static_cast<double>(t.packet_bytes));
     stats::gauge("level", static_cast<double>(t.level));
     s.tick = t.tick;  // a screenshot is named after it, with the panel shown or not
+    s.game = t.game;  // and a performance capture's report says where it was
+    s.level = t.level;
     if (!s.visible) {
         return;
     }
@@ -647,7 +657,8 @@ void draw(const Shown& shown) {
     }
     stats::lap("present");
     s.window = shown.window;
-    const bool badge = s.paused || s.stretch != 1.0 || !s.toast.empty() || !s.notice.empty();
+    const bool badge =
+        s.paused || s.stretch != 1.0 || !s.toast.empty() || !s.notice.empty() || capture_busy();
     const bool drawer_out =
         s.drawer_open || s.drawer_at > 0.0f || s.shot_when_shut || s.touch_editing;
     if (!(s.visible || menu_bar_shown() || badge || drawer_out || !s.shot_path.empty()) || shown.window == nullptr
@@ -655,6 +666,7 @@ void draw(const Shown& shown) {
         return;
     }
     const stats::Scope scope("overlay");
+    capture_frame(shown);
     // The processor's load, each half second.
     if (const stats::Frame* f = stats::history(0); s.visible && f != nullptr && f->start_s - s.cpu_wall >= 0.5) {
         const double seconds = stats::process_cpu_seconds();

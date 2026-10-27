@@ -23,6 +23,7 @@ enum Row {
     kRenderScale,
     kMsaa,
     kAnisotropy,
+    kSceneryDetail,
     kVSync,
     kFrameRate,
     kFrameCap,

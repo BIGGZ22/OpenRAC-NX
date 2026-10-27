@@ -21,7 +21,13 @@
 #include <sys/utsname.h>
 #endif
 #if defined(__ANDROID__)
+#include <cmath>
+#include <dlfcn.h>
+
 #include <sys/system_properties.h>
+#endif
+#if defined(__linux__)
+#include <vector>
 #endif
 
 namespace openrac::system_info {
@@ -44,7 +50,13 @@ std::string uname_text() {
     if (uname(&u) != 0) {
         return {};
     }
-    return std::format("{} {}, {}", u.sysname, u.release, u.machine);
+    // As C strings: formatted as arrays, the fields kept their trailing NULs (Android, libc++).
+    return std::format(
+        "{} {}, {}",
+        static_cast<const char*>(u.sysname),
+        static_cast<const char*>(u.release),
+        static_cast<const char*>(u.machine)
+    );
 }
 #endif
 
@@ -179,6 +191,88 @@ std::string memory() {
     }
 #endif
     return "unknown";
+}
+
+std::string cpu_clocks() {
+#if defined(__linux__)
+    // A core's clock in kHz from its cpufreq folder; 0 when the system keeps it to itself.
+    const auto khz = [](unsigned core, const char* file) {
+        std::ifstream in(std::format("/sys/devices/system/cpu/cpu{}/cpufreq/{}", core, file));
+        unsigned long long value = 0;
+        in >> value;
+        return value;
+    };
+
+    struct Group {
+        unsigned first, last;
+        unsigned long long now, top;
+    };
+
+    std::vector<Group> groups;
+    const unsigned cores = std::thread::hardware_concurrency();
+    for (unsigned core = 0; core < cores; ++core) {
+        const unsigned long long now = khz(core, "scaling_cur_freq");
+        const unsigned long long top = khz(core, "cpuinfo_max_freq");
+        if (now == 0) {
+            continue;
+        }
+        if (!groups.empty() && groups.back().last + 1 == core && groups.back().now == now
+            && groups.back().top == top) {
+            groups.back().last = core;
+        } else {
+            groups.push_back({core, core, now, top});
+        }
+    }
+    std::string out;
+    for (const Group& g : groups) {
+        out += out.empty() ? "" : ", ";
+        out += g.first == g.last ? std::format("cpu{}", g.first)
+                                 : std::format("cpu{}-{}", g.first, g.last);
+        out += std::format(
+            " {:.2f}/{:.2f} GHz", static_cast<double>(g.now) / 1e6, static_cast<double>(g.top) / 1e6
+        );
+    }
+    return out;
+#else
+    return {};
+#endif
+}
+
+std::string thermal() {
+#if defined(__ANDROID__)
+    // The NDK's thermal manager (API 30, the headroom 31), looked up so that the port still runs
+    // on Android 10.
+    using Acquire = void* (*)();
+    using Status = int (*)(void*);
+    using Headroom = float (*)(void*, int);
+    static void* const android = dlopen("libandroid.so", RTLD_NOW | RTLD_LOCAL);
+    if (android == nullptr) {
+        return {};
+    }
+    static const auto acquire =
+        reinterpret_cast<Acquire>(dlsym(android, "AThermal_acquireManager"));
+    static const auto status =
+        reinterpret_cast<Status>(dlsym(android, "AThermal_getCurrentThermalStatus"));
+    static const auto headroom =
+        reinterpret_cast<Headroom>(dlsym(android, "AThermal_getThermalHeadroom"));
+    static void* const manager = acquire != nullptr ? acquire() : nullptr;
+    if (manager == nullptr || status == nullptr) {
+        return {};
+    }
+    static constexpr const char* kStatus[] =
+        {"none", "light", "moderate", "severe", "critical", "emergency", "shutdown"};
+    const int now = status(manager);
+    std::string out = now >= 0 && now < 7 ? kStatus[now] : "unknown";
+    if (headroom != nullptr) {
+        // Asked at most once a second, as the NDK asks: the capture asks at its start and end.
+        if (const float h = headroom(manager, 0); !std::isnan(h)) {
+            out += std::format(", headroom {:.2f}", h);
+        }
+    }
+    return out;
+#else
+    return {};
+#endif
 }
 
 }  // namespace openrac::system_info

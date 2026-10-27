@@ -87,7 +87,8 @@ bool draw_gpu_instances(
 // Registers the instances of a static instance buffer once, with their culling bounds: while the
 // buffer is unchanged and gpu-resident-instances is on, gpu_instances of it sends the GPU only the
 // view and a group record, and the culling reads the instances from device memory
-// (docs/port/RENDER_PERF.md, R-15). False when GPU-driven drawing is off or the sizes disagree.
+// (docs/port/RENDER_PERF.md, R-15). Registering a buffer again replaces its instances. False when
+// GPU-driven drawing is off or the sizes disagree.
 bool gpu_register_instances(
     unsigned instance_buffer, std::span<const renderer::GpuCullBounds> bounds
 );

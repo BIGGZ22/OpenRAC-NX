@@ -30,9 +30,9 @@
  *
  * The liquid grid's cull only ever decides what is drawn, wherever it is called from. The sphere
  * test also serves the game's own logic (an explosion shakes the camera only when it is in view),
- * so it is opened only while a draw callback list runs, and in the updates whose test only decides
- * what they draw: everything else, the game's logic among it, sees the 4:3 view. At 4:3 nothing
- * changes.
+ * so it is opened only while a draw callback list runs, and in the updates below, whose test
+ * stands for "can the player see it": everything else, the game's logic among it, sees the 4:3
+ * view. At 4:3 nothing changes.
  *
  * Those updates: the nanotech cluster's (class 806, the orb on a nanotech crate, NanotechBallUpdate,
  * func_L00_002D9EA0). Each tick it tests its centre with the sphere test (radius in the sphere's w,
@@ -40,11 +40,20 @@
  * sphere, halo and glass sheen) and spawns its eight glints. Tested against the 4:3 tangent, a crate
  * between the 4:3 edge and the picture's lost its orb, although the crate itself is drawn and
  * "drawn" (moby_view.h). Its state changes (homing in on the hero, the pickup) do not depend on
- * the test.
+ * the test. And Kerwan's air traffic's (classes 75, 115-120, 132, 795, the cars, buses and ships;
+ * PAL func_L03_0029ED60, US FUN_L03_0029dba8; ReRAC's air_traffic): each tick the first of a group
+ * parks the whole group for 5 ticks while the sphere test (through the level's copy of
+ * func_L01_00275690, draw distance) finds none of them in view, and a ship not drawn last frame
+ * tests itself to choose how it turns and whether it puffs. Tested against the 4:3 tangent, the
+ * traffic stopped dead between the 4:3 edge and the picture's, in plain view; on the console it
+ * stops only out of sight. Opened, it stops out of the picture's sight instead. This one changes
+ * what the game does in a wide picture (where the ships are a few ticks later), not only what it
+ * draws: the setting turns it off.
  *
- * Both are game fixes the player can switch back to the console's 4:3 view (differences.json;
+ * They are game fixes the player can switch back to the console's 4:3 view (differences.json;
  * openrac_game_fix, game_host.h): fix_wide_liquids for the lists' runs and the liquid grid's cull,
- * fix_wide_nanotech_orbs for the cluster's update. Off, they run as the game wrote them.
+ * fix_wide_nanotech_orbs for the cluster's update, fix_wide_air_traffic for the traffic's. Off,
+ * they run as the game wrote them.
  *
  * Not opened: the callbacks' tests that project a point to the screen and compare it with the
  * screen's pixels. The rest of the world is the port's own: it draws every terrain part, tie and
@@ -138,8 +147,8 @@ static int g_lists;
 static float g_wider = 1.0f;
 static opened g_list_matrix, g_list_clip;
 
-/* How many updates whose sphere test only decides what they draw are running, and how much wider
- * the picture is while they do. */
+/* How many updates whose sphere test stands for what the player sees are running (the nanotech
+ * cluster's, Kerwan's air traffic's), and how much wider the picture is while they do. */
 static int g_effects;
 static float g_effect_wider = 1.0f;
 
@@ -154,6 +163,7 @@ static float wider_for(const unsigned char** flag, const char* key) {
 
 static const unsigned char* g_fix_liquids;
 static const unsigned char* g_fix_orbs;
+static const unsigned char* g_fix_traffic;
 
 static void run_list(void (*run)(void)) {
     if (g_lists > 0) {
@@ -232,5 +242,16 @@ void func_L00_002D9EA0(gaddr moby) {
         g_effect_wider = wider_for(&g_fix_orbs, "fix_wide_nanotech_orbs");
     }
     func_L00_002D9EA0__hooked(moby);
+    g_effects--;
+}
+
+/* Kerwan's air traffic's update: a group of ships parks while its sphere test finds none of them in
+ * view; it is run against the picture's sides. A hook point for mods too (rac1.moby.train_car.update),
+ * under this as func_L03_0029ED60__hooked, so the fix holds for a mod's update as well. */
+void func_L03_0029ED60(gaddr moby) {
+    if (g_effects++ == 0) {
+        g_effect_wider = wider_for(&g_fix_traffic, "fix_wide_air_traffic");
+    }
+    func_L03_0029ED60__hooked(moby);
     g_effects--;
 }

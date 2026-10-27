@@ -92,7 +92,8 @@ GAME = "rac1"  # the game of a pack whose manifest does not say
 VERSIONS = tuple(v.key for v in disc.VERSIONS)  # Ratchet & Clank's discs: pal, ntsc (games.VERSIONS for every game)
 LEVELS_FORMAT = FORMAT
 # The oldest levels format whose models a pack's models are drawn with: 2 gave the mobys their
-# metal packets and chrome and glass maps; 3 only added classes (port.py FORMAT).
+# metal packets and chrome and glass maps; 3 only added classes, 4 the clamped textures' samplers (a
+# pack's older models still draw, repeating them) (port.py FORMAT).
 MODELS_SINCE = 2
 FILES = re.compile(r"^(?:patches\.tsv|level_\d{2}/(?:textures/[A-Za-z0-9_.-]+\.png|(?:mobys|ties|shrubs)/"
                    r"[A-Za-z0-9_.-]+\.glb|terrain\.glb|placements\.json|gameplay_(?:" + "|".join(VERSIONS) + r")\.wad"

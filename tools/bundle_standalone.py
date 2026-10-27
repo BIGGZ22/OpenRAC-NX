@@ -43,6 +43,7 @@ side against it (OPENRAC_ROOT=OUT); an installer needs both.
 """
 import argparse
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -50,6 +51,17 @@ from pathlib import Path
 from openrac_common import files, paths, proc
 
 ROOT = paths.repo_root()
+
+
+def levels_format() -> int:
+    """The level export's format (editor/port.py FORMAT), which names the check's stamp."""
+    text = (ROOT / "editor" / "port.py").read_text(encoding="utf-8")
+    return int(re.search(r"^FORMAT = (\d+)$", text, re.MULTILINE).group(1))
+
+
+# What the level check writes once every level is whole, and Play waits for
+# (port/game/common/program/levels.cpp check_levels).
+STAMP = f"verified-{levels_format()}.json"
 
 # What a player's launcher offers for a version, from launcher/actions.json. The rest (the
 # decompilation's builds and checks, building the port, the tools' tests) needs a checkout.
@@ -145,11 +157,11 @@ def player_actions() -> dict:
                     # From the data folder's levels into the data folder's bakes ({data}/probes/<v>).
                     at = args.index("--levels-dir")
                     action["args"] = args[:at + 1] + [levels] + args[at + 2:]
-                    action["needs"] = [{"path": f"{levels}/verified-3.json", "from": need["from"]}
+                    action["needs"] = [{"path": f"{levels}/{STAMP}", "from": need["from"]}
                                        for need in action.get("needs", [])]
                 elif action["id"] == "port-levels-check":
                     action["args"] = point_at(args, levels)
-                    action["makes"] = f"{levels}/verified-3.json"
+                    action["makes"] = f"{levels}/{STAMP}"
                     action["needs"] = [{"path": f"{levels}/level_99/manifest.json", "from": need["from"]}
                                        for need in action.get("needs", [])]
                 elif action["id"] in MODS:
@@ -164,7 +176,7 @@ def player_actions() -> dict:
                         action["cwd"] = "{data}"
                 else:
                     action["args"] = point_at(args, levels)
-                    action["needs"] = [{"path": f"{levels}/verified-3.json", "from": need["from"]}
+                    action["needs"] = [{"path": f"{levels}/{STAMP}", "from": need["from"]}
                                        for need in action.get("needs", [])]
                     # The game is started in the data folder: what it writes beside itself (a
                     # screenshot) has a place there, and the copy has no folder for each version.

@@ -9,9 +9,11 @@
 // table does not hold as a flag starts off.
 
 #include <array>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <optional>
+#include <string>
 #include <string_view>
 
 #include "check.h"
@@ -200,9 +202,42 @@ void test_frame_counter_measurements_have_their_own_client() {
     CHECK(!stats::enabled());
 }
 
+// The frames dump (a capture's .jsonl): one line of JSON a frame, its names escaped.
+void test_the_dump_writes_a_line_a_frame() {
+    const std::string path = "stats_test_dump.jsonl";
+    std::string error;
+    CHECK(stats::open_dump(path, error));
+    stats::begin_frame(stats::FrameKind::Tick, 7);
+    {
+        const stats::Scope part("a\"b");
+        stats::gauge("g\\x", 1.5);
+    }
+    stats::begin_frame(stats::FrameKind::Between, 7);
+    stats::close_dump();
+    std::FILE* in = std::fopen(path.c_str(), "r");
+    CHECK(in != nullptr);
+    std::string text;
+    if (in != nullptr) {
+        char buffer[4096];
+        std::size_t n = 0;
+        while ((n = std::fread(buffer, 1, sizeof buffer, in)) > 0) {
+            text.append(buffer, n);
+        }
+        std::fclose(in);
+    }
+    std::remove(path.c_str());
+    const std::string_view first = std::string_view(text).substr(0, text.find('\n') + 1);
+    CHECK(first.starts_with("{\"frame\":"));
+    CHECK(first.find(",\"tick\":7,\"kind\":\"tick\",\"alpha\":1.000,") != std::string_view::npos);
+    CHECK(first.find("{\"name\":\"a\\\"b\",\"depth\":0,\"cpu_ms\":") != std::string_view::npos);
+    CHECK(first.find("\"gauges\":{\"g\\\\x\":1.5}") != std::string_view::npos);
+    CHECK(first.ends_with("}}\n"));
+}
+
 }  // namespace
 
 int main() {
+    test_the_dump_writes_a_line_a_frame();
     test_frame_counter_measurements_have_their_own_client();
     set_the_variables();
     test_a_set_switch_is_on_whatever_its_value();

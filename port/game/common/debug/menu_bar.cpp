@@ -4,11 +4,14 @@
 // The debug overlay's menu bar (debug/overlay.h): the menus along the window's top on Windows and
 // Linux, whose items press the keys the port already answers or move its settings on.
 
+#include <format>
 #include <imgui.h>
+#include <string>
 
 #include <SDL3/SDL.h>
 
 #include "common/env.h"
+#include "common/slow_cpu.h"
 #include "debug/overlay.h"
 #include "options_menu.h"
 #include "renderer/gl.h"
@@ -76,8 +79,9 @@ void menu_bar() {
         // Each item moves its setting on, its value beside it, and leaves the menu open.
         ImGui::PushItemFlag(ImGuiItemFlags_AutoClosePopups, false);
         using namespace options_menu;
-        for (const int row :
-             {kAspect, kHud, kRenderScale, kMsaa, kAnisotropy, kFrameRate, kVSync}) {
+        for (const int row : {
+                 kAspect, kHud, kRenderScale, kMsaa, kAnisotropy, kSceneryDetail, kFrameRate, kVSync
+             }) {
             const bool shown_for =
                 row != kHud || settings::get().aspect != settings::Aspect::Standard;
             if (ImGui::MenuItem(label(row), value(row).c_str(), false, shown_for)) {
@@ -120,6 +124,32 @@ void menu_bar() {
         ImGui::Separator();
         if (ImGui::MenuItem("Screenshot", "F12")) {
             press(SDLK_F12);
+        }
+        ImGui::Separator();
+        if (ImGui::MenuItem(
+                capture_busy() ? "Stop recording diagnostics" : "Record diagnostics", "Ctrl+F3"
+            )) {
+            toggle_capture(false);
+        }
+        if (ImGui::BeginMenu("Recording length")) {
+            for (const double seconds : {15.0, 30.0, 60.0, 120.0, 0.0}) {
+                const std::string name =
+                    seconds > 0.0 ? std::format("{:.0f} s", seconds) : std::string("Until stopped");
+                if (ImGui::MenuItem(name.c_str(), nullptr, s.capture_seconds == seconds)) {
+                    s.capture_seconds = seconds;
+                }
+            }
+            ImGui::EndMenu();
+        }
+        // A weaker device's processor, for testing how the game copes (common/slow_cpu.h).
+        if (slow_cpu::available() && ImGui::BeginMenu("Simulate slow CPU")) {
+            for (const int factor : {1, 2, 4, 6}) {
+                const std::string name = factor > 1 ? std::format("{}x", factor) : "Off";
+                if (ImGui::MenuItem(name.c_str(), nullptr, slow_cpu::factor() == factor)) {
+                    slow_cpu::set_factor(factor);
+                }
+            }
+            ImGui::EndMenu();
         }
         if (s.developer) {
             ImGui::Separator();

@@ -7,9 +7,9 @@ confirms the GIF table pointer, material count and 80-byte stride.
 import math
 import struct
 
-from formats import FormatError, span, unpack
+from formats import FormatError, gs_clamp, span, unpack
 import games
-from mesh import Mesh, unit_normal
+from mesh import Mesh, texture_key, unit_normal
 
 
 def tie_mesh(data: bytes, remap: bytes, name: str, fmt: games.Format = games.RAC1) -> Mesh:
@@ -31,7 +31,9 @@ def tie_mesh(data: bytes, remap: bytes, name: str, fmt: games.Format = games.RAC
     textures = list(remap[:material_count])
     if 255 in textures:
         raise FormatError("tie material has no texture")
-    span(data, unpack("<I", header, layout.ad_gifs)[0], material_count * 80)
+    ad_gifs = span(data, unpack("<I", header, layout.ad_gifs)[0], material_count * 80)
+    # CLAMP, the fourth of each setup's A+D quadwords (TIE.md, section 6).
+    clamps = [gs_clamp(ad_gifs, i * 80 + 48) for i in range(material_count)]
     packet_count = header[layout.packet_count]
     table = span(data, packet_table, packet_count * 16)
     mesh = Mesh(name, light_slots=[])
@@ -94,7 +96,8 @@ def tie_mesh(data: bytes, remap: bytes, name: str, fmt: games.Format = games.RAC
                 raise FormatError("tie strip vertex count mismatch")
             for i in range(2, len(primitive)):
                 face = tuple(primitive[i - 2:i + 1])
-                mesh.add_face(("tie", textures[material]), face if i % 2 == winding else face[::-1])
+                mesh.add_face(texture_key("tie", textures[material], clamps[material]),
+                              face if i % 2 == winding else face[::-1])
 
         material = check_material(material)
         while writes or strip_index < len(strips):

@@ -627,7 +627,7 @@ bool make_frames() {
         if (g->timestamp_bits) {
             VkQueryPoolCreateInfo queries{VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO};
             queries.queryType = VK_QUERY_TYPE_TIMESTAMP;
-            queries.queryCount = 512;
+            queries.queryCount = kTimestamps;
             if (!check(
                     vkCreateQueryPool(g->device, &queries, nullptr, &f.timestamps), "timestamp pool"
                 )) {

@@ -34,6 +34,7 @@
 
 #include "common/env.h"
 #include "common/log.h"
+#include "common/parallel.h"
 #include "common/stats.h"
 #include "debug_menu.h"
 #include "debug_overlay.h"
@@ -879,6 +880,16 @@ TickMobys pose_mobys(
     std::uint32_t shadow_moby = 0;
     scene::MobyShadowState shadow_state;
     std::vector<Kept::TargetMoby> target_mobys;
+
+    // A moby to pose: its address and joints, and its instance (in target_mobys or in live).
+    struct PoseJob {
+        std::uint32_t address = 0;
+        int joints = 0;
+        bool target = false;
+        std::size_t index = 0;
+    };
+
+    std::vector<PoseJob> pose_jobs;
     // Mobys the game drew into a texture, and the ones it drew that are not in its list. The game
     // renders some mobys into a target the 2D layer then copies onto the screen: the vendor's item
     // and salesman screens (ReRAC interaction.md 9.3), the page menus' widgets (the 3D Ratchet and
@@ -1093,32 +1104,12 @@ TickMobys pose_mobys(
                 static_cast<unsigned>(b[0x34] | b[0x35] << 8)
             );
         }
+        // Its pose, evaluated after the loop with the others' on several threads.
         if (animate && joints > 0) {
-            const auto pose = scene::moby_palette(ram, m.address);
-            if (!pose.empty()) {
-                instance.palette = static_cast<int>(palette.size());
-                for (int j = 0; j < joints; ++j) {
-                    // Columns: the images of the axes, then the translation, which the palette
-                    // has in packed units (the mesh is in packed units / 1024).
-                    scene::LevelScene::JointColumns c{
-                        1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1
-                    };
-                    if (static_cast<std::size_t>(j) < pose.size()) {
-                        const auto& f = pose[static_cast<std::size_t>(j)];
-                        for (int i = 0; i < 3; ++i) {
-                            c[4 * i + 0] = f[i][0];
-                            c[4 * i + 1] = f[i][1];
-                            c[4 * i + 2] = f[i][2];
-                            c[4 * i + 3] = 0.0f;
-                        }
-                        c[12] = f[3][0] / 1024.0f;
-                        c[13] = f[3][1] / 1024.0f;
-                        c[14] = f[3][2] / 1024.0f;
-                        c[15] = 1.0f;
-                    }
-                    palette.push_back(c);
-                }
-            }
+            const bool target = into_texture.contains(m.address);
+            pose_jobs.push_back(
+                {m.address, joints, target, target ? target_mobys.size() : live.size()}
+            );
         }
         if (const auto t = into_texture.find(m.address); t != into_texture.end()) {
             target_mobys.push_back({m.address, instance, *t->second});
@@ -1163,6 +1154,44 @@ TickMobys pose_mobys(
         }
         live.push_back(instance);
         live_addresses.push_back(m.address);
+    }
+    // The poses: each a pure function of the game's memory, evaluated in parallel (the costliest
+    // part of reading the scene, about 1.5 ms a tick for 180 mobys on a phone's fast core), then
+    // given palette slots in the loop's order, as one thread gave them.
+    std::vector<std::vector<assets::rac1::JointMatrix>> poses(pose_jobs.size());
+    parallel::for_each(pose_jobs.size(), [&](std::size_t i) {
+        poses[i] = scene::moby_palette(ram, pose_jobs[i].address);
+    });
+    for (std::size_t k = 0; k < pose_jobs.size(); ++k) {
+        const PoseJob& job = pose_jobs[k];
+        const auto& pose = poses[k];
+        if (pose.empty()) {
+            continue;
+        }
+        scene::Instance& instance = job.target ? target_mobys[job.index].instance : live[job.index];
+        instance.palette = static_cast<int>(palette.size());
+        if (!job.target) {
+            live_joints[job.index] = job.joints;
+        }
+        for (int j = 0; j < job.joints; ++j) {
+            // Columns: the images of the axes, then the translation, which the palette has in
+            // packed units (the mesh is in packed units / 1024).
+            scene::LevelScene::JointColumns c{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+            if (static_cast<std::size_t>(j) < pose.size()) {
+                const auto& f = pose[static_cast<std::size_t>(j)];
+                for (int i = 0; i < 3; ++i) {
+                    c[4 * i + 0] = f[i][0];
+                    c[4 * i + 1] = f[i][1];
+                    c[4 * i + 2] = f[i][2];
+                    c[4 * i + 3] = 0.0f;
+                }
+                c[12] = f[3][0] / 1024.0f;
+                c[13] = f[3][1] / 1024.0f;
+                c[14] = f[3][2] / 1024.0f;
+                c[15] = 1.0f;
+            }
+            palette.push_back(c);
+        }
     }
     return {
         std::move(live),
@@ -1355,7 +1384,8 @@ void choose_repeat_frame(int level, bool debug) {
          level >= 0 && level < 19,
          k.packets.size(),
          k.before_world,
-         g->frame.id() != 0}
+         g->frame.id() != 0,
+         level}
     );
     g->repeat_frame = picture == TickPicture::Repeat;
     g->overdraw = picture == TickPicture::Overdraw;
@@ -1391,6 +1421,7 @@ void keep_effects(
     const std::vector<renderer::UiQuad>* named_quads
 ) {
     Kept& k = *g->kept;
+    effect_textures();  // before the sky's sprites go in front of the effect quads
     sky_sprite_quads(state);
     particle_quads(ram, state);
     k.effects = std::move(g->effects);
@@ -1558,16 +1589,22 @@ void draw_tick_frame() {
 }
 
 // Keeps effects and schedules the committed tick unless pacing leaves it out.
+// `scene`: the measurement of reading the tick (common/stats.h), ended before the frame is drawn.
 bool finish_tick(
     std::span<const std::uint8_t> ram,
     const host::GameState& state,
     const std::vector<renderer::UiQuad>* named_quads,
     int level,
-    bool debug
+    bool debug,
+    std::optional<stats::Scope>& scene
 ) {
     choose_repeat_frame(level, debug);
-    keep_effects(ram, state, named_quads);
+    {
+        const stats::Scope part("effects read");
+        keep_effects(ram, state, named_quads);
+    }
     report_tick(ram, level);
+    scene.reset();
 
     // A late simulation tick may deliberately leave its displayed frame out.
     if (leave_late_frame()) {
@@ -1635,11 +1672,17 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         return false;
     }
 
+    // [debug tools] Reading the tick from the game's memory, in parts: the "scene" row of the
+    // overlay and of a performance capture (debug_overlay::begin times what is left of it).
+    std::optional<stats::Scope> scene(std::in_place, "scene");
+
     // The level program loaded now (-1: the boot program, title and menus), as the port knows it.
     const int level = openrac_game_loaded_overlay();
     use_world(ram, level);
     auto prepared = std::exchange(g->prepared_tick, std::nullopt);
+    std::optional<stats::Scope> part(std::in_place, "game state");
     host::GameState state = captured_state(ram, level, prepared);
+    part.reset();
     // The world is drawn from the camera the game's world renderers used, not from whatever the
     // camera globals hold at the end of the frame (the page menu sets its own camera, at
     // (256, 256, 64) facing +x, to draw its frame objects, as ReRAC notes).
@@ -1665,14 +1708,19 @@ bool frame(std::span<const std::uint8_t> ram, std::uint32_t chain, std::uint32_t
         log_tick_state(ram, state, level, draws);
     }
     log_mobys_near_hero(ram, state);
+    part.emplace("moby poses");
     TickMobys mobys = prepared ? std::move(prepared->mobys)
                                : pose_mobys(ram, state, world_ran, only_own_camera, debug);
     g->moby_cameras.clear();
     stats::gauge("render preparation ms", prepared ? prepared->seconds * 1000.0 : 0.0);
+    part.emplace("lights");
     light_scene(ram, state);
+    part.emplace("tick kept");
     keep_tick(ram, state, draws, std::move(mobys));
+    part.emplace("2d path");
     const std::vector<renderer::UiQuad>* named_quads = keep_2d_path(ram, chain, level, debug);
-    return finish_tick(ram, state, named_quads, level, debug);
+    part.reset();
+    return finish_tick(ram, state, named_quads, level, debug, scene);
 }
 
 }  // namespace openrac::frontend

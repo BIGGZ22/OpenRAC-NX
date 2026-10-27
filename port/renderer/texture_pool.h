@@ -118,6 +118,15 @@ public:
     // the glyphs' own opacity (0..1) held up to that edge; made once per content of the source.
     TextureHandle distance_field(TextureHandle source);
 
+    // The distance fields made from scratch so far: a field asked for again soon after it was
+    // dropped is taken from those resting (kRestingFields), not made again.
+    std::size_t fields_made() const { return m_fields_made; }
+
+    // The dropped fields whose texels are kept, the latest: text that comes back after a pause
+    // (a counter shown again) gets its field without the frame's hitch of making it, about 9 ms on
+    // a fast phone and four times that on a slow one. A 256 x 128 page's field is 2 MB.
+    static constexpr std::size_t kRestingFields = 4;
+
     const Rgba8Image& image(TextureHandle texture) const;
     AlphaScale alpha_scale(TextureHandle texture) const;
     const std::string& name(TextureHandle texture) const;
@@ -197,6 +206,9 @@ private:
     // The upload a texture or CLUT at `block` is in: the one there, else the latest whose pages
     // reach over it (`offset` says how far into it, in blocks). Null when there is none.
     const Stored* upload_at(std::uint32_t block, std::uint32_t& offset) const;
+    // Whether `upload` is the transfer already stored at its base pointer, byte for byte: then
+    // only its order is renewed (and a texture placed there forgotten), as a new upload's would be.
+    bool repeat_upload(const ImageUpload& upload);
     // The CLUT at tex0.cbp as it is in memory now; false when nothing was put there.
     bool clut_in_memory(const gs::Tex0& tex0, Clut& out) const;
 
@@ -207,6 +219,7 @@ private:
         std::uint64_t field_hash = 0;  // its key in m_distance_fields
         bool mipmaps = false;
         bool linear = false;
+        std::uint8_t wrap = 0;  // the GL texture's clamp: bit 0 across, bit 1 down (0: repeats)
         Rgba8Image image;
         AlphaScale scale = AlphaScale::Gs;
         std::string name;
@@ -219,10 +232,20 @@ private:
     // Creates entry `e`'s GL texture and uploads its texels: the one place a texture is made,
     // for gl_texture() at a first use and for prepare() at a level's load.
     void create_gl(Entry& e);
+    void set_wrap(Entry& e, bool repeat_s, bool repeat_t);
     TextureHandle convert_upload(const gs::Tex0& tex0, const gs::Texa& texa);
     std::vector<std::uint8_t> texture_raster(const Stored& stored, const gs::Tex0& tex0) const;
-    std::vector<std::uint32_t> palette(
-        const gs::Tex0& tex0, const gs::Texa& texa, std::uint64_t& hash
+    // The CLUT an indexed texture reads: the one loaded from its block, else memory's (into `now`).
+    // Null when there is none (drawn transparent).
+    const Clut* palette_clut(const gs::Tex0& tex0, Clut& now);
+    // Adds a distance field of `source` (whose content hashes to `hash`, sampled as `sample`) and
+    // remembers it by both.
+    TextureHandle add_field(
+        Rgba8Image image,
+        std::string name,
+        std::uint64_t hash,
+        std::uint64_t sample,
+        TextureHandle source
     );
 
     std::unique_ptr<UpscaledTextureColours> m_upscaled_texture_colours;
@@ -240,9 +263,19 @@ private:
     std::unordered_map<std::uint64_t, TextureHandle> m_distance_fields;  // by the source's content
     // The field last given for a handle, with a sample of its texels (distance_field).
     std::unordered_map<TextureHandle, std::pair<std::uint64_t, TextureHandle>> m_field_of_handle;
+
+    // Dropped fields, the oldest first (kRestingFields).
+    struct RestingField {
+        std::uint64_t hash = 0;  // the source's content, as m_distance_fields keys it
+        Rgba8Image image;
+        std::string name;
+    };
+
+    std::vector<RestingField> m_resting_fields;
+    std::size_t m_fields_made = 0;
 };
 
-// FNV-1a, for the cache keys.
+// A 64-bit hash of the bytes, for the cache keys.
 std::uint64_t hash_bytes(const std::uint8_t* data, std::size_t size);
 
 }  // namespace openrac::renderer

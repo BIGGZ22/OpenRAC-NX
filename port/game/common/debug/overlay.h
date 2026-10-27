@@ -239,6 +239,9 @@ struct State {
     double cpu_seconds = 0.0;  // the process's processor time at the last measure, in seconds
     double cpu_wall = 0.0;     // the frame's start then (common/stats.h's clock)
     double cpu_load = 0.0;     // the load between the last two: 1 is one core busy
+
+    // The performance capture's length, as the drawer and the menu set it (0: until stopped).
+    double capture_seconds = 30.0;
 };
 
 // The overlay's state: what the last tick gave it and what its panels and windows were set to.
@@ -423,6 +426,34 @@ void change_setting(int row, int by);
 // where the level has no compatible probe data. A change is saved and marked for the window to
 // apply. Defined in debug/controls.cpp.
 void enhanced_controls();
+
+// ---- The performance capture (common/perf_capture.h) ----
+
+// Starts a capture of s.capture_seconds, or stops the one running, or calls off the one about to
+// start. `after_drawer`: it starts three seconds after the drawer has gone. Defined in
+// debug/capture.cpp.
+void toggle_capture(bool after_drawer);
+
+// The capture's length as the drawer shows it ("30 s", "Until stopped"), and moved on by `by`.
+const char* capture_length_name();
+void step_capture_length(int by);
+
+// The simulated slow processor's factor as the drawer and the menu show it ("Off", "4x"), and moved
+// on by `by` (common/slow_cpu.h; only where slow_cpu::available()).
+std::string slow_cpu_name();
+void step_slow_cpu(int by);
+
+// Says whether a capture runs or is about to start (or one is due by script), so that the
+// overlay is drawn for its badge; and whether one is counting down to its start.
+bool capture_busy();
+bool capture_pending();
+
+// The status badge's line for the capture ("REC 12 / 30 s"); empty when none runs.
+std::string capture_badge();
+
+// Once a picture, before the overlay is drawn: starts a capture whose time has come, ends one when
+// the drawer opens, and writes, copies and announces a finished one. Defined in debug/capture.cpp.
+void capture_frame(const Shown& shown);
 
 // ---- What is drawn over the game's picture ----
 

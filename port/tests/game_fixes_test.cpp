@@ -19,12 +19,12 @@
 #include "openrac/game_host.h"
 #include "settings.h"
 
-#define CHECK(c)                                                    \
-    do {                                                            \
-        if (!(c)) {                                                 \
-            std::fprintf(stderr, "%d: %s\n", __LINE__, #c);         \
-            std::exit(1);                                           \
-        }                                                           \
+#define CHECK(c)                                                                                   \
+    do {                                                                                           \
+        if (!(c)) {                                                                                \
+            std::fprintf(stderr, "%d: %s\n", __LINE__, #c);                                        \
+            std::exit(1);                                                                          \
+        }                                                                                          \
     } while (0)
 
 namespace fs = std::filesystem;
@@ -46,9 +46,13 @@ void write(const fs::path& path, const std::string& text) {
 }  // namespace
 
 int main() {
-    // The table: rac1's three wide-screen fixes, all on by default (on is the port's fix).
-    CHECK(fixes::count() >= 3);
-    for (const char* key : {"fix_wide_moby_effects", "fix_wide_nanotech_orbs", "fix_wide_liquids"}) {
+    // The table: rac1's four wide-screen fixes, all on by default (on is the port's fix).
+    CHECK(fixes::count() >= 4);
+    for (const char* key :
+         {"fix_wide_moby_effects",
+          "fix_wide_nanotech_orbs",
+          "fix_wide_liquids",
+          "fix_wide_air_traffic"}) {
         const int i = fixes::find(key);
         CHECK(i >= 0);
         CHECK(fixes::fix(i).on);
@@ -67,7 +71,9 @@ int main() {
         }
         const std::string text = read(entry.path());
         for (const std::regex* re : {&call, &helper}) {
-            for (auto it = std::sregex_iterator(text.begin(), text.end(), *re); it != std::sregex_iterator(); ++it) {
+            for (auto it = std::sregex_iterator(text.begin(), text.end(), *re);
+                 it != std::sregex_iterator();
+                 ++it) {
                 asked.insert((*it)[1].str());
             }
         }
@@ -75,9 +81,14 @@ int main() {
     CHECK(asked.count("fix_wide_moby_effects") == 1);
     CHECK(asked.count("fix_wide_liquids") == 1);
     CHECK(asked.count("fix_wide_nanotech_orbs") == 1);
+    CHECK(asked.count("fix_wide_air_traffic") == 1);
     for (const std::string& key : asked) {
         if (fixes::find(key.c_str()) < 0) {
-            std::fprintf(stderr, "the host C asks for %s, which differences.json does not have\n", key.c_str());
+            std::fprintf(
+                stderr,
+                "the host C asks for %s, which differences.json does not have\n",
+                key.c_str()
+            );
             return 1;
         }
     }

@@ -271,6 +271,8 @@
 #define func_L02_00250720 game_FUN_L02_0024f748
 #define func_L02_00250720__game game_FUN_L02_0024f748__game
 #define func_L03_00292AC0 game_FUN_L03_00291918
+#define func_L03_0029ED60 game_FUN_L03_0029dba8
+#define func_L03_0029ED60__hooked game_FUN_L03_0029dba8__hooked
 #define func_L03_002DDD58 func_L03_002DC990
 #define func_L07_002F9418 func_L07_002F8038
 #define func_L07_0030E800 func_L07_0030D420

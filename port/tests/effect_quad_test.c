@@ -30,11 +30,14 @@ int main(void) {
     GREF(uint32_t,0x28D148)=0x346000;
     func_L00_001FD1D8(0x1000,0,0);
     CHECK(submitted==1 && !memcmp(&input,&captured,0x90));
-    CHECK(captured.pixels==0x346000 && captured.clut==0x345000);
+    CHECK(captured.pixels == 0x346000 && captured.clut == 0x345000 && captured.source == 1);
     /* The texture is cached after its upload frame. */
     GREF(int,0x25F558)=0;
     func_L00_001FD1D8(0x1000,0x2000,0);
-    CHECK(submitted==2 && captured.pixels==0x346000 && captured.clut==0x345000);
+    CHECK(
+        submitted == 2 && captured.pixels == 0x346000 && captured.clut == 0x345000
+        && captured.source == 2
+    );
     for(int k=0;k<4;++k) {
         CHECK(captured.corner[k][0]==2*input.corner[k][0]+7*input.corner[k][3]);
         CHECK(captured.corner[k][1]==3*input.corner[k][1]+11*input.corner[k][3]);
@@ -47,6 +50,6 @@ int main(void) {
     CHECK(submitted==3 && !memcmp(&input,&captured,0x90));
     input.tex0=0x5678; memcpy(ram+0x1000,&input,0x90);
     func_L00_001FD1D8(0x1000,0,0);
-    CHECK(submitted==4 && captured.pixels==0 && captured.clut==0);
+    CHECK(submitted == 4 && captured.pixels == 0 && captured.clut == 0 && captured.source == 0);
     puts("effect quad: OK"); return 0;
 }

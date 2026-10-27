@@ -103,6 +103,11 @@ struct Settings {
     float temporal_sharpness = 0.2f;         // AMD RCAS strength in [0, 1].
     renderer::TextureFilter texture_filter = renderer::TextureFilter::EdgeAware;
     int anisotropy = 0;  // 0: mode default; otherwise 1 (off), 2, 4, 8, 16
+    // Scenery detail: false draws every tie and shrub, however far (the port's default); true,
+    // "Original", leaves out the ties and shrubs beyond the game's draw distances (a low-end option,
+    // scene::LevelScene::choose_scenery; levels exported before it have no shrub limits). Both draw
+    // each one at its most detailed LOD.
+    bool original_lod = false;
 
     int anisotropy_samples(bool enhanced) const {
         return anisotropy ? anisotropy : enhanced ? 4 : 1;

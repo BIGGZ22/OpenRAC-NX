@@ -126,6 +126,10 @@ int material_index(const cgltf_material* source, const fs::path& base, LevelData
             if (texture != nullptr && texture->image != nullptr && texture->image->uri != nullptr) {
                 m.image = image_index(base / texture->image->uri, level);
             }
+            if (texture != nullptr && texture->sampler != nullptr) {
+                m.clamp_s = texture->sampler->wrap_s == cgltf_wrap_mode_clamp_to_edge;
+                m.clamp_t = texture->sampler->wrap_t == cgltf_wrap_mode_clamp_to_edge;
+            }
         }
     }
     // A texture with texels below full alpha is drawn by the GS as the cutout materials are (the
@@ -145,8 +149,8 @@ int material_index(const cgltf_material* source, const fs::path& base, LevelData
     for (std::size_t i = 0; i < level.materials.size(); ++i) {
         const Material& o = level.materials[i];
         if (o.image == m.image && o.cutout == m.cutout && o.blend == m.blend && o.metal == m.metal
-            && o.colour == m.colour && o.emission == m.emission
-            && o.emission_image == m.emission_image) {
+            && o.clamp_s == m.clamp_s && o.clamp_t == m.clamp_t && o.colour == m.colour
+            && o.emission == m.emission && o.emission_image == m.emission_image) {
             return static_cast<int>(i);
         }
     }
@@ -206,6 +210,25 @@ void grow(Vec3& low, Vec3& high, const Vec3& p) {
         low[i] = std::min(low[i], p[i]);
         high[i] = std::max(high[i], p[i]);
     }
+}
+
+// A tie's or shrub's draw distance as Ratchet & Clank's loader and renderer leave it
+// (LevelData::draw_distances): `stored` is the placement's, `fade` the shrub class's billboard fade
+// distance (-1 none). A placement without one is drawn as far as any.
+float game_draw_distance(Layer layer, const json::Value& stored, int fade) {
+    constexpr float kTieCap = 720.0f;    // TieProc's (draw_data.h kRac1Constants)
+    constexpr float kShrubCap = 500.0f;  // ShrubProc's
+    constexpr float kShrubMin = 16.0f;   // the loader's minimum
+    constexpr float kFadeBand = 24.0f;   // a billboard class's: its fade distance + 24
+    if (!stored.is_number()) {
+        return layer == Layer::Ties ? kTieCap : kShrubCap;
+    }
+    const auto d = static_cast<float>(stored.number());
+    if (layer == Layer::Ties) {
+        return std::min(d, kTieCap);
+    }
+    const float raised = std::max(d, fade >= 0 ? static_cast<float>(fade) + kFadeBand : kShrubMin);
+    return std::min(std::max(raised, kShrubMin), kShrubCap);
 }
 
 }  // namespace
@@ -430,6 +453,15 @@ std::vector<renderer::Rgba8Image> load_sky_textures(const fs::path& dir) {
     return out;
 }
 
+Vec3 bounds_centre(const Model& model, const Mat4& matrix) {
+    return renderer::transform_point(
+        matrix,
+        {(model.min[0] + model.max[0]) * 0.5f,
+         (model.min[1] + model.max[1]) * 0.5f,
+         (model.min[2] + model.max[2]) * 0.5f}
+    );
+}
+
 bool load_level(const fs::path& dir, LevelData& out, std::string& error, const fs::path& edited) {
     out = LevelData{};
     out.dir = dir;
@@ -550,6 +582,11 @@ bool load_level(const fs::path& dir, LevelData& out, std::string& error, const f
     std::map<int, ClassModel> ties;
     std::map<int, ClassModel> shrubs;
     std::map<int, ClassModel> mobys;
+    // The shrub classes' billboard fade distances ("billboard_fade", -1 none), when every class
+    // has one; and the game's caps, known for Ratchet & Clank's (renderer/world/draw_data.h).
+    std::map<int, int> billboard_fades;
+    bool fades_known = true;
+    const bool known_caps = manifest["game"].string() == "rac1";
     std::optional<std::uint32_t> box;
     const json::Value& classes = manifest["classes"];
     const std::pair<const char*, std::map<int, ClassModel>*> families[] =
@@ -558,6 +595,10 @@ bool load_level(const fs::path& dir, LevelData& out, std::string& error, const f
         for (const auto& [key, cls] : classes[family].members()) {
             const int id = std::atoi(key.c_str());
             const auto scale = static_cast<float>(cls["scale"].number(1.0));
+            if (table == &shrubs) {
+                fades_known = fades_known && cls["billboard_fade"].is_number();
+                billboard_fades[id] = static_cast<int>(cls["billboard_fade"].number(-1));
+            }
             if (cls["mesh"].is_string()) {
                 auto model = model_at(cls["mesh"]);
                 if (!model) {
@@ -670,6 +711,11 @@ bool load_level(const fs::path& dir, LevelData& out, std::string& error, const f
                 }
             }
             out.instances[static_cast<std::size_t>(layer)].push_back(instance);
+            if (known_caps && (layer == Layer::Ties || (layer == Layer::Shrubs && fades_known))) {
+                out.draw_distances[static_cast<std::size_t>(layer)].push_back(
+                    game_draw_distance(layer, p["draw_distance"], billboard_fades[id])
+                );
+            }
         }
     }
 

@@ -17,29 +17,6 @@ namespace openrac::ps2 {
 
 namespace {
 
-int exponent(u32 x) {
-    return static_cast<int>((x >> 23) & 0xff);
-}
-
-u64 mantissa(u32 x) {
-    return (x & 0x7f'ffff) | 0x80'0000;
-}
-
-// Packs sign * mag * 2^lsb_exp (mag > 0; lsb_exp is the biased exponent of
-// mag's bit 23), truncating to 24 significant bits.
-u32 pack(u32 sign, u64 mag, int lsb_exp) {
-    const int k = 63 - std::countl_zero(mag);
-    const int e = lsb_exp + (k - 23);
-    const u64 m = k >= 23 ? mag >> (k - 23) : mag << (23 - k);
-    if (e > 255) {
-        return sign | kMax;
-    }
-    if (e < 1) {
-        return sign;
-    }
-    return sign | static_cast<u32>(e) << 23 | (static_cast<u32>(m) & 0x7f'ffff);
-}
-
 u64 isqrt(u64 n) {
     auto r = static_cast<u64>(std::sqrt(static_cast<double>(n)));
     while (r * r > n) {
@@ -55,49 +32,11 @@ s64 order_key(u32 x) {
     return (x & kSign) != 0 ? -static_cast<s64>(x & kMax) : static_cast<s64>(x);
 }
 
+using detail::exponent;
+using detail::mantissa;
+using detail::pack;
+
 }  // namespace
-
-u32 mul(u32 a, u32 b) {
-    const u32 sign = (a ^ b) & kSign;
-    if (exponent(a) == 0 || exponent(b) == 0) {
-        return sign;
-    }
-    // The 48-bit product has its binary point at bit 46; bit 23 of (p >> 23)
-    // is worth 2^(ea + eb - 254).
-    return pack(sign, (mantissa(a) * mantissa(b)) >> 23, exponent(a) + exponent(b) - 127);
-}
-
-u32 add(u32 a, u32 b) {
-    const int ea = exponent(a);
-    const int eb = exponent(b);
-    if (ea == 0 || eb == 0) {
-        if (ea != 0) {
-            return a;
-        }
-        if (eb != 0) {
-            return b;
-        }
-        return (a & b & kSign) != 0 ? kSign : 0;
-    }
-    const u32 hi = ea >= eb ? a : b;
-    u32 lo = ea >= eb ? b : a;
-    const int d = exponent(hi) - exponent(lo);
-    if (d >= 25) {
-        return hi;
-    }
-    if (d >= 1) {
-        lo &= ~u32{0} << (d - 1);
-    }
-    auto signed_value = [](u32 x, u64 m) {
-        return (x & kSign) != 0 ? -static_cast<s64>(m) : static_cast<s64>(m);
-    };
-    const s64 sum = signed_value(hi, mantissa(hi) << d) + signed_value(lo, mantissa(lo));
-    if (sum == 0) {
-        return 0;
-    }
-    const u64 magnitude = sum < 0 ? static_cast<u64>(-sum) : static_cast<u64>(sum);
-    return pack(sum < 0 ? kSign : 0, magnitude, exponent(lo));
-}
 
 u32 div(u32 a, u32 b) {
     const u32 sign = (a ^ b) & kSign;

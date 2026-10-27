@@ -32,6 +32,19 @@ def unpack(fmt: str, data: bytes, offset: int = 0) -> tuple:
     return struct.unpack(fmt, span(data, offset, struct.calcsize(fmt)))
 
 
+CLAMP_1 = 0x08  # the GS register an A+D quadword's address byte names
+
+
+def gs_clamp(data: bytes, offset: int) -> int:
+    """The axes an A+D CLAMP_1 quadword at offset clamps: bit 0 S, bit 1 T, where its WMS or WMT
+    is 1 (CLAMP; 0 repeats, the region modes are drawn repeated). 0 when the quadword is another
+    register's."""
+    lo, hi, address = unpack("<iiB", data, offset)
+    if address != CLAMP_1:
+        return 0
+    return int(lo & 3 == 1) | int(hi & 3 == 1) << 1
+
+
 def wad(data: bytes, limit: int = 64 << 20) -> bytes:
     """Decompress a WAD stream the way func_0020C468 does.
 

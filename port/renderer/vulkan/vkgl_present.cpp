@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -326,6 +327,7 @@ void publish_counters() {
     // Nobody is measuring: the next frame that is measured shows only its own part.
     if (!stats::enabled()) {
         g->published = now;
+        g->where.clear();
         return;
     }
 
@@ -334,6 +336,12 @@ void publish_counters() {
     // The counts and bytes, each as its row of the table says.
     for (const Gauge& gauge : kGauges) {
         stats::gauge(gauge.name, gauge_value(gauge, now, before));
+    }
+
+    // Where the frame's passes were split and the whole picture copied (count_where).
+    for (auto& [event, count] : g->where) {
+        stats::gauge(event, count);
+        count = 0.0;
     }
 
     stats::gauge(
@@ -513,10 +521,12 @@ bool present_to_screen() {
     note_finished_presents(0);
     // The wait for a free image of the swapchain, measured: the game thread blocks here.
     const Clock::time_point acquiring = Clock::now();
+    std::optional<stats::Scope> step(std::in_place, "vulkan acquire");
     VkResult r = vkAcquireNextImageKHR(
         g->device, g->swapchain, UINT64_MAX, f.acquired, VK_NULL_HANDLE, &index
     );
     g->acquire_wait_s = seconds_since(acquiring);
+    step.reset();
     if (r == VK_ERROR_OUT_OF_DATE_KHR) {
         if (!make_swapchain()) {
             return false;
@@ -531,7 +541,7 @@ bool present_to_screen() {
     if (r != VK_SUCCESS && r != VK_SUBOPTIMAL_KHR) {
         return false;
     }
-    end_rendering();
+    end_rendering(PassEnd::Present);
     const VkImage screen = g->swapchain_images[index];
     const bool composed = composable();
 
@@ -557,7 +567,11 @@ bool present_to_screen() {
     swapchain_barrier(
         cmd, screen, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
     );
+    // The frame's GPU-driven work recorded and everything handed to the queue; then the present,
+    // which a driver may hold until the display or the GPU has room for another picture.
+    step.emplace("vulkan submit");
     submit(f.acquired, g->rendered[index], false, own);
+    step.emplace("vulkan queue present");
     VkPresentInfoKHR info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     info.waitSemaphoreCount = 1;
     info.pWaitSemaphores = &g->rendered[index];

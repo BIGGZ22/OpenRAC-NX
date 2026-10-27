@@ -62,6 +62,7 @@ before and after, and how its frames are shown to be the same.
 | `vk-persistent-descriptors` | on | none (exact) | On the path without bindless materials, a descriptor set binding only textures, samplers and the frame's ring is kept across frames instead of made each frame ([R-14](#r-14-descriptor-sets-kept-across-frames)). |
 | `vk-last-pipeline` | on | none (exact) | Each program keeps its last graphics pipeline and the whole key it was found by; a draw with the same key takes it back before hashing the key or looking it up ([vk-last-pipeline](#vk-last-pipeline-a-programs-last-pipeline)). |
 | `fsr-motion-batch` | on | none (exact) | Enhanced Vulkan with FSR only: the object-motion pass instances consecutive objects of one geometry and material from one pose buffer instead of one draw per object ([fsr-motion-batch](#fsr-motion-batch-object-motion-in-batches)). |
+| `moby-glow-skip` | on | none (exact) | The mobys' two glow draws leave out the triangles with no glow packet vertex, whose every fragment they would discard ([moby-glow-skip](#moby-glow-skip-glow-draws-without-the-faces-they-discard)). |
 
 Its tests are `render_opt` (the table, and the parsing of the variable: a name, a list, `all`, an
 unknown name kept apart; it runs in the headless preset too) and `render_opt_environment` (the
@@ -106,6 +107,8 @@ it stands. The last column names the package of phase R whose result the counter
 | `vk_submits` | frame | `vkQueueSubmit`: one per frame, and one per read-back (`glReadPixels`, `glFinish`) | `vkgl_commands.cpp` | R-08 |
 | `vk_frames_presented` | total | Frames ended by `present()` | `vkgl_present.cpp` | |
 | `vk_fullscreen_copies` | frame | Copies, blits and resolves whose destination is the default framebuffer's size or the screen's | each copy | R-07 |
+| `vk_pass_end <why> in <section>` | frame | Render passes ended before the frame's end, by what ended them (`target`, `copy`, `sample`, `compute`, `barrier`, `submit`, `present`, `other`: `PassEnd`) and the stats section open then; on a tiled GPU each one stores the attachments and the next pass loads them | `end_rendering` and its callers | R-06 |
+| `vk_fullscreen_copy in <section>` | frame | The full-screen copies above, by the section open then | `count_copy` | R-07 |
 | `vk_ring_bytes` | frame | Bytes taken from the frame's upload ring (vertices, indices, uniforms, texels); the older `vk_ring_kb` is the same in KiB | `vkgl_commands.cpp` | R-05, R-15 |
 | `vk_texture_creations` | frame | Images made: textures, render targets, the default framebuffer, mip chains made again | `vkgl_resources.cpp` | R-13 |
 | `vk_texture_upload_bytes` | frame | Texel bytes staged for upload into images | `vkgl_resources.cpp` | R-13 |
@@ -1586,3 +1589,24 @@ material run (`scene::MotionSubmission::Batched`). Off, it draws each object on 
 `OPENRAC_FSR_MOTION_BATCH_OFF` before it joined the registry. The synthetic scene does not run
 FSR, so `render_equivalence_vulkan` compares it only as a switch that changes nothing there;
 `fsr3_motion` (enhanced preset) draws the two submissions and compares their motion targets.
+
+## moby-glow-skip: glow draws without the faces they discard
+
+From the performance captures of an Ayn Odin 3. The mobys' glow passes (`kMobyGlow`, drawn
+before and after the translucent ones) draw every primitive of every moby again, and
+`mesh.frag` discards each fragment whose vertex is not a glow packet's (`v_glow != glow_pass`):
+on most models that is all of them, so the passes cost their vertex work and draw calls for
+nothing. `LevelScene::upload` marks each primitive that has at least one glow packet vertex
+(`light_slot < -1.5`, `Primitive::glow_vertices`, kept when its indices run past the level's),
+and `draw_layer` leaves the others out of the glow passes. Of a primitive it keeps, only the
+triangles with a glow vertex are drawn there: `upload` copies them, in their order, after the
+level's indices (`Primitive::glow_first`, `glow_count`; none when every triangle glows), since a
+capture of Eudora still drew 144k triangles a frame in the glow passes against 150k in the opaque
+one. A PVS-compacted index buffer draws its primitives whole. Off, every primitive is drawn there
+whole, as before.
+
+**Equivalence.** Exact by construction: a primitive or triangle left out has no vertex the
+fragment shader would keep in a glow pass (`v_glow` is flat, so a triangle takes its provoking
+vertex's, whichever vertex that is), so no fragment, depth or blend write changes; the triangles
+kept are drawn in their order. The draw calls and
+triangles of the glow passes fall (`draw_calls`, `triangles` of the `mobys` layer).

@@ -109,6 +109,57 @@ void test_outside_a_level_ticks_are_drawn() {
     CHECK(pictures.choose(first) == TickPicture::Draw);
 }
 
+// A save loaded in play: the loading picture's ticks run in the boot program, and the next level's
+// ticks keep the last level's camera in the game's memory. Its ticks without a world (a scene's
+// first) start from a cleared frame, not over the loading picture, until it draws its world.
+void test_another_level_forgets_the_picture() {
+    TickPictures pictures;
+    TickFacts play = level_tick(kAllLayers, kPlayBytes, kPlayBeforeWorld);
+    play.level = 4;
+    CHECK(pictures.choose(play) == TickPicture::Draw);
+
+    TickFacts loading = level_tick(0, kFadeBytes, kFadeBytes);
+    loading.in_level = false;
+    loading.level = -1;
+    CHECK(pictures.choose(loading) == TickPicture::Draw);
+
+    TickFacts scene = level_tick(0, kFadeBytes, kFadeBytes);
+    scene.level = 3;
+    CHECK(pictures.choose(scene) == TickPicture::Draw);
+    CHECK(pictures.choose(scene) == TickPicture::Draw);
+
+    TickFacts world = level_tick(kAllLayers, kPlayBytes, kPlayBeforeWorld);
+    world.level = 3;
+    CHECK(pictures.choose(world) == TickPicture::Draw);
+    CHECK(pictures.choose(scene) == TickPicture::Overdraw);
+}
+
+// A save loaded from the in-game Load Game page: its story card's ticks (no world, a short list)
+// come while the old level and its camera are still in memory. The picture shown is the page
+// menu's, not a world, so they start from a cleared frame (as from the title), not over the menu.
+void test_story_card_after_a_page_menu_is_drawn() {
+    TickPictures pictures;
+    TickFacts play = level_tick(kAllLayers, kPlayBytes, kPlayBeforeWorld);
+    play.level = 4;
+    CHECK(pictures.choose(play) == TickPicture::Draw);
+
+    TickFacts menu = level_tick(0, kMenuSnapshotBytes + 1, kMenuSnapshotBytes + 1);
+    menu.level = 4;
+    for (int tick = 0; tick < kMostMenuGapTicks; ++tick) {
+        CHECK(pictures.choose(menu) == TickPicture::Repeat);
+    }
+    CHECK(pictures.choose(menu) == TickPicture::Draw);
+
+    TickFacts card = level_tick(0, kFadeBytes, kFadeBytes);
+    card.level = 4;
+    CHECK(pictures.choose(card) == TickPicture::Draw);
+    CHECK(pictures.choose(card) == TickPicture::Draw);
+
+    // Once the level's world is drawn again, its ticks without one go over it as before.
+    CHECK(pictures.choose(play) == TickPicture::Draw);
+    CHECK(pictures.choose(card) == TickPicture::Overdraw);
+}
+
 }  // namespace
 
 int main() {
@@ -116,5 +167,7 @@ int main() {
     test_take_off_world_without_its_list_stands();
     test_menu_gap_stands_a_few_ticks();
     test_outside_a_level_ticks_are_drawn();
+    test_another_level_forgets_the_picture();
+    test_story_card_after_a_page_menu_is_drawn();
     return openrac::test::result();
 }

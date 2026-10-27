@@ -14,7 +14,7 @@ from mesh import Mesh
 FLOAT, SHORT, UNSIGNED_BYTE, UNSIGNED_INT = 5126, 5122, 5121, 5125
 ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER = 34962, 34963
 KINDS = {1: "SCALAR", 2: "VEC2", 3: "VEC3", 4: "VEC4", 16: "MAT4"}
-REPEAT, LINEAR, LINEAR_MIPMAP_LINEAR = 10497, 9729, 9987
+REPEAT, CLAMP_TO_EDGE, LINEAR, LINEAR_MIPMAP_LINEAR = 10497, 33071, 9729, 9987
 
 
 def face_normal(a, b, c) -> tuple[float, float, float]:
@@ -59,12 +59,24 @@ class Gltf:
         self.doc["accessors"].append(accessor)
         return len(self.doc["accessors"]) - 1
 
-    def material(self, name: str, uri: str, *, cutout: bool = False) -> int:
-        """A double-sided diffuse material; cutout uses glTF's MASK mode."""
-        key = (name, uri, cutout)
+    def sampler(self, clamp: int) -> int:
+        """The sampler that clamps the axes of clamp (bit 0 S, bit 1 T) and repeats the others;
+        sampler 0 repeats both."""
+        wrap = {"wrapS": CLAMP_TO_EDGE if clamp & 1 else REPEAT, "wrapT": CLAMP_TO_EDGE if clamp & 2 else REPEAT}
+        samplers = self.doc["samplers"]
+        for i, sampler in enumerate(samplers):
+            if sampler["wrapS"] == wrap["wrapS"] and sampler["wrapT"] == wrap["wrapT"]:
+                return i
+        samplers.append({**samplers[0], **wrap})
+        return len(samplers) - 1
+
+    def material(self, name: str, uri: str, *, cutout: bool = False, clamp: int = 0) -> int:
+        """A double-sided diffuse material; cutout uses glTF's MASK mode, clamp the axes the
+        texture is clamped on (bit 0 S, bit 1 T), as the game's GS CLAMP setting."""
+        key = (name, uri, cutout, clamp)
         if key not in self.materials:
             self.doc["images"].append({"uri": uri})
-            self.doc["textures"].append({"source": len(self.doc["images"]) - 1, "sampler": 0})
+            self.doc["textures"].append({"source": len(self.doc["images"]) - 1, "sampler": self.sampler(clamp)})
             pbr = {"baseColorTexture": {"index": len(self.doc["textures"]) - 1},
                    "metallicFactor": 0, "roughnessFactor": 1}
             material = {"name": name, "doubleSided": True, "pbrMetallicRoughness": pbr}

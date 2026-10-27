@@ -7,9 +7,12 @@ publish.workspace = true
 
 [lib]
 name = "openrac_launcher_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+# cdylib for Android (the APK loads the launcher as a library), rlib for the desktop program
+# (main.rs). No staticlib: that is iOS's, and a desktop build linked one too.
+crate-type = ["cdylib", "rlib"]
 
 [build-dependencies]
+serde_json.workspace = true
 tauri-build = { version = "2", features = [] }
 
 [dependencies]

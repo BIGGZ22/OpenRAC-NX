@@ -88,6 +88,9 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
     {Opt::FsrMotionBatch, "fsr-motion-batch",
      "FSR's object motion drawn in batches from one pose buffer, not one draw per object",
      true, Tolerance{}},
+    {Opt::MobyGlowSkip, "moby-glow-skip",
+     "the mobys' two glow draws leave out primitives with no glow packet vertex, all discarded",
+     true, Tolerance{}},
 }};
 // clang-format on
 

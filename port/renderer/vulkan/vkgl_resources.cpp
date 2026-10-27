@@ -908,7 +908,7 @@ bool copy_buffer_to_texture(unsigned buffer, unsigned texture, int width, int he
         || b->size < bytes) {
         return false;
     }
-    end_rendering();
+    end_rendering(PassEnd::Copy);
     const BufferRef src = resolve(*b);
     if (!src.buffer || src.size < bytes) {
         return false;

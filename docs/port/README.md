@@ -45,6 +45,7 @@ The code is in [port/](../../port/README.md).
 | [RENDERER.md](RENDERER.md) | How the game builds a frame, everything it draws, the VU programs, the graphics chip's conventions |
 | [RAC1_GPU_DRIVEN.md](RAC1_GPU_DRIVEN.md) | Vulkan visibility, compaction, indirect batching and resource lifetime |
 | [RENDER_PERF.md](RENDER_PERF.md) | What drawing costs: the render counters and gauges, the timed passes, the optimisation registry, and each render package's numbers |
+| [PERFORMANCE_CAPTURE.md](PERFORMANCE_CAPTURE.md) | Recording a stretch of play on a desktop or a phone into one short report to paste: frame times, a verdict, CPU and GPU time per pass, the device's clocks and heat |
 | [RAC1_PROBE_GI.md](../../port/enhanced/docs/RAC1_PROBE_GI.md) | Baked probe GI, sparse and dense volumes, sampling and validation |
 | [RAC1_HERO_SHADOW.md](../../port/enhanced/docs/RAC1_HERO_SHADOW.md) | Ratchet's shadow map: directional on the ground, downward in the air |
 | [RAC1_SUN_SHADOW.md](../../port/enhanced/docs/RAC1_SUN_SHADOW.md) | Four sun cascades, a 10% directional-light floor and stencil suppression |

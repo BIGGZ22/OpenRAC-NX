@@ -1,5 +1,6 @@
 """The copy of OpenRAC an installed launcher carries: its actions and its files."""
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -8,6 +9,19 @@ import unittest
 from pathlib import Path
 
 import bundle_standalone as bundle
+
+
+class LevelsStamp(unittest.TestCase):
+    """The check's stamp names the export's format in every place that reads or writes it: an old
+    name leaves Play waiting for a stamp the game never writes, the check run again and again."""
+
+    def test_every_stamp_names_the_export_format(self):
+        expected = bundle.levels_format()
+        header = (bundle.ROOT / "port" / "scene" / "level.h").read_text(encoding="utf-8")
+        self.assertEqual(int(re.search(r"kManifestFormat = (\d+);", header).group(1)), expected)
+        actions = (bundle.ROOT / "launcher" / "actions.json").read_text(encoding="utf-8")
+        stamps = set(re.findall(r"verified-(\d+)\.json", actions))
+        self.assertEqual(stamps, {str(expected)})
 
 
 class PlayerActions(unittest.TestCase):
@@ -72,7 +86,7 @@ class PlayerActions(unittest.TestCase):
         self.assertEqual(play["args"][play["args"].index("--levels") + 1], "{data}/port/pal")
         # Play waits for the check's stamp, and the check for the export.
         check = self.pal["port-levels-check"]
-        self.assertEqual(check["makes"], "{data}/port/pal/verified-3.json")
+        self.assertEqual(check["makes"], "{data}/port/pal/verified-4.json")
         self.assertEqual(check["args"][check["args"].index("--levels") + 1], "{data}/port/pal")
         self.assertEqual([need["path"] for need in check["needs"]], [self.pal["port-levels"]["artifact"]])
         self.assertEqual([need["path"] for need in play["needs"]], [check["makes"]])
@@ -95,7 +109,7 @@ class PlayerActions(unittest.TestCase):
         self.assertEqual(levels["artifact"], "{data}/port/ntsc/level_99/manifest.json")
         at = check["args"].index("--levels")
         self.assertEqual(check["args"][at + 1], "{data}/port/ntsc")
-        self.assertEqual(check["makes"], "{data}/port/ntsc/verified-3.json")
+        self.assertEqual(check["makes"], "{data}/port/ntsc/verified-4.json")
         self.assertEqual([need["path"] for need in check["needs"]], [levels["artifact"]])
         self.assertTrue(check["artifact"].endswith("openrac-rac1-ntsc.exe"))
 

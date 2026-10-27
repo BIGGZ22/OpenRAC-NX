@@ -400,7 +400,7 @@
           "artifact"
         ],
         "artifact": "port/build/release/openrac-rac1-pal.exe",
-        "makes": "assets/port/rac1/pal/verified-3.json",
+        "makes": "assets/port/rac1/pal/verified-4.json",
         "needs": [
           {
             "path": "assets/port/rac1/pal/level_99/manifest.json",
@@ -448,7 +448,7 @@
         "artifact": "port/build/release/openrac-probe-bake.exe",
         "needs": [
           {
-            "path": "assets/port/rac1/pal/verified-3.json",
+            "path": "assets/port/rac1/pal/verified-4.json",
             "from": "a check of the levels (Check the levels)"
           }
         ],
@@ -478,7 +478,7 @@
         "todo": "Built by port-build. The port reads each level's program from your disc image when decompiler_out (openrac-extractor --decompile) is not there. It draws from the levels port-levels writes (--levels): without them the menus have no world behind them and a level has no scenery. Runs on Windows, Linux and macOS: the port is one program for all three (it was listed for Windows and Linux only until 2026-10-13, though it had been built and run on macOS).",
         "needs": [
           {
-            "path": "assets/port/rac1/pal/verified-3.json",
+            "path": "assets/port/rac1/pal/verified-4.json",
             "from": "a check of the levels (Check the levels)"
           }
         ]
@@ -674,7 +674,7 @@
         "todo": "Built by port-build. The Mods page runs overrides-stack first, which puts the packed levels (assets/packed/rac1/pal) and the packs that are on into {data}/mods/pal. Run headless on macOS (--level 0 --frames 400): the port logged the sectors it took from the packed file and ran as it does without. Not run from the desktop app yet. Runs on Windows, Linux and macOS: the port is one program for all three (it was listed for Windows and Linux only until 2026-10-13, though it had been built and run on macOS).",
         "needs": [
           {
-            "path": "assets/port/rac1/pal/verified-3.json",
+            "path": "assets/port/rac1/pal/verified-4.json",
             "from": "a check of the levels (Check the levels)"
           }
         ]
@@ -1034,7 +1034,7 @@
           "artifact"
         ],
         "artifact": "port/build/release/openrac-rac1-ntsc.exe",
-        "makes": "assets/port/rac1/ntsc/verified-3.json",
+        "makes": "assets/port/rac1/ntsc/verified-4.json",
         "needs": [
           {
             "path": "assets/port/rac1/ntsc/level_99/manifest.json",
@@ -1082,7 +1082,7 @@
         "artifact": "port/build/release/openrac-probe-bake.exe",
         "needs": [
           {
-            "path": "assets/port/rac1/ntsc/verified-3.json",
+            "path": "assets/port/rac1/ntsc/verified-4.json",
             "from": "a check of the levels (Check the levels)"
           }
         ],
@@ -1112,7 +1112,7 @@
         "artifact": "port/build/release/openrac-rac1-ntsc.exe",
         "needs": [
           {
-            "path": "assets/port/rac1/ntsc/verified-3.json",
+            "path": "assets/port/rac1/ntsc/verified-4.json",
             "from": "a check of the levels (Check the levels)"
           }
         ]
@@ -1308,7 +1308,7 @@
         "artifact": "port/build/release/openrac-rac1-ntsc.exe",
         "needs": [
           {
-            "path": "assets/port/rac1/ntsc/verified-3.json",
+            "path": "assets/port/rac1/ntsc/verified-4.json",
             "from": "a check of the levels (Check the levels)"
           }
         ]

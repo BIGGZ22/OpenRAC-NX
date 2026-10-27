@@ -255,6 +255,9 @@ typedef struct openrac_game_quad {
      * its effect texture paging sends them to TEX0's blocks; 0 when the texture is already in the
      * GS's memory some other way. */
     uint32_t pixels, clut;
+    /* Where those two were found: 1 this frame's paging records, 2 the sources the same TEX0 had
+     * when it was last paged in, 0 nowhere. */
+    uint32_t source;
 } openrac_game_quad;
 
 void openrac_game_effect_quad(const openrac_game_quad* quad);

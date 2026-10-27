@@ -363,7 +363,7 @@ MaterialBinding material_binding(Program& p, const Target& target) {
             sample.view = sample_view(*sample.image, 0, 0);
         }
         if (sample.image->layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-            end_rendering();
+            end_rendering(PassEnd::Sample);
             barrier(frame().main, *sample.image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         }
         sample.image->touched = g->recording;

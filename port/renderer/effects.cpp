@@ -252,7 +252,8 @@ bool EffectRenderer::apply(std::uint64_t tex0_bits, std::uint64_t tex1_bits, std
     }
     // The filter and the wrap are the bound texture's own state (glTexParameteri): set again for
     // each texture bound, not only when the bits change. A second texture with the same bits kept
-    // the filter it had: the sea's second layer was magnified pixel by pixel (Pokitaru).
+    // the filter it had: the sea's second layer was magnified pixel by pixel (Pokitaru). The wrap
+    // is set by the bind (TexturePool::set_wrap), the filter here.
     const bool rebound = texture != m_applied.texture || clamp_bits != m_applied.clamp_bits;
     if (rebound) {
         const auto wrap = gs::Clamp::decode(clamp_bits);
@@ -267,14 +268,13 @@ bool EffectRenderer::apply(std::uint64_t tex0_bits, std::uint64_t tex1_bits, std
     m_applied.texture = texture;
     if (rebound || tex1_bits != m_applied.tex1_bits) {
         const gs::Tex1 tex1 = gs::Tex1::decode(tex1_bits);
-        const gs::Clamp clamp = gs::Clamp::decode(clamp_bits);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<GLint>(tex1.mmag ? GL_LINEAR : GL_NEAREST));
         const bool linear_min = tex1.mmin == 1 || tex1.mmin == 4 || tex1.mmin == 5;
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<GLint>(linear_min ? GL_LINEAR : GL_NEAREST));
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-                        static_cast<GLint>(clamp.wms == gs::Wrap::Repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE));
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
-                        static_cast<GLint>(clamp.wmt == gs::Wrap::Repeat ? GL_REPEAT : GL_CLAMP_TO_EDGE));
+        glTexParameteri(
+            GL_TEXTURE_2D,
+            GL_TEXTURE_MIN_FILTER,
+            static_cast<GLint>(linear_min ? GL_LINEAR : GL_NEAREST)
+        );
         m_applied.tex1_bits = tex1_bits;
         m_applied.clamp_bits = clamp_bits;
     }

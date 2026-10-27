@@ -35,6 +35,7 @@ constexpr const char* kLabels[kRows] = {
     "Render scale",
     "Anti-aliasing",
     "Anisotropic filtering",
+    "Scenery detail",
     "VSync",
     "Frame rate",
     "Frame cap",
@@ -53,35 +54,86 @@ constexpr const char* kFixesLabel = "Game fixes";
 struct Words {
     const char* text[5];
 };
+
 constexpr Words kWords[] = {
     {{"Display mode", "Mode d'affichage", "Anzeigemodus", "Modo de pantalla", "Modalità schermo"}},
     {{"Monitor", "Écran", "Monitor", "Monitor", "Monitor"}},
     {{"Resolution", "Résolution", "Auflösung", "Resolución", "Risoluzione"}},
     {{"Picture", "Format d'image", "Bildformat", "Formato de imagen", "Formato immagine"}},
     {{"HUD", "Interface", "HUD", "HUD", "HUD"}},
-    {{"Render scale", "Échelle de rendu", "Renderskalierung", "Escala de render", "Scala di rendering"}},
+    {{"Render scale",
+      "Échelle de rendu",
+      "Renderskalierung",
+      "Escala de render",
+      "Scala di rendering"}},
     {{"Anti-aliasing", "Anticrénelage", "Kantenglättung", "Antialiasing", "Antialiasing"}},
-    {{"Anisotropic filtering", "Filtrage anisotrope", "Anisotrope Filterung", "Filtrado anisotrópico",
+    {{"Anisotropic filtering",
+      "Filtrage anisotrope",
+      "Anisotrope Filterung",
+      "Filtrado anisotrópico",
       "Filtro anisotropico"}},
+    {{"Scenery detail",
+      "Détail du décor",
+      "Szeneriedetails",
+      "Detalle del escenario",
+      "Dettaglio scenario"}},
     {{"VSync", "Synchro verticale", "VSync", "Sincronía vertical", "Sincronia verticale"}},
     {{"Frame rate", "Fréquence d'images", "Bildrate", "Fotogramas", "Frequenza fotogrammi"}},
-    {{"Frame cap", "Limite d'images", "Bildratenlimit", "Límite de fotogramas", "Limite fotogrammi"}},
-    {{"Frame counter", "Compteur d'images", "Bildzähler", "Contador de fotogramas", "Contatore fotogrammi"}},
-    {{"Mute in background", "Muet en arrière-plan", "Im Hintergrund stumm", "Silencio en segundo plano",
+    {{"Frame cap",
+      "Limite d'images",
+      "Bildratenlimit",
+      "Límite de fotogramas",
+      "Limite fotogrammi"}},
+    {{"Frame counter",
+      "Compteur d'images",
+      "Bildzähler",
+      "Contador de fotogramas",
+      "Contatore fotogrammi"}},
+    {{"Mute in background",
+      "Muet en arrière-plan",
+      "Im Hintergrund stumm",
+      "Silencio en segundo plano",
       "Muto in background"}},
-    {{"Skip cutscenes", "Passer les cinématiques", "Videos überspringen", "Saltar cinemáticas", "Salta filmati"}},
-    {{"Game fixes", "Corrections du jeu", "Spielkorrekturen", "Correcciones del juego", "Correzioni del gioco"}},
-    {{"Wide-screen effects", "Effets écran large", "Breitbild-Effekte", "Efectos panorámicos",
+    {{"Skip cutscenes",
+      "Passer les cinématiques",
+      "Videos überspringen",
+      "Saltar cinemáticas",
+      "Salta filmati"}},
+    {{"Game fixes",
+      "Corrections du jeu",
+      "Spielkorrekturen",
+      "Correcciones del juego",
+      "Correzioni del gioco"}},
+    {{"Wide-screen effects",
+      "Effets écran large",
+      "Breitbild-Effekte",
+      "Efectos panorámicos",
       "Effetti widescreen"}},
-    {{"Wide-screen crate orbs", "Orbes de caisse écran large", "Breitbild-Kistenkugeln",
-      "Orbes de caja panorámicos", "Sfere casse widescreen"}},
-    {{"Wide-screen seas, lava", "Mers et lave écran large", "Breitbild-Meere, Lava", "Mares y lava panorámicos",
+    {{"Wide-screen crate orbs",
+      "Orbes de caisse écran large",
+      "Breitbild-Kistenkugeln",
+      "Orbes de caja panorámicos",
+      "Sfere casse widescreen"}},
+    {{"Wide-screen seas, lava",
+      "Mers et lave écran large",
+      "Breitbild-Meere, Lava",
+      "Mares y lava panorámicos",
       "Mari e lava widescreen"}},
+    {{"Wide-screen traffic",
+      "Trafic écran large",
+      "Breitbild-Verkehr",
+      "Tráfico panorámico",
+      "Traffico widescreen"}},
     {{"On", "Activé", "An", "Sí", "Sì"}},
     {{"Off", "Désactivé", "Aus", "No", "No"}},
     {{"Original", "Original", "Original", "Original", "Originale"}},
+    {{"Full", "Complet", "Voll", "Completo", "Completo"}},
     {{"Desktop", "Bureau", "Desktop", "Escritorio", "Desktop"}},
-    {{"Window's own", "Celui de la fenêtre", "Wie das Fenster", "El de la ventana", "Quello della finestra"}},
+    {{"Window's own",
+      "Celui de la fenêtre",
+      "Wie das Fenster",
+      "El de la ventana",
+      "Quello della finestra"}},
     {{"Trilinear", "Trilinéaire", "Trilinear", "Trilineal", "Trilineare"}},
     {{"Window", "Fenêtre", "Fenster", "Ventana", "Finestra"}},
     {{"Borderless", "Sans bordure", "Rahmenlos", "Sin bordes", "Senza bordi"}},
@@ -93,8 +145,10 @@ constexpr Words kWords[] = {
     {{"Display", "Écran", "Bildschirm", "Pantalla", "Schermo"}},
     {{"Video", "Vidéo", "Video", "Vídeo", "Video"}},
     {{"Video Options", "Options vidéo", "Videooptionen", "Opciones de vídeo", "Opzioni video"}},
-    {{"Change the display, picture and frame rate", "Changer l'affichage, l'image et la fréquence",
-      "Anzeige, Bild und Bildrate ändern", "Cambiar pantalla, imagen y fotogramas",
+    {{"Change the display, picture and frame rate",
+      "Changer l'affichage, l'image et la fréquence",
+      "Anzeige, Bild und Bildrate ändern",
+      "Cambiar pantalla, imagen y fotogramas",
       "Cambia schermo, immagine e fotogrammi"}},
 };
 // Texts with a number in them: the words around it.
@@ -247,6 +301,8 @@ std::string value_of(int row) {
                 s.anisotropy_samples(gl::enhanced_rendering_available() && s.enhanced_graphics);
             return samples > 1 ? std::format("Anisotropic {}x", samples) : std::string("Trilinear");
         }
+        case kSceneryDetail:
+            return s.original_lod ? "Original" : "Full";
         case kVSync:
             return settings::name(s.vsync);
         case kFrameRate:
@@ -323,6 +379,9 @@ void step_value(int row, int by) {
                     static_cast<int>(renderer::TexturePool::max_anisotropy())
                 )
             );
+            break;
+        case kSceneryDetail:
+            s.original_lod = !s.original_lod;
             break;
         case kVSync:
             s.vsync = stepped_enum(s.vsync, by);

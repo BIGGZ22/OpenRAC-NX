@@ -9,9 +9,12 @@
 #include <cstdlib>
 #include <cstring>
 #include <deque>
+#include <format>
+#include <iterator>
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <string>
 
 #include "common/env.h"
 #include "common/log.h"
@@ -57,6 +60,9 @@ struct State {
     GpuHooks gpu;
     std::FILE* dump = nullptr;
     std::uint64_t dump_next = 0;  // the serial of the next frame to write
+    FrameReader reader = nullptr;
+    void* reader_user = nullptr;
+    std::uint64_t reader_next = 0;  // the serial of the next frame to hand the reader
 };
 
 State& state() {
@@ -73,81 +79,105 @@ Frame* frame_of(std::uint64_t serial) {
     return f.serial == serial ? &f : nullptr;
 }
 
-void write_json_string(std::FILE* out, std::string_view text) {
-    std::fputc('"', out);
+void write_json_string(std::string& out, std::string_view text) {
+    out += '"';
     for (const char c : text) {
         if (c == '"' || c == '\\') {
-            std::fputc('\\', out);
-            std::fputc(c, out);
+            out += '\\';
+            out += c;
         } else if (static_cast<unsigned char>(c) < 0x20) {
-            std::fprintf(out, "\\u%04x", c);
+            std::format_to(std::back_inserter(out), "\\u{:04x}", c);
         } else {
-            std::fputc(c, out);
+            out += c;
         }
     }
-    std::fputc('"', out);
+    out += '"';
 }
 
+// One frame as a line of JSON, made in memory and written at once: hundreds of small writes, each
+// taking the file's lock, cost a phone's window thread more than the frame's own counting.
 void write_frame(std::FILE* out, const Frame& f) {
-    std::fprintf(out, "{\"frame\":%llu,\"tick\":%llu,\"kind\":\"%s\",\"alpha\":%.3f,\"t\":%.6f,\"frame_ms\":%.3f",
-                 static_cast<unsigned long long>(f.serial), static_cast<unsigned long long>(f.tick),
-                 frame_kind_name(f.kind), static_cast<double>(f.alpha), f.start_s, f.interval_ms);
+    thread_local std::string line;
+    line.clear();
+    const auto add = std::back_inserter(line);
+    std::format_to(
+        add,
+        "{{\"frame\":{},\"tick\":{},\"kind\":\"{}\",\"alpha\":{:.3f},\"t\":{:.6f},\"frame_ms\":{:."
+        "3f}",
+        f.serial,
+        f.tick,
+        frame_kind_name(f.kind),
+        static_cast<double>(f.alpha),
+        f.start_s,
+        f.interval_ms
+    );
     if (f.kind == FrameKind::Tick) {
-        std::fprintf(out, ",\"game_ms\":%.3f", f.game_ms);
+        std::format_to(add, ",\"game_ms\":{:.3f}", f.game_ms);
     }
     const double gpu = f.gpu_ms();
     if (gpu >= 0.0) {
-        std::fprintf(out, ",\"gpu_ms\":%.3f", gpu);
+        std::format_to(add, ",\"gpu_ms\":{:.3f}", gpu);
     } else {
-        std::fputs(",\"gpu_ms\":null", out);
+        line += ",\"gpu_ms\":null";
     }
     for (std::size_t i = 0; i < kCounterCount; ++i) {
-        std::fprintf(out, ",\"%s\":%llu", counter_name(static_cast<Counter>(i)),
-                     static_cast<unsigned long long>(f.counters[i]));
+        std::format_to(add, ",\"{}\":{}", counter_name(static_cast<Counter>(i)), f.counters[i]);
     }
-    std::fputs(",\"sections\":[", out);
+    line += ",\"sections\":[";
     for (std::size_t i = 0; i < f.sections.size(); ++i) {
         const Section& s = f.sections[i];
-        std::fputs(i == 0 ? "{\"name\":" : ",{\"name\":", out);
-        write_json_string(out, s.name);
-        std::fprintf(out, ",\"depth\":%d,\"cpu_ms\":%.3f", s.depth, s.cpu_ms);
+        line += i == 0 ? "{\"name\":" : ",{\"name\":";
+        write_json_string(line, s.name);
+        std::format_to(add, ",\"depth\":{},\"cpu_ms\":{:.3f}", s.depth, s.cpu_ms);
         if (s.gpu_ms >= 0.0) {
-            std::fprintf(out, ",\"gpu_ms\":%.3f", s.gpu_ms);
+            std::format_to(add, ",\"gpu_ms\":{:.3f}", s.gpu_ms);
         }
-        std::fprintf(out, ",\"draw_calls\":%llu,\"triangles\":%llu}", static_cast<unsigned long long>(s.draw_calls),
-                     static_cast<unsigned long long>(s.triangles));
+        std::format_to(add, ",\"draw_calls\":{},\"triangles\":{}}}", s.draw_calls, s.triangles);
     }
-    std::fputs("],\"gauges\":{", out);
+    line += "],\"gauges\":{";
     for (std::size_t i = 0; i < f.gauges.size(); ++i) {
         if (i != 0) {
-            std::fputc(',', out);
+            line += ',';
         }
-        write_json_string(out, f.gauges[i].first);
-        std::fprintf(out, ":%.6g", f.gauges[i].second);
+        write_json_string(line, f.gauges[i].first);
+        std::format_to(add, ":{:.6g}", f.gauges[i].second);
     }
-    std::fputs("}}\n", out);
+    line += "}}\n";
+    std::fwrite(line.data(), 1, line.size(), out);
 }
 
-// Writes the closed frames whose GPU times are back, or that have waited long enough (`all`: every
-// closed frame).
-void flush_dump(bool all) {
+// Hands `take` the closed frames from serial `next` on whose GPU times are back, or that have
+// waited long enough (`all`: every closed frame), moving `next` past them.
+template <typename Take>
+void flush_frames(std::uint64_t& next, bool all, Take&& take) {
     State& s = state();
-    if (s.dump == nullptr) {
-        return;
-    }
-    while (s.dump_next < s.next_serial) {
-        if (s.next_serial - s.dump_next > kHistory) {
-            s.dump_next = s.next_serial - kHistory;  // fell out of the ring unwritten
+    while (next < s.next_serial) {
+        if (s.next_serial - next > kHistory) {
+            next = s.next_serial - kHistory;  // fell out of the ring unread
         }
-        const Frame* f = frame_of(s.dump_next);
+        const Frame* f = frame_of(next);
         if (f == nullptr || !f->closed) {
             break;
         }
-        if (!all && f->pending_gpu > 0 && s.next_serial - s.dump_next < kDumpWait) {
+        if (!all && f->pending_gpu > 0 && s.next_serial - next < kDumpWait) {
             break;
         }
-        write_frame(s.dump, *f);
-        ++s.dump_next;
+        take(*f);
+        ++next;
+    }
+}
+
+// Writes the frames due to the dump and hands the reader its own.
+void flush_dump(bool all) {
+    State& s = state();
+    if (s.dump != nullptr) {
+        flush_frames(s.dump_next, all, [&s](const Frame& f) { write_frame(s.dump, f); });
+    }
+    // Read once: the reader may be taken away between two frames, never in the middle of one.
+    if (const FrameReader reader = s.reader; reader != nullptr) {
+        flush_frames(s.reader_next, all, [&s, reader](const Frame& f) {
+            reader(f, s.reader_user);
+        });
     }
 }
 
@@ -216,6 +246,14 @@ void set_enabled(Client client, bool on) {
         s.stack.clear();
     }
     g_enabled = enabled;
+}
+
+std::string open_section() {
+    const State& s = state();
+    if (!g_enabled || s.open == nullptr || s.stack.empty()) {
+        return {};
+    }
+    return s.open->sections[static_cast<std::size_t>(s.stack.back().index)].name;
 }
 
 void Scope::begin(std::string_view name, unsigned flags) {
@@ -294,6 +332,9 @@ double Frame::cpu_ms(std::string_view section) const {
 }
 
 double Frame::gpu_ms() const {
+    if (gpu_frame_ms >= 0.0) {
+        return gpu_frame_ms;
+    }
     double total = 0.0;
     bool any = false;
     for (const Section& s : sections) {
@@ -334,6 +375,7 @@ void begin_frame(FrameKind kind, std::uint64_t tick, float alpha) {
     f.game_ms = 0.0;
     f.closed = false;
     f.pending_gpu = 0;
+    f.gpu_frame_ms = -1.0;
     f.counters.fill(0);
     f.sections.clear();
     f.gauges.clear();
@@ -411,6 +453,26 @@ void gpu_result(std::uint64_t serial, int section, double ms) {
     }
 }
 
+std::uint64_t gpu_frame_begin() {
+    State& s = state();
+    if (!g_enabled || s.open == nullptr) {
+        return kNoFrame;
+    }
+    s.open->pending_gpu++;
+    return s.open->serial;
+}
+
+void gpu_frame_result(std::uint64_t serial, double ms) {
+    Frame* f = frame_of(serial);
+    if (f == nullptr) {
+        return;
+    }
+    f->gpu_frame_ms = ms;
+    if (f->pending_gpu > 0) {
+        f->pending_gpu--;
+    }
+}
+
 bool open_dump(const std::string& path, std::string& error) {
     State& s = state();
     close_dump();
@@ -435,7 +497,7 @@ void close_dump() {
         return;
     }
     close_open(Clock::now());
-    flush_dump(true);
+    flush_frames(s.dump_next, true, [&s](const Frame& f) { write_frame(s.dump, f); });
     std::fclose(s.dump);
     s.dump = nullptr;
     set_enabled(Client::Dump, false);
@@ -443,6 +505,14 @@ void close_dump() {
 
 bool dumping() {
     return state().dump != nullptr;
+}
+
+void set_reader(FrameReader reader, void* user) {
+    State& s = state();
+    s.reader = reader;
+    s.reader_user = user;
+    s.reader_next = s.next_serial;
+    set_enabled(Client::Capture, reader != nullptr);
 }
 
 namespace {

@@ -23,6 +23,16 @@
       "refs": ["commit 96f08e81", "port/game/rac1/host/wide_view.c"]
     },
     {
+      "id": "wide-air-traffic",
+      "kind": "fix",
+      "name": "Wide-screen traffic",
+      "discs": ["pal", "ntsc"],
+      "original": "Kerwan's flying cars, buses and ships stop on their paths while none of their group is inside the game's 4:3 view, and fly on once one is back in it.",
+      "port": "Their view test sees the wider picture, so the traffic at the sides of a wide picture keeps flying. Off: it stops between the 4:3 edge and the picture's, in view.",
+      "setting": { "key": "fix_wide_air_traffic", "default": true },
+      "refs": ["port/game/rac1/host/wide_view.c"]
+    },
+    {
       "id": "wide-liquids",
       "kind": "fix",
       "name": "Wide-screen seas, lava",

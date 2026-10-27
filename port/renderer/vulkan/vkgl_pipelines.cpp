@@ -1812,7 +1812,7 @@ void OPENRAC_GLAPI dispatch_compute(GLuint x, GLuint y, GLuint z) {
     if (!p || !p->linked || !p->compute_pipeline || !x || !y || !z) {
         return;
     }
-    end_rendering();
+    end_rendering(PassEnd::Compute);
     std::vector<Sampled> samplers;
     for (std::size_t i = 0; i < p->compiled.uniforms.size(); ++i) {
         const auto& u = p->compiled.uniforms[i];
@@ -1849,7 +1849,7 @@ void OPENRAC_GLAPI dispatch_compute(GLuint x, GLuint y, GLuint z) {
 }
 
 void OPENRAC_GLAPI memory_barrier(GLbitfield) {
-    end_rendering();
+    end_rendering(PassEnd::Barrier);
     // Shader writes (compute's, the only shaders that write) before every later use of what they
     // wrote: shader and uniform reads, vertices and indices, indirect arguments, copies (the R-08
     // table). The reference path: every stage.

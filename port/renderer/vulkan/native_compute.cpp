@@ -106,7 +106,7 @@ bool record_native_compute(
         );
     }
 
-    end_rendering();
+    end_rendering(PassEnd::Compute);
     const auto command = frame().main;
 
     // Queue order and the renderer's image tracker remain authoritative across native dispatches.

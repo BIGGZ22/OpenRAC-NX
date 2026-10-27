@@ -35,8 +35,9 @@ using renderer::Mat4;
 using renderer::Vec3;
 
 // The extracted levels' format (editor/port.py FORMAT); --check-levels writes verified-<format>.json,
-// which the launcher waits for, so older exports are read from the disc again before Play.
-inline constexpr int kManifestFormat = 3;
+// which the launcher waits for, so older exports are read from the disc again before Play. 4: the
+// textures the game clamps carry clamping samplers.
+inline constexpr int kManifestFormat = 4;
 
 struct Vertex {
     float position[3];
@@ -57,6 +58,10 @@ struct Material {
     bool metal = false;   // a metal packet's chrome or glass map (metal_*): drawn in the shine pass
     bool cutout = false;  // glTF alphaMode MASK: alpha test at 0.5
     bool blend = false;   // glTF alphaMode BLEND
+    // The texture's sampler clamps across (S) or down (T): the GS CLAMP_1 of the game's setup. A
+    // clamped texture repeated pulls its far edge into the near one under bilinear filtering.
+    bool clamp_s = false;
+    bool clamp_t = false;
     std::array<float, 4> colour{1.0f, 1.0f, 1.0f, 1.0f};
     Vec3 emission{};  // shared linear emitted radiance, independent of diffuse lighting
     int emission_image = -1;
@@ -72,6 +77,14 @@ struct Primitive {
     int shell = -1;  // a sky's: the game's shell number (its node Sky_N), for the shell's matrix
     int terrain_fragment = -1;
     std::uint16_t occlusion = Pvs::always;
+    // Whether any of its vertices is a glow packet's (light slot -2, mesh.vert): only those can be
+    // drawn by the mobys' glow pass, which leaves the others out (LevelScene::upload sets it).
+    bool glow_vertices = true;
+    // Of those, its triangles with a glow vertex, in their order, as indices of their own (glow_first,
+    // glow_count; LevelScene::upload): the glow pass's draw, whose other triangles it would discard.
+    // A count of 0 draws the whole primitive there.
+    std::uint32_t glow_first = 0;
+    std::uint32_t glow_count = 0;
 };
 
 struct Model {
@@ -150,6 +163,14 @@ struct LevelData {
     std::array<std::vector<Instance>, kLayerCount> instances;
     // Moby classes: model and whether it is the stand-in box, for placing live mobys.
     std::map<int, std::pair<std::uint32_t, bool>> moby_classes;
+
+    // Each tie's and shrub's draw distance as the game's loader and renderer leave it (parallel to
+    // instances; game units of camera depth): a tie's own, capped at 720 (TieProc; 0 is never
+    // drawn), a shrub's raised to 16 and, for a class with a billboard, to its fade distance + 24,
+    // capped at 500 (ShrubProc; shrub_sky.md section 4). Empty for a layer whose export does not
+    // carry them (shrubs before "billboard_fade") or a game whose caps are not known. Drawn by only
+    // "Scenery detail: Original" (LevelScene::choose_scenery).
+    std::array<std::vector<float>, kLayerCount> draw_distances;
     // The ties' and shrubs' lit colours, 64 or 24 per instance, RGBA bytes (0x80 = 1.0), from
     // placements.json.
     std::vector<std::uint32_t> light_colours;
@@ -163,6 +184,9 @@ struct LevelData {
     Vec3 bounds_max{};
     int missing_images = 0;
 };
+
+// The world centre of `model`'s bounds drawn at `matrix`.
+Vec3 bounds_centre(const Model& model, const Mat4& matrix);
 
 // Load a level directory. Returns false with a reason if the manifest or a
 // mesh cannot be read; a missing texture only counts in missing_images.

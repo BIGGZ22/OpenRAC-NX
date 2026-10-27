@@ -723,6 +723,7 @@ void VKGL vertex_attrib_pointer(
     a.type = type;
     a.normalized = normalized != GL_FALSE;
     a.integer = false;
+    a.format = vertex_format(a.type, a.size, a.normalized, a.integer);
     a.stride = stride;
     a.offset = reinterpret_cast<std::uintptr_t>(pointer);
     a.buffer = g->state.array_buffer;
@@ -733,7 +734,9 @@ void VKGL vertex_attrib_i_pointer(
 ) {
     vertex_attrib_pointer(index, size, type, GL_FALSE, stride, pointer);
     if (index < kAttributes) {
-        vertex_array().attributes[index].integer = true;
+        Attribute& a = vertex_array().attributes[index];
+        a.integer = true;
+        a.format = vertex_format(a.type, a.size, a.normalized, a.integer);
     }
 }
 

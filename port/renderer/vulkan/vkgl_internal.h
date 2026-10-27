@@ -80,6 +80,9 @@ inline constexpr int kUnits = 32;
 inline constexpr int kAttributes = 16;
 inline constexpr int kUniformBindings = 16;
 inline constexpr VkDeviceSize kChunk = 8u << 20;
+// A frame slot's timestamp queries; the last two time the whole frame (Frame::frame_timing).
+inline constexpr std::uint32_t kTimestamps = 512;
+inline constexpr std::uint32_t kFrameTimestamp = kTimestamps - 2;
 
 // GL enums the headers do not list, which the functions below are asked about.
 inline constexpr GLenum kGlActiveUniforms = 0x8B86;
@@ -188,6 +191,7 @@ struct GpuResident {
     struct Group {
         std::uint32_t first = 0;    // Its first instance's first word in `words`.
         std::uint32_t count = 0;    // Its instances.
+        std::uint32_t room = 0;     // The instances its words have room for (registered again).
         std::uint64_t version = 0;  // The buffer's version when registered: another is stale.
     };
 
@@ -195,6 +199,7 @@ struct GpuResident {
     std::vector<std::uint32_t> words;  // Per instance, 8 words of bounds then 30 of its data.
     Chunk buffer;                      // `words` in device memory; empty until a batch needs it.
     bool dirty = false;                // `words` changed since `buffer` was made.
+    std::size_t unused = 0;            // Words no group holds (outgrown by its buffer).
 };
 
 // The cull, front face, depth and stencil state of a draw, as Vulkan's numbers: what a pipeline
@@ -267,6 +272,14 @@ struct Frame {
 
     VkQueryPool timestamps = VK_NULL_HANDLE;
     std::uint32_t timestamp_used = 0;
+    // The whole frame's two timestamps, the pool's last two (kFrameTimestamp): written at the start
+    // of `upload` and after `main`'s last render pass, for the stats frame `frame_serial`.
+    enum class FrameTiming : std::uint8_t {
+        None,
+        Started,
+        Ended
+    } frame_timing = FrameTiming::None;
+    std::uint64_t frame_serial = 0;
     int active_timing = -1;
     std::vector<Timing> timings;
     VkCommandPool pool = VK_NULL_HANDLE;
@@ -393,6 +406,8 @@ struct Attribute {
     GLenum type = GL_FLOAT;
     bool normalized = false;
     bool integer = false;
+    // vertex_format() of the four above, worked out when they are set rather than at every draw.
+    VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
     GLsizei stride = 0;
     std::uintptr_t offset = 0;
     GLuint buffer = 0;
@@ -951,6 +966,9 @@ struct Context {
     Measures measures;
     SubmissionCounters submission, reported_submission;
     SubmissionCounters published;  // The render counters as the last frame's gauges left them.
+    // This frame's pass ends and full-screen copies by section ("vk_pass_end copy in hud"), while
+    // measuring; kept at 0 between frames so that each frame shows each one.
+    std::unordered_map<std::string, double> where;
     // The frames_presented at which begin_pipeline_warmup's warm-up ends; never, until it is called.
     std::uint64_t warmup_end = UINT64_MAX;
     SDL_Window* window = nullptr;
@@ -1091,6 +1109,9 @@ inline void count_barrier(VkPipelineStageFlags source, VkPipelineStageFlags dest
     }
 }
 
+// Counts `event` in the section open now, as a gauge of this frame (published by present).
+void count_where(std::string_view event);
+
 // Counts one copy, blit or resolve into a region `width` by `height` texels: a full-screen copy
 // as well when that is the default framebuffer's size or the screen's.
 inline void count_copy(std::uint32_t width, std::uint32_t height) {
@@ -1103,6 +1124,9 @@ inline void count_copy(std::uint32_t width, std::uint32_t height) {
     // The whole picture read and written again, the costliest copy on a tiled GPU.
     if (frame_sized || screen_sized) {
         ++g->submission.fullscreen_copies;
+        if (stats::enabled()) {
+            count_where("vk_fullscreen_copy");
+        }
     }
 }
 
@@ -1173,9 +1197,25 @@ Slice ring_copy(const void* data, VkDeviceSize size);
 // This frame's `upload` command buffer, marked used so that it is submitted.
 VkCommandBuffer upload_cmd();
 
+// What ends a render pass before the frame does: a pass on another target, a copy or upload into
+// an image (cmd_for), a draw that samples an image a pass wrote, a compute dispatch, a memory
+// barrier, a submit (a read-back, the frame's end), the present. Counted by the frame's section
+// while measuring (vk_pass_end gauges), so a capture says which part of the frame splits it: on a
+// tiled GPU each split stores the attachments and the next pass loads them again.
+enum class PassEnd : std::uint8_t {
+    Target,
+    Copy,
+    Sample,
+    Compute,
+    Barrier,
+    Submit,
+    Present,
+    Other
+};
+
 // Flushes the merged draws and ends the rendering pass `main` is in, if any, forgetting the
-// bound pipeline.
-void end_rendering();
+// bound pipeline; `why` is counted when a pass was open.
+void end_rendering(PassEnd why = PassEnd::Other);
 
 // The command buffer for an operation on `image`, outside any drawing: `upload` while this
 // recording has not used it in `main` (it then runs before everything `main` does), else `main`.
