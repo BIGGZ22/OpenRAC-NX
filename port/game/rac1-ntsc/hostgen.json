@@ -56,6 +56,7 @@
     "FUN_001f44b8"
   ],
   "level_hooks": [
+    "func_001E93E8",
     "func_001E9400",
     "func_001E9408",
     "func_001E9410",
