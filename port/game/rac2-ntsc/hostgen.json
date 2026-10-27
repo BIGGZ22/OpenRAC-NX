@@ -35,6 +35,7 @@
     "table": "derived_names.json"
   },
   "places": "config/levels/functions.tsv",
+  "candidates": "nonmatching/functional.tsv",
   "names": {
     "code": [
       "^func_(?:L(?P<overlay>\\d\\d)_)?(?P<addr>[0-9A-Fa-f]{6,8})(?:_\\w*)?$",
