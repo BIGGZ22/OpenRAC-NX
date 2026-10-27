@@ -117,8 +117,10 @@ def triage() -> list[dict]:
         if f["status"] == "near-miss":
             f.update(route="opus", reason=f"near-miss, {f['match_percent']}%")
         else:
-            seg = "text" if f["unit"].startswith("game/") else "core_text"
-            asm = ROOT / "asm/nonmatchings" / seg / f"{f['name']}.s"
+            is_overlay = bool(rank_candidates.OVERLAY_NAME.match(f["name"]))
+            seg = "text" if is_overlay or f["unit"].startswith("game/") else "core_text"
+            directory = rank_candidates.OVERLAY_ASM if is_overlay else Path("asm/nonmatchings") / seg
+            asm = ROOT / directory / f"{f['name']}.s"
             if not asm.exists():
                 f.update(route="blocked", reason="no asm (run tools/setup_asm.sh)")
                 rows.append(f)
