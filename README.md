@@ -1,390 +1,90 @@
 # OpenRAC-NX
 
-**Ratchet & Clank 1 on Nintendo Switch, built natively from OpenRAC's decompiled code.**
+A native Nintendo Switch port of **Ratchet & Clank (2002)**, based on [OpenRAC](https://github.com/OpenRAC/OpenRAC).
 
-> **Very early WIP / experimental preview.** This is an unfinished port for
-> testing and feedback, with bugs and incomplete features expected. A complete
-> playthrough has not been verified. Back up your saves before updating.
+**Early alpha. An overclock and full application mode are required for playable performance.** The app does not apply an overclock automatically. Performance varies by scene, and a complete playthrough has not been verified.
 
-**Overclock required for playable performance in this early build.** Stock
-Switch clock speeds are not sufficient for the current port. Configure your
-overclock before playing; the application does not apply one automatically.
-No specific clock profile has been validated for every Switch model.
+[Download releases](https://github.com/BIGGZ22/OpenRAC-NX/releases) · [Build guide](port/platform/switch/README.md) · [Credits](CREDITS.md)
 
-OpenRAC-NX is an experimental Switch fork of [OpenRAC](https://github.com/OpenRAC/OpenRAC).
-It rebuilds the game for Switch through devkitPro/libnx and an SDL2/Mesa OpenGL
-frontend. It does not run a PS2 emulator.
+## Requirements
 
-This fork currently focuses on **Ratchet & Clank 1 PAL, `SCES_509.16`**. The
-Europe/Australia v2.00 disc has been validated during development. Other games
-and disc versions are not the target of this Switch build.
+- A homebrew-capable Nintendo Switch.
+- Your own **Ratchet & Clank PAL Europe/Australia v2.00 ISO (`SCES_509.16`)**.
+- At least **2 GiB of free SD space** in addition to the ISO.
 
-## Availability and current status
+Other games and disc revisions are currently unsupported. No game files are included.
 
-The source is public: **anyone can clone this branch and build it** with the
-dependencies below. The Switch changes are on **`codex/switch-port`**; use that
-branch when cloning. A build on a completely fresh computer has not yet been
-verified.
+## Installation
 
-Basic gameplay has been reported working on a Switch. Releases should be
-treated as **early WIP builds**, not stable releases. Performance and behavior
-can vary between planets and scenes. See the testing limits below before
-reporting a problem.
-
-## Features in this WIP build
-
-- **Ratchet & Clank 1 PAL gameplay:** a native Switch build using an OpenGL
-  renderer, controller input and audio output.
-- **ISO setup on the Switch:** validates your supported ISO and prepares the
-  boot files and all 21 renderer scenes on first launch. No PC extraction or
-  ISO mounting is needed for the normal installation.
-- **Resumable setup:** visual progress, completed-cache checksums, free-space
-  checks, cancellation and a Setup page to resume or repair preparation.
-- **Graphical launcher:** a sidebar, cards, switches, progress bars and the
-  Switch system font, with controller and touch navigation.
-- **Saved display settings:** picture shape, HUD placement, resolution scale,
-  anti-aliasing, texture filtering, anisotropy, scenery detail, VSync, frame-rate
-  options, frame cap and frame counter.
-- **Audio and gameplay settings:** master/music/effects volume, playback mode,
-  language, cutscene skipping, logging and the supported upstream game fixes.
-- **Controller customization:** separate movement and camera deadzones,
-  horizontal/vertical camera sensitivity, axis inversion and stick swapping.
-- **Button rebinding:** capture or cycle gameplay bindings, clear a binding,
-  swap occupied assignments and restore controller defaults. Settings persist
-  between launches; menu navigation and the exit shortcut retain fixed controls.
-- **Full-speed stick movement fix:** corrects full-tilt diagonal directions
-  that could make Ratchet walk instead of run.
-- **Third-person lock-strafe:** hold ZL by default to strafe while the right
-  stick aims. Facing and lateral movement smoothing includes direction changes;
-  release ZL for normal movement. Included in the NRO, with no separate mod install.
-- **Full-screen movie audio fix:** movie/gameplay audio-device handoff changes
-  address silent full-screen cutscenes; broader console testing is still needed.
-- **Memory-card saves:** automatic save-folder creation, flushed file writes,
-  a launcher storage check and a fix for the missing PS2 directory entries
-  that caused the PAL game to reject existing save folders after restarting.
-- **Persistent configuration:** launcher options are stored in an INI file;
-  existing data, settings and save folders can be kept when replacing the NRO.
-
-The renderer is **OpenGL only**. The experimental deko3d renderer and renderer
-switch have been removed. The original Ratchet 1 animations are retained;
-lock-strafe does not add Ratchet 2/3 animation assets.
-
-## Known limitations and testing status
-
-- Only **Ratchet & Clank 1 PAL Europe/Australia v2.00 (`SCES_509.16`)** is the
-  validated disc target. Other games and revisions are unsupported by this build.
-- Complete playthroughs, performance across all planets, long sessions and
-  every combination of settings have not been verified on console.
-- First-launch preparation has been compared with PC-exported data. Its speed
-  and gameplay with the generated caches still need more Switch testing.
-- The latest movie-audio and lock-strafe changes need more hardware feedback.
-- The save fix passes the PAL game's actual directory validator and separate
-  process file-reload tests. A complete in-game save, exit and reload on Switch
-  still needs confirmation. The launcher's storage check alone cannot prove it.
-- Desktop debug panels, Vulkan, enhanced lighting and FSR are unavailable.
-- Use Homebrew Menu in **full application mode**; applet mode has insufficient
-  memory for this port's intended use.
-
-**No ISO, PS2 executable, extracted models, textures, sounds or prepared game
-data is included. You must provide your own supported disc image.** The NRO
-needs your supported ISO. This build can prepare its boot files and renderer caches directly on the Switch.
-
-## Install a released NRO: no PC extraction needed
-
-Download `openrac-rac1-pal.nro` from the
-[GitHub releases page](https://github.com/BIGGZ22/OpenRAC-NX/releases).
-The source-code ZIP is for developers; it is not the ready-to-run application.
-Release assets contain the application only. You supply the supported ISO.
-
-**Before playing:** an overclock is required for playable performance. Full
-application mode is also required; it does not replace the overclock requirement.
-
-1. Copy `openrac-rac1-pal.nro` into `SD:/switch/openrac/`.
-2. Copy your own **Ratchet & Clank 1 PAL Europe/Australia v2.00 ISO** into the
-   same folder. For example, name it `Ratchet.iso`. Keep only one ISO in that
-   folder so setup can choose it unambiguously. The older installed location
-   `data/iso_data/rac1/disc.iso` is also supported.
-3. Leave **at least 2 GiB of additional free SD space** for generated caches
-   and working space. The full-disc PC test generated about 936 MiB of caches;
-   setup checks available space before writing each level.
-4. Launch OpenRAC through Homebrew Menu in **full application mode**.
-5. First-launch setup validates the complete ISO, extracts the boot files and
-   prepares all 21 renderer scenes. A progress screen shows its current step.
-   Keep the console powered and allow time for the initial setup.
-6. When setup completes, press **A** on the Play tab to start.
+1. Download `openrac-rac1-pal.nro` from the releases page.
+2. Put the NRO and your supported ISO in `SD:/switch/openrac/`. Keep only one ISO in that folder.
+3. Launch in **full application mode**, then let first-launch setup prepare the game.
+4. Select **Play** and press **A**.
 
 ```text
 SD:/switch/openrac/
   openrac-rac1-pal.nro
-  Ratchet.iso                 <- your supported disc image
-  data/                       <- created by the application
+  Ratchet.iso
 ```
 
-**Leave the ISO in place:** gameplay still reads sectors from it. Setup stores
-its path and does not make a second copy. The boot files and versioned renderer
-caches are created under `data/iso_data/rac1/` and `data/port/pal/`. Saves remain
-under `memcard/SCES_509.16/` and settings under `settings/`.
+**Keep the ISO in place after setup.** If setup is interrupted, use the **Setup** page to resume or repair it.
 
-Press **+** during setup to cancel. Completed, checksum-verified level caches
-are kept and reused on the next attempt; incomplete files are not accepted as
-finished levels. In the **Setup** tab, press **A** to prepare, resume or repair.
-If you run out of space, free space and restart. Existing saves are preserved.
-Setup errors are also recorded in `data/setup.log`; review logs for personal paths before sharing them.
-PC-prepared installations continue to work.
+## Features
 
-This installation path has been compiled for Switch and exercised on a PC
-against the supported disc, including comparison with the PC exporter. Its
-first-launch performance and gameplay with generated caches still need console
-testing. Report any setup error with the step shown on screen.
+- On-console ISO setup with resumable preparation.
+- Controller and touch-operated launcher.
+- Saved video, audio, gameplay and controller settings.
+- Button rebinding, stick deadzones and camera sensitivity options.
+- Third-person lock-strafe: hold **ZL** to strafe while aiming with the right stick.
+- Memory-card saves stored on the SD card.
 
-## Building from source (optional for release users)
+### Upcoming: v0.2.0 alpha
 
-- A homebrew-capable Nintendo Switch with Homebrew Menu, preferably running
-  in full application mode for the memory needed by levels and textures.
-- A PC if building the NRO yourself or using the optional PC extraction route.
-- Your own supported Ratchet & Clank 1 PAL ISO.
-- [devkitPro](https://devkitpro.org/) with devkitA64, libnx and Switch tools.
-- The `switch-sdl2` and `switch-mesa` portlibs.
-- CMake 3.24 or newer, Make, Git, Python 3, and a **host Clang compiler**.
-  Clang reads the decompiled game sources; devkitA64's GCC compiles the Switch
-  program. Both are needed.
+The next version adds resolution presets and handheld/docked profiles, optional Status Monitor FPS/RES reporting, a lock-strafe toggle, experimental FOV controls and particle-rendering improvements. It also updates the menu and settings handoff.
 
-The commands below use an MSYS/devkitPro shell with the devkitPro package
-repositories configured. Keep configuration and builds in the same MSYS
-installation. Install the Switch dependencies there:
+These changes are being prepared for GitHub tag `v0.2.0-alpha`.
 
-```sh
-pacman -S --needed switch-dev switch-sdl2 switch-mesa
-```
+## Controls
 
-Install the host tools above as well. On an MSYS2 installation, host Clang can
-be installed with `pacman -S --needed mingw-w64-x86_64-clang`; the Switch build
-looks in `/mingw64/bin` and `/clang64/bin` as well as the normal tool search path.
+In the launcher, use **L/R** to change pages, the **D-pad** to select, and **A** or **Left/Right** to adjust. **B** returns to Play; **+** exits. Touch navigation is supported.
 
-## 1. Get the source
-
-```sh
-git clone --single-branch --branch codex/switch-port https://github.com/BIGGZ22/OpenRAC-NX.git
-cd OpenRAC-NX
-```
-
-CMake downloads pinned source dependencies during the first configuration,
-including the lock-strafe implementation. An internet connection is required
-for that first download.
-
-## 2. Build the Switch application
-
-From the repository root:
-
-```sh
-cd port
-cmake --preset switch-aarch64
-cmake --build --preset switch-aarch64 -j8
-cd ..
-```
-
-The Homebrew Menu application is:
-
-```text
-port/build-switch/openrac-rac1-pal.nro
-```
-
-Use the `.nro`, not the intermediate `.elf`. The preset uses devkitPro's
-toolchain at `/opt/devkitpro/cmake/Switch.cmake` and builds only Ratchet 1 PAL.
-See the [detailed Switch guide](port/platform/switch/README.md) for the explicit
-CMake command and implementation details.
-
-## 3. Optional: prepare your disc data on the PC
-
-**You do not mount the ISO.** The tools open it directly. From the repository
-root, run the following, replacing the example ISO path with your own:
-
-```sh
-python tools/extractor.py "/c/path/to/Ratchet and Clank.iso" \
-  --game rac1 --proj-path build/switch-data --extract --boot-only
-
-python editor/extract.py port "/c/path/to/Ratchet and Clank.iso" \
-  build/switch-data/port/pal --jobs 2
-```
-
-The first command validates the disc and prepares the full `disc.iso`, the
-boot executable `SCES_509.16`, `SYSTEM.CNF` and `buildinfo.json`. The
-`--boot-only` option avoids extracting unused disc files; it still retains
-and validates the full ISO.
-
-The second command exports the level models and textures used by the native
-renderer. Wait for it to finish before copying the data. The resulting folders
-are `build/switch-data/iso_data/` and `build/switch-data/port/`.
-
-The extractor rejects unrecognized disc revisions. Renaming another game's
-ISO or executable will not make it compatible.
-
-## 4. Copy PC-prepared data to the SD card
-
-Create `/switch/openrac/` on the SD card. Copy the NRO into it, then copy both
-prepared data folders into `/switch/openrac/data/`:
-
-```text
-SD:/switch/openrac/
-  openrac-rac1-pal.nro
-  data/
-    iso_data/
-      rac1/
-        disc.iso
-        SCES_509.16
-        SYSTEM.CNF
-        buildinfo.json
-    port/
-      pal/
-        level_00/
-        level_01/
-        ...
-        level_18/
-        level_98/
-        level_99/
-```
-
-Copy **all exported level folders**, including their contents. The title and
-first-level manifests are checked by the launcher, but later levels are also
-needed to continue playing. Keep the ISO as one file; split ISO files are not
-supported. Your SD filesystem must be able to store that file.
-
-## 5. Start the game
-
-1. Open Homebrew Menu in full application mode and select **OpenRAC**.
-2. Check that the Play page shows the disc, exported levels and save storage as ready. Press **X** to recheck.
-3. Press **A** on the Play page, or **ZL**, to start once the disc and title/first-level assets
-   are found.
-
-The launch menu has **Play, Display, Audio, Gameplay, Game fixes, Saves and Setup**
-tabs, plus **Controller**. Use **L/R** to switch tabs, **Up/Down** to select, and **Left/Right** or
-**A** to change a setting. **B** returns to Play and **+** exits. Changes are
-saved to `/switch/openrac/settings/rac1-pal.ini` and applied at game startup;
-the menu reports a failure if settings cannot be written.
-
-The launcher now uses a graphical sidebar, cards, switches and a progress bar,
-with the Switch's shared system font. Touch a sidebar page or use L/R; touch
-a setting's value or use Left/Right to adjust it.
-
-The **Controller** page offers movement/camera deadzones, independent horizontal
-and vertical camera sensitivity, camera inversion and stick swapping. Button
-bindings are gameplay-only: launcher navigation stays on the standard controls.
-
-- Select an action and press **A** to rebind it. Release the confirm button,
-  press the new button, then release it to save.
-- **Left/Right** cycles bindings; **X** clears the selected binding.
-- Reusing an occupied button swaps its old action onto the previous button.
-- Press **+ and - together** or touch **Cancel** to cancel capture; a timeout
-  preserves the old binding.
-- The last row restores all controller defaults. Other settings and saves stay.
-- The fixed **L + R + Minus** exit shortcut always uses physical buttons and
-  cannot be rebound. Hold it to exit the game and return to Homebrew Menu if
-  you need to reopen the launcher and restore your controls.
-
-Bindings and controller preferences persist in the regular settings file.
-The default mapping retains the previous controls and full-speed diagonal
-movement. The launcher and gameplay both use OpenGL.
-
-Display options include picture shape, HUD position, resolution scale,
-anti-aliasing, texture filtering, anisotropy, scenery detail, VSync, frame rate,
-frame cap and frame counter. Audio offers master, music and sound volumes and
-playback mode. Gameplay offers language, cutscene skipping and detailed logs.
-The Game fixes tab exposes this disc's upstream fix switches. Vulkan, FSR and
-desktop window/monitor controls are unavailable on Switch.
-
-The **Saves** tab shows the memory-card folder and performs a write/close/read-back
-check. Save normally through the game's own menu, wait for completion, and exit
-with L + R + Minus before restarting. Back up the entire
-`/switch/openrac/memcard/SCES_509.16/` folder to preserve progress. Save writes
-are flushed to the SD card before reporting success. An unavailable or
-unwritable card is shown as an error; existing saves are not reset.
-The memory-card adapter supplies the PS2 `.` and `..` directory entries on
-Switch. Earlier builds omitted them, causing the PAL game to reject a save
-folder even when its files had been written. Replace the NRO and keep your
-existing `memcard` folder when updating; do not format or delete it to apply
-this fix. A launcher storage check tests file access, not the game's full
-save/load flow. Save and restart on the console to verify your progress.
-
-Developers can test the PAL game's actual save-directory validator after
-generating the PAL sources with
-`python port/tests/run_pal_memory_card_scan_test.py --cc gcc`. This uses
-synthetic save files, checks rejection of the old eight-entry listing, and
-reopens the files in a fresh process. It does not require or distribute an ISO.
-
-On the Play tab, **Y** starts a 300-frame headless diagnostic.
-
-## Gameplay controls (defaults)
-
-| Switch input | Function / PS2 equivalent |
+| Switch input | In-game action / PS2 equivalent |
 | --- | --- |
-| Left stick | Movement |
-| Right stick | Camera |
-| Hold ZL | Third-person lock-strafe; release for normal movement |
-| B | Cross |
-| A | Circle |
-| X | Triangle |
-| Y | Square |
-| L / R | L1 / R1 |
-| ZR | R2, original behavior |
-| + / - | Start / Select |
+| Left / right stick | Movement / camera |
+| B / A / X / Y | Cross / Circle / Triangle / Square |
+| L / R / ZR | L1 / R1 / R2 |
+| Hold ZL | Lock-strafe |
+| + / − | Start / Select |
 | Stick clicks | L3 / R3 |
-| Hold L + R + Minus | Exit at a game-frame boundary |
+| Hold L + R + Minus | Exit the game |
 
-While lock-strafing, the left stick moves independently of Ratchet's facing
-and the right stick controls camera/aim. The extension stays inactive in
-cutscenes, menus, vehicles and unsupported movement states. It is built into
-the NRO and does not require installing a separate mod.
+Customize gameplay bindings on the **Controller** page.
 
-## Troubleshooting and updates
+## Updating and saves
 
-- **Files missing:** check the SD layout above. A raw ISO alone is not the
-  complete installation until first-launch preparation finishes. Use the Setup tab to prepare or repair it.
-- **Startup or memory trouble:** use Homebrew Menu in full application mode.
-- **Movie sound or strafe problems:** report the scene/planet, what happened,
-  and which build you tested. These changes still need hardware feedback.
-- **Logs:** the session log is
-  `SD:/switch/openrac/data/openrac-rac1-pal.log`. Review logs for personal
-  paths or other private information before posting them publicly.
-- **Updating the application:** back up your saves, then replace only the NRO
-  with the version downloaded from a release or built from this branch.
-  Keep your existing game data, saves and settings unless an update explicitly
-  requires a new level export. Saves are under `/switch/openrac/memcard/`.
+Back up your saves, then **replace only the NRO**. Keep your ISO, prepared data and settings.
+
+- **Saves:** `SD:/switch/openrac/memcard/SCES_509.16/`
+- **Settings:** `SD:/switch/openrac/settings/rac1-pal.ini`
+
+Save through the game's menu and wait for it to finish before exiting.
+
+## Troubleshooting
+
+- **Missing files or interrupted setup:** open the Setup page and select prepare/resume.
+- **Low performance:** check that your overclock is active and you launched in full application mode.
+- **Reporting a bug:** include the build version, planet/scene and steps to reproduce it.
+- **Game log:** `SD:/switch/openrac/data/openrac-rac1-pal.log`
+- **Setup log:** `SD:/switch/openrac/data/setup.log`
+
+## Building from source
+
+Use the `codex/switch-port` branch. See the [Switch build guide](port/platform/switch/README.md) for devkitPro dependencies and build commands.
 
 ## Credits and license
 
-This fork builds on the work of the [OpenRAC contributors](https://github.com/OpenRAC/OpenRAC)
-and the decompilation projects listed in [CREDITS.md](CREDITS.md). The
-lock-strafe extension is adapted from
-[OpenRAC/rac1-mods](https://github.com/OpenRAC/rac1-mods), with Switch-specific
-input, memory access and smoothing changes. The Switch toolchain and platform
-libraries come from devkitPro/libnx, SDL and Mesa. The graphical
-launcher loads the Switch's shared system font on device; no font file is bundled.
+Built on [OpenRAC](https://github.com/OpenRAC/OpenRAC) and its contributing decompilation projects. Lock-strafe is adapted from [OpenRAC/rac1-mods](https://github.com/OpenRAC/rac1-mods). Thanks to the devkitPro/libnx, SDL and Mesa contributors.
 
-Existing licenses and notices are retained. See [LICENSE.md](LICENSE.md),
-[COPYING](COPYING) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Source
-changes to GPL-covered components remain covered by their existing licenses.
+See [CREDITS.md](CREDITS.md), [LICENSE.md](LICENSE.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-OpenRAC-NX is an unofficial fan project, not affiliated with or endorsed by
-Sony Interactive Entertainment, Insomniac Games, Nintendo or the upstream
-OpenRAC maintainers. Ratchet & Clank and other trademarks belong to their
-respective owners. This repository does not distribute the game or its assets.
-
-<details>
-<summary>Upstream decompilation progress</summary>
-
-These figures describe the upstream decompilation projects, not Switch compatibility.
-
-<!-- badges:begin -->
-<!-- Generated by tools/openrac.py tables from games/*/game.json; do not edit. -->
-<table>
-  <tr><th align="left" width="260">Game</th><th align="left" width="270">Project</th><th align="right" width="190">Code decompiled</th></tr>
-  <tr><td>Ratchet &amp; Clank (PAL)</td><td><a href="https://github.com/OpenRAC/rac1-decomp">rac1-decomp</a></td><td align="right"><a href="https://bytematch.dev/OpenRAC/rac1-decomp/SCES_509.16"><img src="https://bytematch.dev/OpenRAC/rac1-decomp.svg?mode=shield&amp;label=&amp;measure=matched_code_percent&amp;version=SCES_509.16&amp;color=ffb443&amp;style=flat-square" alt="Ratchet & Clank (PAL): code decompiled"></a></td></tr>
-  <tr><td>Ratchet &amp; Clank (NTSC)</td><td><a href="https://github.com/lombyte-project/Lombyte">Lombyte Project</a></td><td align="right"><a href="https://bytematch.dev/lombyte-project/Lombyte/SCUS_971.99"><img src="https://bytematch.dev/lombyte-project/Lombyte.svg?mode=shield&amp;label=&amp;measure=matched_code_percent&amp;version=SCUS_971.99&amp;color=ffb443&amp;style=flat-square" alt="Ratchet & Clank (NTSC): code decompiled"></a></td></tr>
-  <tr><td>Going Commando</td><td><a href="https://github.com/OpenRAC/rac2-gc-decomp">rac2-decomp</a></td><td align="right"><a href="https://bytematch.dev/OpenRAC/rac2-decomp/SCUS_972.68"><img src="https://bytematch.dev/OpenRAC/rac2-decomp.svg?mode=shield&amp;label=&amp;measure=matched_code_percent&amp;version=SCUS_972.68&amp;color=ffb443&amp;style=flat-square" alt="Going Commando: code decompiled"></a></td></tr>
-  <tr><td>Up Your Arsenal</td><td><a href="https://github.com/OpenRAC/rac3-uya-decomp">rac3-uya-decomp</a></td><td align="right"><a href="https://bytematch.dev/OpenRAC/rac3-decomp/SCUS_973.53"><img src="https://bytematch.dev/OpenRAC/rac3-decomp.svg?mode=shield&amp;label=&amp;measure=matched_code_percent&amp;version=SCUS_973.53&amp;color=ffb443&amp;style=flat-square" alt="Up Your Arsenal: code decompiled"></a></td></tr>
-  <tr><td>Deadlocked</td><td><a href="https://github.com/OpenRAC/rac-deadlocked-decomp">rac-deadlocked-decomp</a></td><td align="right"><a href="https://bytematch.dev/OpenRAC/rac4-decomp/SCUS_974.65"><img src="https://bytematch.dev/OpenRAC/rac4-decomp.svg?mode=shield&amp;label=&amp;measure=matched_code_percent&amp;version=SCUS_974.65&amp;color=ffb443&amp;style=flat-square" alt="Deadlocked: code decompiled"></a></td></tr>
-  <tr><td>Size Matters</td><td><a href="https://github.com/OpenRAC/rac5-sm-decomp">rac5-sm-decomp</a></td><td align="right"><a href="https://bytematch.dev/OpenRAC/rac5-sm-decomp/SCUS_976.15"><img src="https://bytematch.dev/OpenRAC/rac5-sm-decomp.svg?mode=shield&amp;label=&amp;measure=matched_code_percent&amp;version=SCUS_976.15&amp;color=ffb443&amp;style=flat-square" alt="Size Matters: code decompiled"></a></td></tr>
-</table>
-<!-- badges:end -->
-
-</details>
+An unofficial fan project, independently maintained and not endorsed by Sony Interactive Entertainment, Insomniac Games, Nintendo or the OpenRAC maintainers.
