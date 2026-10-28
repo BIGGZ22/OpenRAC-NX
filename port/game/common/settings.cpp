@@ -309,7 +309,27 @@ void load(const std::filesystem::path& file) {
         } else if (key == "skip_cutscenes") {
             known = parse_bool(value, s.skip_cutscenes);
         } else if (key == "switch_launcher_deko3d") {
-            known = parse_bool(value, s.switch_launcher_deko3d);
+            // Obsolete launcher backend setting: ignored for existing installations.
+        } else if (key == "controller_movement_deadzone") {
+            known = parse_int(value,0,30,s.controller.movement_deadzone);
+        } else if (key == "controller_camera_deadzone") {
+            known = parse_int(value,0,30,s.controller.camera_deadzone);
+        } else if (key == "controller_camera_x") {
+            known = parse_int(value,25,200,s.controller.camera_x);
+        } else if (key == "controller_camera_y") {
+            known = parse_int(value,25,200,s.controller.camera_y);
+        } else if (key == "controller_invert_x") {
+            known = parse_bool(value,s.controller.invert_x);
+        } else if (key == "controller_invert_y") {
+            known = parse_bool(value,s.controller.invert_y);
+        } else if (key == "controller_swap_sticks") {
+            known = parse_bool(value,s.controller.swap_sticks);
+        } else if (key.starts_with("controller_bind_")) {
+            known=false;
+            for(unsigned i=0;i<16;++i) if(key.substr(16)==platform::controller::kActionKeys[i]) {
+                const int physical=platform::controller::physical_from_key(value);
+                if(physical>=-1) { s.controller.buttons[i]=physical; known=true; }
+            }
         } else if (key == "strafe" || key == "lock_strafe") {
             old_strafe = true;
         } else if (key == "volume") {
@@ -349,6 +369,7 @@ void load(const std::filesystem::path& file) {
                   "Mods tab. This file's strafe setting is left out.",
                   file.string());
     }
+    platform::controller::sanitize(s.controller);
     g_gain = gain_now();
     log::info("settings from {}: {}", file.string(), summary());
 }
@@ -438,9 +459,16 @@ bool save() {
         << "original_lod = " << (s.original_lod ? 1 : 0) << "\n"
         << "skip_cutscenes = " << (s.skip_cutscenes ? 1 : 0) << "\n"
         << "volume = " << s.volume << "\n"
-        << "switch_launcher_deko3d = " << (s.switch_launcher_deko3d ? 1 : 0) << "\n"
         << "touch_scale = " << s.touch_scale << "\n"
         << "touch_camera = " << s.touch_camera << "\n";
+    out << "controller_movement_deadzone = " << s.controller.movement_deadzone << "\n"
+        << "controller_camera_deadzone = " << s.controller.camera_deadzone << "\n"
+        << "controller_camera_x = " << s.controller.camera_x << "\n"
+        << "controller_camera_y = " << s.controller.camera_y << "\n"
+        << "controller_invert_x = " << s.controller.invert_x << "\n"
+        << "controller_invert_y = " << s.controller.invert_y << "\n"
+        << "controller_swap_sticks = " << s.controller.swap_sticks << "\n";
+    for(unsigned i=0;i<16;++i) out << "controller_bind_" << platform::controller::kActionKeys[i] << " = " << platform::controller::binding_key(s.controller.buttons[i]) << "\n";
     if (!s.touch_layout.empty()) {
         out << "touch_layout = " << s.touch_layout << "\n";
     }

@@ -142,6 +142,7 @@ openrac_add_test(c_boundary LIBS openrac_common)
 openrac_add_test(frame_pacing INCLUDES .)
 openrac_add_test(frame_counter INCLUDES .)
 openrac_add_test(stick_rim SOURCES tests/stick_rim_test.cpp platform/pad.cpp INCLUDES .)
+openrac_add_test(controller_profile SOURCES tests/controller_profile_test.cpp platform/pad.cpp INCLUDES .)
 openrac_add_c_test(strafe_smoothing INCLUDES . MATH)
 openrac_add_c_test(memory_card SOURCES tests/memory_card_test.c game/common/lib/mc.c
   INCLUDES runtime/include game/common/include)

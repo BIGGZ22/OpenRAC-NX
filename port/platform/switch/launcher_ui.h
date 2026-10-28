@@ -17,7 +17,7 @@ struct View {
     int tab = 0, selected = 0, save_files = 0;
     bool disc = false, executable = false, levels = false, writable = false;
     std::vector<Row> rows;
-    std::string notice, graphics = "OpenGL";
+    std::string notice;
 };
 
 class Canvas {
@@ -27,6 +27,7 @@ public:
     bool font(std::span<const std::uint8_t> bytes);
     void menu(const View& view);
     void progress(const std::string& stage, unsigned done, unsigned total);
+    void binding(const std::string& action, const std::string& prompt);
     const std::vector<std::uint32_t>& pixels() const;
 
 private:
@@ -38,9 +39,10 @@ class Graphics {
 public:
     Graphics();
     ~Graphics();
-    bool open(bool deko3d, std::string& error);
+    bool open(std::string& error);
     bool show(const View& view, std::string& error);
     bool progress(const std::string& stage, unsigned done, unsigned total, std::string& error);
+    bool binding(const std::string& action, const std::string& prompt, std::string& error);
 
 private:
     struct Impl;

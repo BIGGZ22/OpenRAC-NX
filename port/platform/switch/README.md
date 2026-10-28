@@ -4,7 +4,7 @@ For cloning the public Switch branch, prerequisites, installation and controls,
 start with the [OpenRAC-NX README](../../../README.md).
 
 Starting without arguments opens the controller-operated launch menu. L/R selects
-a tab: Play, Display, Audio, Gameplay, Game fixes, Saves or Setup. Up/Down selects
+a tab: Play, Display, Audio, Gameplay, Game fixes, Saves, Setup or Controller. Up/Down selects
 a row and Left/Right or A changes it. Changes persist in
 `sdmc:/switch/openrac/settings/rac1-pal.ini`. B returns to Play, X checks the
 installation and save storage, and + exits. The launcher is graphical and supports touch as well as controller input.
@@ -13,16 +13,15 @@ storage checks pass. The Saves tab reports write/close/read-back health and the
 number of stored files under `/switch/openrac/memcard/SCES_509.16/`.
 B in game is PS2 Cross, A is Circle, X is Triangle and Y is Square.
 
-The Display page's **Launcher graphics** setting selects OpenGL or an
-experimental native deko3d menu presenter. This switches the launcher only;
-gameplay remains OpenGL. A deko3d gameplay backend is not implemented.
-The deko3d presenter uses two native scanout images, GPU copy commands and
-explicit queue completion before releasing or changing its resources. It uses
-no GL context. The shared UI canvas draws custom cards and text from the
-Switch's shared font; no system font file is distributed. An interrupted native
-startup restores OpenGL on the next run. Both paths require console testing.
+The **Controller** page adds saved movement/camera deadzones, camera speed,
+axis inversion and stick swapping. Select an action and press A to capture a
+replacement button; confirm it by releasing it. Left/Right cycles bindings,
+X clears one, and the last row restores defaults. Occupied buttons swap
+assignments. Plus + Minus together or the touch Cancel button cancels capture.
+Menu navigation and the physical L + R + Minus exit chord cannot be remapped.
+The old experimental launcher renderer has been removed; OpenGL is used.
 
-During gameplay, hold **ZL** for third-person lock-strafe: left stick moves
+During gameplay, hold **ZL** (the default L2 binding) for third-person lock-strafe: left stick moves
 independently of Ratchet's facing and right stick turns the camera/aim. Release
 ZL to return to normal movement. ZR keeps its original behavior. This is a
 built-in console control extension, including when external mods are disabled.
@@ -37,7 +36,7 @@ are retained, including the mod's backward walk/run cycle.
 The implementation is adapted from OpenRAC/rac1-mods' GPL-3.0-or-later
 [lock-strafe](https://github.com/OpenRAC/rac1-mods/tree/2c5139c106de03a7ae2d0ef55a703a1d7c290d09/lock-strafe),
 pinned at `2c5139c106de03a7ae2d0ef55a703a1d7c290d09`. CMake fetches that source
-and generates a ZL-only variant using the compact guest-memory accessors.
+and generates an L2-only variant using the compact guest-memory accessors.
 
 On the Play tab, with valid disc files, Y starts a headless boot test capped at 300 game frames.
 It stops earlier if it reaches an untranslated function. This is a diagnostic,

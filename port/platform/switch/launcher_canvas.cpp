@@ -18,7 +18,8 @@ constexpr Color rgb(unsigned r, unsigned g, unsigned b) {
 constexpr Color ink = rgb(9, 17, 30), panel = rgb(19, 32, 49), lineColor = rgb(39, 59, 77),
                 white = rgb(236, 244, 249), muted = rgb(144, 166, 184), teal = rgb(68, 232, 193),
                 orange = rgb(255, 177, 87);
-const char* tabs[] = {"Play", "Display", "Audio", "Gameplay", "Game fixes", "Saves", "Setup"};
+const char* tabs[] =
+    {"Play", "Display", "Audio", "Gameplay", "Game fixes", "Saves", "Setup", "Controller"};
 
 unsigned codepoint(const std::string& s, std::size_t& i) {
     unsigned c = static_cast<unsigned char>(s[i++]);
@@ -234,7 +235,7 @@ struct Canvas::Impl {
         text(x + 20, y + 10, title, 25, primary ? ink : white, w - 40);
     }
 
-    void background(int active, const std::string& backend) {
+    void background(int active) {
         for (int y = 0; y < kHeight; ++y) {
             for (int x = 0; x < kWidth; ++x) {
                 pixels[y * kWidth + x] =
@@ -248,7 +249,7 @@ struct Canvas::Impl {
         bolt(28, 34, 28, teal);
         text(69, 31, "OPENRAC", 30);
         text(70, 63, "NX  /  SWITCH", 15, muted);
-        for (int i = 0; i < 7; ++i) {
+        for (int i = 0; i < 8; ++i) {
             int y = 148 + i * 60;
             if (i == active) {
                 rect(18, y - 4, 212, 48, rgb(30, 61, 72), 12);
@@ -259,8 +260,8 @@ struct Canvas::Impl {
         text(32, 648, "RATCHET 1  /  PAL", 16, muted);
         text(296, 34, "RATCHET & CLANK", 20, muted);
         text(296, 66, active >= 0 ? tabs[active] : "Preparing your game", 40);
-        text(984, 41, "GAME  /  OpenGL", 17, white);
-        text(984, 66, "MENU  /  " + backend, 16, muted);
+        text(984, 41, "PAL v2.00", 17, white);
+        text(984, 66, "SCES_509.16", 16, muted);
         rect(296, 643, 936, 1, lineColor);
         text(296, 665, "L / R   Pages     D-pad   Select     A   Confirm     B   Back", 20, muted);
         text(1110, 665, "+  Exit", 20, muted);
@@ -296,8 +297,8 @@ const std::vector<std::uint32_t>& Canvas::pixels() const {
 }
 
 void Canvas::menu(const View& v) {
-    p->background(v.tab, v.graphics);
-    if (v.tab >= 1 && v.tab <= 4) {
+    p->background(v.tab);
+    if ((v.tab >= 1 && v.tab <= 4) || v.tab == 7) {
         p->card(296, 128, 936, 412);
         int first = std::max(0, v.selected - 8), end = std::min(int(v.rows.size()), first + 9);
         for (int i = first; i < end; ++i) {
@@ -326,7 +327,17 @@ void Canvas::menu(const View& v) {
                 1
             );
         }
-        if (v.notice.empty()) {
+        if (v.tab == 7 && v.notice.empty()) {
+            p->wrap(
+                316,
+                568,
+                "A: Rebind  |  X: Clear  |  Left / Right: Adjust  |  Swipe to scroll",
+                21,
+                muted,
+                880,
+                2
+            );
+        } else if (v.notice.empty()) {
             p->text(
                 316,
                 578,
@@ -416,7 +427,7 @@ void Canvas::menu(const View& v) {
 }
 
 void Canvas::progress(const std::string& stage, unsigned done, unsigned total) {
-    p->background(-1, "Setup");
+    p->background(-1);
     p->card(296, 147, 936, 389);
     p->text(330, 178, "FIRST-LAUNCH PREPARATION", 18, teal);
     p->wrap(330, 222, stage, 33, white, 845, 2);
@@ -445,5 +456,24 @@ void Canvas::progress(const std::string& stage, unsigned done, unsigned total) {
         2
     );
     p->text(330, 492, "+   Cancel and return to the menu", 21, white);
+}
+
+void Canvas::binding(const std::string& action, const std::string& prompt) {
+    p->background(7);
+    p->card(296, 147, 936, 389);
+    p->text(330, 178, "REBIND CONTROLLER BUTTON", 18, teal);
+    p->text(330, 224, action, 36, white, 850);
+    p->wrap(330, 290, prompt, 27, white, 850, 2);
+    p->wrap(
+        330,
+        379,
+        "Press + and - together to cancel. This screen times out after 20 seconds. Occupied "
+        "buttons swap assignments.",
+        22,
+        muted,
+        850,
+        3
+    );
+    p->button(328, 470, 315, "Cancel", false);
 }
 }  // namespace openrac::platform::launcher_ui

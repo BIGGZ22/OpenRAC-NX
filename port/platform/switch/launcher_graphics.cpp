@@ -8,7 +8,6 @@
 #include "renderer/gl.h"
 
 #include <SDL2/SDL.h>
-#include <deko3d.hpp>
 
 namespace openrac::platform::launcher_ui {
 namespace {
@@ -142,93 +141,6 @@ public:
     }
 };
 
-class DekoSurface final : public Surface {
-    dk::UniqueDevice device;
-    dk::UniqueQueue queue;
-    dk::UniqueMemBlock images_memory, upload_memory, commands_memory;
-    std::array<dk::Image, 2> images;
-    dk::UniqueSwapchain swapchain;
-    dk::UniqueCmdBuf commands;
-
-    static unsigned aligned(unsigned n, unsigned alignment = DK_MEMBLOCK_ALIGNMENT) {
-        return (n + alignment - 1) & ~(alignment - 1);
-    }
-
-public:
-    ~DekoSurface() override {
-        if (queue) {
-            queue.waitIdle();
-        }
-    }
-
-    void init() {
-        device = dk::DeviceMaker{}.create();
-        if (!device) {
-            throw std::runtime_error("deko3d device unavailable");
-        }
-        queue = dk::QueueMaker{device}.setFlags(DkQueueFlags_Graphics).create();
-        if (!queue) {
-            throw std::runtime_error("deko3d queue unavailable");
-        }
-        dk::ImageLayout layout;
-        dk::ImageLayoutMaker{device}
-            .setFlags(DkImageFlags_UsageRender | DkImageFlags_UsagePresent)
-            .setFormat(DkImageFormat_RGBA8_Unorm)
-            .setDimensions(kWidth, kHeight)
-            .initialize(layout);
-        const auto stride = aligned(static_cast<unsigned>(layout.getSize()), layout.getAlignment());
-        images_memory = dk::MemBlockMaker{device, aligned(2 * stride)}
-                            .setFlags(DkMemBlockFlags_GpuCached | DkMemBlockFlags_Image)
-                            .create();
-        upload_memory = dk::MemBlockMaker{device, aligned(kWidth * kHeight * 4)}
-                            .setFlags(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached)
-                            .create();
-        commands_memory = dk::MemBlockMaker{device, 0x10000}
-                              .setFlags(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached)
-                              .create();
-        if (!images_memory || !upload_memory || !commands_memory) {
-            throw std::runtime_error("deko3d menu allocation failed");
-        }
-        std::array<DkImage const*, 2> targets;
-        for (unsigned i = 0; i < 2; ++i) {
-            images[i].initialize(layout, images_memory, i * stride);
-            targets[i] = &images[i];
-        }
-        swapchain = dk::SwapchainMaker{device, nwindowGetDefault(), targets}.create();
-        commands = dk::CmdBufMaker{device}.create();
-        if (!swapchain || !commands) {
-            throw std::runtime_error("deko3d menu presentation unavailable");
-        }
-    }
-
-    void present(const std::vector<std::uint32_t>& pixels) override {
-        // The custom UI is rasterized once per change. deko3d uploads it to
-        // native tiled scanout images; no OpenGL context or Mesa is used here.
-        queue.waitIdle();
-        if (queue.isInErrorState()) {
-            throw std::runtime_error("deko3d presentation failed");
-        }
-        std::memcpy(upload_memory.getCpuAddr(), pixels.data(), kWidth * kHeight * 4);
-        int slot = queue.acquireImage(swapchain);
-        if (slot < 0 || slot >= 2) {
-            throw std::runtime_error("deko3d swapchain acquisition failed");
-        }
-        commands.clear();
-        commands.addMemory(commands_memory, 0, 0x10000);
-        commands.copyBufferToImage(
-            {upload_memory.getGpuAddr(), kWidth, kHeight},
-            dk::ImageView{images[slot]},
-            {0, 0, 0, kWidth, kHeight, 1}
-        );
-        commands.barrier(DkBarrier_Full, DkInvalidateFlags_Image);
-        queue.submitCommands(commands.finishList());
-        queue.presentImage(swapchain, slot);
-        queue.waitIdle();
-        if (queue.isInErrorState()) {
-            throw std::runtime_error("deko3d presentation failed");
-        }
-    }
-};
 }  // namespace
 
 struct Graphics::Impl {
@@ -248,7 +160,7 @@ Graphics::Graphics() : p(std::make_unique<Impl>()) {}
 
 Graphics::~Graphics() = default;
 
-bool Graphics::open(bool deko, std::string& error) {
+bool Graphics::open(std::string& error) {
     p->surface.reset();
     try {
         if (!p->font) {
@@ -265,15 +177,9 @@ bool Graphics::open(bool deko, std::string& error) {
             }
             p->font = true;
         }
-        if (deko) {
-            auto next = std::make_unique<DekoSurface>();
-            next->init();
-            p->surface = std::move(next);
-        } else {
-            auto next = std::make_unique<OpenGlSurface>();
-            next->init();
-            p->surface = std::move(next);
-        }
+        auto next = std::make_unique<OpenGlSurface>();
+        next->init();
+        p->surface = std::move(next);
         return true;
     } catch (const std::exception& e) {
         error = e.what();
@@ -297,6 +203,17 @@ bool Graphics::progress(
 ) {
     try {
         p->canvas.progress(stage, done, total);
+        p->surface->present(p->canvas.pixels());
+        return true;
+    } catch (const std::exception& e) {
+        error = e.what();
+        return false;
+    }
+}
+
+bool Graphics::binding(const std::string& action, const std::string& prompt, std::string& error) {
+    try {
+        p->canvas.binding(action, prompt);
         p->surface->present(p->canvas.pixels());
         return true;
     } catch (const std::exception& e) {

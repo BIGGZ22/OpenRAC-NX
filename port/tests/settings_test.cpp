@@ -267,21 +267,39 @@ int main() {
     // Replacing settings repeatedly must work on filesystems that refuse an
     // overwrite rename. A stop after moving the previous file is recoverable.
     settings::set_volume(35);
-    settings::get().switch_launcher_deko3d = true;
+    auto& controls=settings::get().controller;
+    controls.movement_deadzone=12;controls.camera_deadzone=8;
+    controls.camera_x=135;controls.camera_y=75;controls.invert_y=true;controls.swap_sticks=true;
+    platform::controller::bind(controls,14,0);
+    const auto expected_controls=controls;
     CHECK(settings::save());
     settings::load(file);
-    CHECK(settings::get().switch_launcher_deko3d);
-    settings::get().switch_launcher_deko3d = false;
+    CHECK(settings::get().controller.buttons==expected_controls.buttons);
+    CHECK(settings::get().controller.movement_deadzone==12 && settings::get().controller.camera_deadzone==8);
+    CHECK(settings::get().controller.camera_x==135 && settings::get().controller.camera_y==75);
+    CHECK(settings::get().controller.invert_y && settings::get().controller.swap_sticks);
+    settings::get().controller.invert_y=false;
     settings::set_volume(70);
     CHECK(settings::save());
     settings::load(file);
     CHECK(settings::get().volume == 70);
-    CHECK(!settings::get().switch_launcher_deko3d);
+    CHECK(!settings::get().controller.invert_y);
     const auto previous = std::filesystem::path(file.string() + ".previous");
     std::filesystem::rename(file, previous);
     settings::load(file);
     CHECK(settings::get().volume == 70);
     CHECK(std::filesystem::is_regular_file(file));
+    // Malformed controller preferences retain usable defaults; obsolete menu
+    // backend preferences do not survive the next save.
+    std::ofstream(file) << "controller_camera_x = 0\ncontroller_movement_deadzone = 90\n"
+                          "controller_bind_cross = unknown\nswitch_launcher_deko3d = 1\n";
+    settings::load(file);
+    CHECK(settings::get().controller.camera_x == 100);
+    CHECK(settings::get().controller.movement_deadzone == 0);
+    CHECK(settings::get().controller.buttons[14] == 1);
+    CHECK(settings::save());
+    { std::ifstream in(file); const std::string text((std::istreambuf_iterator<char>(in)),{});
+      CHECK(text.find("switch_launcher_deko3d") == std::string::npos); }
     const auto blocked = folder / "blocked";
     std::ofstream(blocked) << "not a directory";
     settings::load(blocked / "settings.ini");

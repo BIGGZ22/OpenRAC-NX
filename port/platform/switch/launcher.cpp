@@ -19,6 +19,7 @@
 #include "program/options.h"
 #ifdef OPENRAC_FRONTEND
 #include "fixes.h"
+#include "platform/switch/input.h"
 #include "platform/switch/launcher_ui.h"
 #include "scene/disc_cache.h"
 #include "scene/disc_import.h"
@@ -32,36 +33,6 @@ bool launcher_active = false;
 std::string notice;
 #ifdef OPENRAC_FRONTEND
 std::unique_ptr<launcher_ui::Graphics> ui;
-constexpr const char* kGraphicsPending = "sdmc:/switch/openrac/settings/launcher-deko-pending";
-
-void graphics_presented() {
-    std::error_code ec;
-    std::filesystem::remove(kGraphicsPending, ec);
-}
-
-bool start_graphics(bool native, std::string& error) {
-    if (native) {
-        if (!card_directory("sdmc:/switch/openrac/settings")) {
-            error = "Cannot create graphics recovery marker";
-            return false;
-        }
-        FILE* file = std::fopen(kGraphicsPending, "wb");
-        if (!file) {
-            error = "Cannot create graphics recovery marker";
-            return false;
-        }
-        bool ok =
-            std::fputc('1', file) != EOF && std::fflush(file) == 0 && fsync(fileno(file)) == 0;
-        if (std::fclose(file) != 0) {
-            ok = false;
-        }
-        if (!ok) {
-            error = "Cannot flush graphics recovery marker";
-            return false;
-        }
-    }
-    return ui->open(native, error);
-}
 
 void show_error(const std::string& error) {
     ErrorApplicationConfig dialog;
@@ -73,23 +44,12 @@ void show_error(const std::string& error) {
 }
 
 bool open_graphics() {
-    if (!ui) {
-        ui = std::make_unique<launcher_ui::Graphics>();
-    }
+    ui = std::make_unique<launcher_ui::Graphics>();
     std::string error;
-    auto& choice = settings::get().switch_launcher_deko3d;
-    if (start_graphics(choice, error)) {
+    if (ui->open(error)) {
         return true;
     }
-    const auto first_error = error;
-    choice = !choice;
-    if (start_graphics(choice, error)) {
-        settings::save();
-        notice = "Menu graphics fallback: using " + std::string(choice ? "deko3d" : "OpenGL") + ". "
-                 + first_error;
-        return true;
-    }
-    show_error(first_error + " / " + error);
+    show_error(error);
     ui.reset();
     return false;
 }
@@ -248,7 +208,6 @@ void prepare(PadState& pad) {
                     if (!ui->progress(text, done, total, graphics_error)) {
                         throw std::runtime_error(graphics_error);
                     }
-                    graphics_presented();
                     last_draw = now;
                     last_text = text;
                 }
@@ -273,15 +232,14 @@ constexpr const char* kDisplay[] =
      "VSync",
      "Frame rate",
      "Frame cap",
-     "Frame counter",
-     "Launcher graphics"};
+     "Frame counter"};
 constexpr const char* kAudio[] =
     {"Master volume", "Music volume", "Sound effects", "Playback mode"};
 constexpr const char* kGameplay[] = {"Language", "Start skips cutscenes", "Detailed logging"};
 
 int rows(int tab) {
     if (tab == 1) {
-        return 12;
+        return 11;
     }
     if (tab == 2) {
         return 4;
@@ -291,6 +249,9 @@ int rows(int tab) {
     }
     if (tab == 4) {
         return fixes::count();
+    }
+    if (tab == 7) {
+        return 24;
     }
     return 0;
 }
@@ -326,8 +287,6 @@ std::string value(int tab, int row) {
                 return std::to_string(s.frame_cap);
             case 10:
                 return name(s.show_fps);
-            case 11:
-                return s.switch_launcher_deko3d ? "deko3d (experimental)" : "OpenGL";
         }
     }
     if (tab == 2) {
@@ -354,7 +313,109 @@ std::string value(int tab, int row) {
     if (tab == 4) {
         return fixes::on(row) ? "On" : "Off";
     }
+    if (tab == 7) {
+        const auto& c = s.controller;
+        switch (row) {
+            case 0:
+                return std::to_string(c.movement_deadzone) + "%";
+            case 1:
+                return std::to_string(c.camera_deadzone) + "%";
+            case 2:
+                return std::to_string(c.camera_x) + "%";
+            case 3:
+                return std::to_string(c.camera_y) + "%";
+            case 4:
+                return c.invert_x ? "On" : "Off";
+            case 5:
+                return c.invert_y ? "On" : "Off";
+            case 6:
+                return c.swap_sticks ? "On" : "Off";
+            case 23:
+                return "A  Restore";
+            default:
+                return controller::binding_name(c.buttons[row - 7]);
+        }
+    }
     return {};
+}
+
+const char* controller_label(int row) {
+    constexpr const char* labels[] =
+        {"Movement deadzone",
+         "Camera deadzone",
+         "Camera horizontal speed",
+         "Camera vertical speed",
+         "Invert camera X",
+         "Invert camera Y",
+         "Swap sticks"};
+    if (row < 7) {
+        return labels[row];
+    }
+    if (row < 23) {
+        return controller::kActionNames[row - 7];
+    }
+    return "Restore controller defaults";
+}
+
+void capture_binding(PadState& pad, int action) {
+    controller::BindingCapture capture;
+    std::string prompt = "Release all buttons, then press the new button.";
+    std::string shown;
+    const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(20);
+    while (appletMainLoop() && std::chrono::steady_clock::now() < end) {
+        padUpdate(&pad);
+        const auto raw = padGetButtons(&pad);
+        if ((raw & (HidNpadButton_Plus | HidNpadButton_Minus))
+            == (HidNpadButton_Plus | HidNpadButton_Minus)) {
+            notice = "Rebind cancelled. Existing binding kept.";
+            return;
+        }
+        HidTouchScreenState touch{};
+        if (hidGetTouchScreenStates(&touch, 1) > 0 && touch.count && touch.touches[0].x >= 328
+            && touch.touches[0].x < 650 && touch.touches[0].y >= 465 && touch.touches[0].y < 525) {
+            notice = "Rebind cancelled. Existing binding kept.";
+            return;
+        }
+        const auto state = capture.update(switch_physical_buttons(raw));
+        switch (state) {
+            case controller::CaptureState::Cancelled:
+                notice = "Rebind cancelled. Existing binding kept.";
+                return;
+            case controller::CaptureState::ReleaseButtons:
+                prompt = "Release all buttons, then press the new button.";
+                break;
+            case controller::CaptureState::PressButton:
+                prompt = "Press one controller button, then release it.";
+                break;
+            case controller::CaptureState::MultipleButtons:
+                prompt = "Use one button at a time. Release and try again.";
+                break;
+            case controller::CaptureState::ReleaseToConfirm:
+                prompt = std::string("Release ") + controller::binding_name(capture.physical)
+                         + " to confirm.";
+                break;
+            case controller::CaptureState::Bound:
+                controller::bind(
+                    settings::get().controller, static_cast<unsigned>(action), capture.physical
+                );
+                notice = settings::save()
+                             ? std::string("Bound ") + controller::kActionNames[action] + " to "
+                                   + controller::binding_name(capture.physical)
+                                   + ". Occupied bindings are swapped."
+                             : "Binding changed, but settings could not be saved.";
+                return;
+        }
+        if (shown != prompt) {
+            std::string error;
+            if (!ui->binding(controller::kActionNames[action], prompt, error)) {
+                show_error(error);
+                return;
+            }
+            shown = prompt;
+        }
+        svcSleepThread(16'000'000);
+    }
+    notice = "Rebind timed out. Existing binding kept.";
 }
 
 void change(int tab, int row, int by) {
@@ -396,9 +457,6 @@ void change(int tab, int row, int by) {
             case 10:
                 step_frame_counter(by);
                 break;
-            case 11:
-                s.switch_launcher_deko3d = !s.switch_launcher_deko3d;
-                break;
         }
     }
     if (tab == 2) {
@@ -424,6 +482,41 @@ void change(int tab, int row, int by) {
     if (tab == 4) {
         fixes::set(row, !fixes::on(row));
     }
+    if (tab == 7) {
+        auto& c = s.controller;
+        switch (row) {
+            case 0:
+                c.movement_deadzone = std::clamp(c.movement_deadzone + by, 0, 30);
+                break;
+            case 1:
+                c.camera_deadzone = std::clamp(c.camera_deadzone + by, 0, 30);
+                break;
+            case 2:
+                c.camera_x = std::clamp(c.camera_x + by * 5, 25, 200);
+                break;
+            case 3:
+                c.camera_y = std::clamp(c.camera_y + by * 5, 25, 200);
+                break;
+            case 4:
+                c.invert_x = !c.invert_x;
+                break;
+            case 5:
+                c.invert_y = !c.invert_y;
+                break;
+            case 6:
+                c.swap_sticks = !c.swap_sticks;
+                break;
+            case 23:
+                notice = "Press A to restore controller defaults.";
+                return;
+            default: {
+                int physical = c.buttons[row - 7];
+                physical = (physical + 1 + by + 17) % 17 - 1;
+                controller::bind(c, static_cast<unsigned>(row - 7), physical);
+                break;
+            }
+        }
+    }
     notice = save() ? "Settings saved. Applied when you start the game."
                     : "Settings could not be saved. Check the SD card before exiting.";
 }
@@ -438,12 +531,12 @@ bool draw(int tab, int selected, const Data& data) {
     view.levels = data.levels;
     view.writable = data.writable;
     view.notice = notice;
-    view.graphics = settings::get().switch_launcher_deko3d ? "deko3d (test)" : "OpenGL";
-    if (tab >= 1 && tab <= 4) {
+    if ((tab >= 1 && tab <= 4) || tab == 7) {
         for (int i = 0; i < rows(tab); ++i) {
             const char* label = tab == 1   ? kDisplay[i]
                                 : tab == 2 ? kAudio[i]
                                 : tab == 3 ? kGameplay[i]
+                                : tab == 7 ? controller_label(i)
                                            : fixes::fix(i).name;
             view.rows.push_back({label, value(tab, i)});
         }
@@ -460,21 +553,7 @@ bool draw(int tab, int selected, const Data& data) {
     }
     std::string error;
     if (ui->show(view, error)) {
-        graphics_presented();
         return true;
-    }
-    notice = "Menu graphics error: " + error;
-    if (settings::get().switch_launcher_deko3d) {
-        settings::get().switch_launcher_deko3d = false;
-        settings::save();
-        if (open_graphics()) {
-            view.graphics = "OpenGL";
-            view.notice = notice;
-            if (ui->show(view, error)) {
-                graphics_presented();
-                return true;
-            }
-        }
     }
     show_error(error);
     return false;
@@ -489,12 +568,6 @@ int switch_launcher() {
     launcher_active = true;
 #ifdef OPENRAC_FRONTEND
     settings::load("sdmc:/switch/openrac/settings/rac1-pal.ini");
-    std::error_code recovery;
-    if (std::filesystem::exists(kGraphicsPending, recovery)) {
-        settings::get().switch_launcher_deko3d = false;
-        settings::save();
-        notice = "The previous deko3d menu start did not finish. Restored OpenGL.";
-    }
     if (!open_graphics()) {
         return 0;
     }
@@ -549,9 +622,7 @@ int switch_launcher() {
             b |= direction;
             next_repeat = now + std::chrono::milliseconds(350);
         } else if (direction && now >= next_repeat) {
-            // Backend changes are deliberate single presses, never held repeats.
-            b |= (tab == 1 && selected == 11) ? direction & (HidNpadButton_Up | HidNpadButton_Down)
-                                              : direction;
+            b |= direction;
             next_repeat = now + std::chrono::milliseconds(90);
         }
         previous_direction = direction;
@@ -563,11 +634,14 @@ int switch_launcher() {
                 touch_y = swipe_y = y;
                 touch_moved = false;
                 touch_action = 0;
-                if (x < 250 && y >= 144 && y < 568) {
-                    tab = std::clamp((y - 144) / 60, 0, 6);
+                if (x < 250 && y >= 144 && y < 628) {
+                    tab = std::clamp((y - 144) / 60, 0, 7);
                     selected = 0;
                     dirty = true;
-                } else if (tab >= 1 && tab <= 4 && x >= 296 && x < 1218 && y >= 143 && y < 530) {
+                } else if (
+                    ((tab >= 1 && tab <= 4) || tab == 7) && x >= 296 && x < 1218 && y >= 143
+                    && y < 530
+                ) {
                     const int row = std::max(0, selected - 8) + (y - 143) / 43;
                     if (row < rows(tab)) {
                         selected = row;
@@ -593,7 +667,7 @@ int switch_launcher() {
                     touch_moved = true;
                     touch_action = 0;
                 }
-                if (tab >= 1 && tab <= 4 && x >= 296 && std::abs(y - swipe_y) >= 32
+                if (((tab >= 1 && tab <= 4) || tab == 7) && x >= 296 && std::abs(y - swipe_y) >= 32
                     && rows(tab) > 0) {
                     selected = std::clamp(selected + (y < swipe_y ? 1 : -1), 0, rows(tab) - 1);
                     swipe_y = y;
@@ -612,13 +686,21 @@ int switch_launcher() {
             break;
         }
         if (b & (HidNpadButton_L | HidNpadButton_R)) {
-            tab = (tab + ((b & HidNpadButton_R) ? 1 : 6)) % 7;
+            tab = (tab + ((b & HidNpadButton_R) ? 1 : 7)) % 8;
             selected = 0;
             dirty = true;
         }
         if (b & HidNpadButton_B) {
             tab = 0;
             selected = 0;
+            dirty = true;
+        }
+        if (tab == 7 && selected >= 7 && selected < 23 && (b & HidNpadButton_X)) {
+            controller::bind(settings::get().controller, static_cast<unsigned>(selected - 7), -1);
+            notice = settings::save()
+                         ? "Binding cleared. Menu controls and exit shortcut are unchanged."
+                         : "Could not save the cleared binding.";
+            b &= ~HidNpadButton_X;
             dirty = true;
         }
         if (b & HidNpadButton_X) {
@@ -642,15 +724,15 @@ int switch_launcher() {
                 selected = (selected + 1) % n;
             }
             if (b & (HidNpadButton_Left | HidNpadButton_Right | HidNpadButton_A)) {
-                const bool previous = settings::get().switch_launcher_deko3d;
-                change(tab, selected, (b & HidNpadButton_Left) ? -1 : 1);
-                if (previous != settings::get().switch_launcher_deko3d) {
-                    if (!open_graphics()) {
-                        return 0;
-                    }
-                    if (notice == "Settings saved. Applied when you start the game.") {
-                        notice = "Menu graphics changed. Gameplay continues to use OpenGL.";
-                    }
+                if (tab == 7 && (b & HidNpadButton_A) && selected >= 7 && selected < 23) {
+                    capture_binding(pad, selected - 7);
+                } else if (tab == 7 && selected == 23 && (b & HidNpadButton_A)) {
+                    settings::get().controller = controller::Profile{};
+                    notice = settings::save()
+                                 ? "Controller defaults restored."
+                                 : "Defaults restored, but settings could not be saved.";
+                } else {
+                    change(tab, selected, (b & HidNpadButton_Left) ? -1 : 1);
                 }
             }
             if (b) {
