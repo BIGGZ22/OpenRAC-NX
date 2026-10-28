@@ -239,6 +239,18 @@ with L + R + Minus before restarting. Back up the entire
 `/switch/openrac/memcard/SCES_509.16/` folder to preserve progress. Save writes
 are flushed to the SD card before reporting success. An unavailable or
 unwritable card is shown as an error; existing saves are not reset.
+The memory-card adapter supplies the PS2 `.` and `..` directory entries on
+Switch. Earlier builds omitted them, causing the PAL game to reject a save
+folder even when its files had been written. Replace the NRO and keep your
+existing `memcard` folder when updating; do not format or delete it to apply
+this fix. A launcher storage check tests file access, not the game's full
+save/load flow. Save and restart on the console to verify your progress.
+
+Developers can test the PAL game's actual save-directory validator after
+generating the PAL sources with
+`python port/tests/run_pal_memory_card_scan_test.py --cc gcc`. This uses
+synthetic save files, checks rejection of the old eight-entry listing, and
+reopens the files in a fresh process. It does not require or distribute an ISO.
 
 On the Play tab, **Y** starts a 300-frame headless diagnostic.
 

@@ -350,6 +350,29 @@ static int matches(const char* pattern, const char* name) {
     return strcmp(pattern, name) == 0;
 }
 
+static void list_dot_entries(const char* path, const char* pattern) {
+    /* PS2 cards always expose these entries. Switch fsdev does not synthesize
+     * them. RAC1 PAL rejects an otherwise valid save unless its eight files
+     * plus these two entries total ten (and six directory allocation blocks).
+     * Use this folder's metadata for both: the card root must not expose its
+     * host parent, and directory entries have no file payload. */
+    for (int i = 0; i < 2; ++i) {
+        const char* name = i == 0 ? "." : "..";
+        if (!matches(pattern, name)) continue;
+        add_entry(path, "");
+        mc_entry* e = &listing[listing_count - 1];
+        e->size = 0;
+        e->attributes = MC_ATTR_DIR;
+        strcpy(e->name, name);
+    }
+}
+
+static void list_host_entry(const char* path, const char* pattern, const char* name) {
+    /* Supply exactly one copy on hosts which already enumerate dot entries. */
+    if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0 && matches(pattern, name))
+        add_entry(path, name);
+}
+
 static void list(int port, const char* spec) {
     char dir_part[512], pattern[64], path[1024];
     const char* slash = strrchr(spec, '/');
@@ -372,10 +395,9 @@ static void list(int port, const char* spec) {
     if (h == -1) {
         return;
     }
+    list_dot_entries(path, pattern);
     do {
-        if (matches(pattern, found.name)) {
-            add_entry(path, found.name);
-        }
+        list_host_entry(path, pattern, found.name);
     } while (_findnext(h, &found) == 0);
     _findclose(h);
 #else
@@ -383,11 +405,10 @@ static void list(int port, const char* spec) {
     if (d == NULL) {
         return;
     }
+    list_dot_entries(path, pattern);
     struct dirent* ent;
     while ((ent = readdir(d)) != NULL) {
-        if (matches(pattern, ent->d_name)) {
-            add_entry(path, ent->d_name);
-        }
+        list_host_entry(path, pattern, ent->d_name);
     }
     closedir(d);
 #endif

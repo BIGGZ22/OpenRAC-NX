@@ -42,6 +42,23 @@ int main(int argc, char** argv) {
     CHECK(memcmp(G(2048), "persistent-progress", 20) == 0);
     CHECK(openrac_lib_sceMcClose(fd) == 0); CHECK(result() == 0);
     CHECK(openrac_lib_sceMcClose(fd) == 0); CHECK(result() == -5);
+    /* Exactly one pair of PS2 dot entries, independent of host enumeration.
+     * Check pagination, zero directory payloads, and wildcard filtering. */
+    strcpy((char*)G(256), "/BESCES-50916/*");
+    CHECK(openrac_lib_sceMcGetDir(0, 0, 256, 0, -1, 0) == 0); CHECK(result() == 3);
+    CHECK(openrac_lib_sceMcGetDir(0, 0, 256, 0, 1, 1024) == 0); CHECK(result() == 1);
+    CHECK(strcmp((char*)G(1056), ".") == 0);
+    CHECK(GREF(uint32_t, 1040) == 0 && GREF(uint16_t, 1044) == 0x8427);
+    CHECK(openrac_lib_sceMcGetDir(0, 0, 256, 1, 1, 1024) == 0); CHECK(result() == 1);
+    CHECK(strcmp((char*)G(1056), "..") == 0);
+    CHECK(GREF(uint32_t, 1040) == 0 && GREF(uint16_t, 1044) == 0x8427);
+    CHECK(openrac_lib_sceMcGetDir(0, 0, 256, 1, 10, 1024) == 0); CHECK(result() == 1);
+    CHECK(strcmp((char*)G(1056), "save00") == 0);
+    CHECK(openrac_lib_sceMcGetDir(0, 0, 256, 1, 10, 1024) == 0); CHECK(result() == 0);
+    strcpy((char*)G(256), "/BESCES-50916/save*");
+    CHECK(openrac_lib_sceMcGetDir(0, 0, 256, 0, -1, 0) == 0); CHECK(result() == 1);
+    strcpy((char*)G(256), "/no-such-folder/*");
+    CHECK(openrac_lib_sceMcGetDir(0, 0, 256, 0, -1, 0) == 0); CHECK(result() == 0);
     /* A regular file used as a parent must never appear as an inserted card. */
     char blocked[1200];
     snprintf(blocked, sizeof blocked, "%s/BESCES-50916/save00/child", openrac_game_card_dir);
