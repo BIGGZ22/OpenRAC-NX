@@ -310,7 +310,7 @@ int main(int argc, char** argv) {
     open_session(argc, argv);
     const fs::path iso = g_options.data / "iso_data" / openrac_game.game;
     const fs::path exe = iso / openrac_game.serial;
-    const fs::path disc = iso / "disc.iso";
+    const fs::path disc = installed_disc(g_options.data);
     if (!fs::exists(exe) || !fs::exists(disc)) {
         log::fatalf(
             "{} has no {} and disc.iso: set the game up from your disc first "

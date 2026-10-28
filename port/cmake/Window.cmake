@@ -237,14 +237,25 @@ endif()
 add_library(openrac_scene STATIC
   scene/hero_shadow.cpp
   scene/level.cpp
+  scene/disc_cache.cpp
+  scene/disc_import.cpp
+  scene/iso_setup.cpp
   scene/moby_pose.cpp
   scene/moby_shadow.cpp
   scene/screenshot.cpp
   scene/sun_shadow.cpp
 )
 target_link_libraries(openrac_scene PUBLIC openrac_renderer openrac_viewer_third_party
-  openrac_assets_geometry)
+  openrac_assets_geometry openrac_assets_world openrac_extract)
 openrac_warnings(openrac_scene)
+openrac_add_test(disc_cache SOURCES tests/disc_cache_test.cpp LIBS openrac_scene)
+if(NOT SWITCH)
+  # Optional integration tools; the caller supplies their own ISO and PC export.
+  add_executable(openrac-disc-setup-check tests/disc_setup_host.cpp)
+  target_link_libraries(openrac-disc-setup-check PRIVATE openrac_scene)
+  add_executable(openrac-disc-compare-check tests/disc_compare_host.cpp)
+  target_link_libraries(openrac-disc-compare-check PRIVATE openrac_scene)
+endif()
 
 # Scene conversion/fingerprinting is shared by activation checks and the
 # offline tool. It contains no Embree calls and is available in normal builds.

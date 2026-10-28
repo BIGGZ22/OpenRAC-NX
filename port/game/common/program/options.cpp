@@ -7,6 +7,7 @@
 #include "program/options.h"
 
 #include <cstdlib>
+#include <fstream>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -162,6 +163,17 @@ fs::path levels_or_flat(const fs::path& own) {
 
 fs::path default_levels(const fs::path& data) {
     return levels_or_flat(data / "port" / game_version());
+}
+
+fs::path installed_disc(const fs::path& data) {
+    const auto folder = data / "iso_data" / openrac_game.game;
+    std::string image;
+    std::ifstream pointer(folder / "disc-path.txt");
+    if (std::getline(pointer, image) && !image.empty() && image.size() < 4096) {
+        if (image.back() == '\r') image.pop_back();
+        return fs::path(image);
+    }
+    return folder / "disc.iso";
 }
 
 Options parse(int argc, char** argv) {

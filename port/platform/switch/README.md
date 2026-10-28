@@ -44,7 +44,32 @@ in full application mode: this loads level models and textures, not just the
 small setup dashboard. Hold L + R + Minus to exit at a game frame boundary.
 Explicit command-line arguments retain CLI use; `--window` enables rendering.
 
-## Prepare the ISO on your PC
+## First-launch setup on Switch
+
+Copy the NRO and a single supported PAL v2.00 ISO into `/switch/openrac/`.
+Leave at least 2 GiB extra SD space and launch in full application mode.
+Setup starts automatically when level data is missing or preparation was
+interrupted. It verifies the ISO's size, boot identity and full SHA-1 against
+the known PAL build, extracts the boot files, and creates all 21 scene caches.
+The progress screen can be cancelled with +; completed levels are reused.
+The Setup tab's A action also prepares, resumes or repairs the data.
+
+The ISO stays in its original location. `data/iso_data/rac1/disc-path.txt`
+records its path, used for game sector reads and level overlays. Do not move
+or delete it after preparation. No second multi-gigabyte copy is made.
+
+Each `data/port/pal/level_NN/scene.orcache` is written through a partial file,
+flushed to SD, checksummed and published before its completion manifest.
+A setup-in-progress marker prevents Play during an interrupted installation.
+Versioned cache headers reject incompatible layouts; repair regenerates bad
+caches. Saves and player settings are not reset. The cache format is internal
+to this build and can be regenerated from the disc; do not distribute caches.
+
+The same native installer has completed all scenes on PC, with textures,
+class bounds/triangles and scenery counts compared to the PC export. Switch
+installation speed and gameplay from these caches still need hardware testing.
+
+## Optional: prepare the ISO on your PC
 
 Do not mount the ISO. From the OpenRAC repository root in MSYS, run:
 

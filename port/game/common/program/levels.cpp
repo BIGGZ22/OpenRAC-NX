@@ -41,7 +41,7 @@ bool level_program_from_disc(int level, std::vector<std::uint8_t>* bytes) {
 
     if (!tried) {
         tried = true;
-        const fs::path image = g_options.data / "iso_data" / openrac_game.game / "disc.iso";
+        const fs::path image = installed_disc(g_options.data);
 
         if (std::string(openrac_game.game) == "rac1") {
             try {

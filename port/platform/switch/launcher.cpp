@@ -8,12 +8,17 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <chrono>
+#include <cctype>
 #include <unistd.h>
 #include "openrac/game_host.h"
 #include "game/common/lib/card_storage.h"
+#include "program/options.h"
 #ifdef OPENRAC_FRONTEND
 #include "settings.h"
 #include "fixes.h"
+#include "scene/disc_import.h"
+#include "scene/disc_cache.h"
 #endif
 
 namespace openrac::platform {
@@ -58,13 +63,85 @@ Data inspect() {
     const auto folder = std::filesystem::path(kRoot) / "iso_data" / openrac_game.game;
     const auto levels = std::filesystem::path(kRoot) / "port/pal";
     std::error_code ec;
-    return {signature(folder / "disc.iso", 16 * 2048, "\1CD001\1", 7),
+    bool exported = std::filesystem::is_regular_file(levels / "level_99/manifest.json",ec)
+        && std::filesystem::is_regular_file(levels / "level_00/manifest.json",ec);
+    if (std::filesystem::exists(levels / "setup-complete",ec)) {
+#ifdef OPENRAC_FRONTEND
+        std::ifstream stamp(levels / "setup-complete");
+        unsigned version = 0;
+        exported = exported && (stamp >> version) && version == scene::kDiscCacheVersion;
+#endif
+        // An on-device install promises all scenes, not only the first one.
+        for (int id = 0; id < 21 && exported; ++id) {
+            const int level = id < 19 ? id : id == 19 ? 98 : 99;
+            char name[16]; std::snprintf(name,sizeof name,"level_%02d",level);
+            const auto folder = levels / name;
+            exported = std::filesystem::is_regular_file(folder / "manifest.json",ec)
+                && (std::filesystem::is_regular_file(folder / "scene.orcache",ec)
+                    || std::filesystem::is_regular_file(folder / "placements.json",ec));
+        }
+    }
+    return {signature(program::installed_disc(kRoot), 16 * 2048, "\1CD001\1", 7),
         signature(folder / openrac_game.serial, 0, "\177ELF", 4),
-        std::filesystem::is_regular_file(levels / "level_99/manifest.json", ec)
-            && std::filesystem::is_regular_file(levels / "level_00/manifest.json", ec), check_card()};
+        exported && !std::filesystem::exists(levels / "setup-in-progress",ec), check_card()};
 }
 #ifdef OPENRAC_FRONTEND
 using namespace settings;
+std::filesystem::path setup_image() {
+    std::error_code ec;
+    const auto installed = program::installed_disc(kRoot);
+    if (std::filesystem::is_regular_file(installed,ec)) return installed;
+    const auto legacy = std::filesystem::path(kRoot) / "iso_data/rac1/disc.iso";
+    if (std::filesystem::is_regular_file(legacy,ec)) return legacy;
+    std::filesystem::path found;
+    for (std::filesystem::directory_iterator it("sdmc:/switch/openrac",ec),end;
+         it != end && !ec; it.increment(ec)) {
+        auto extension = it->path().extension().string();
+        for (auto& c : extension) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        if (extension == ".iso" && it->is_regular_file(ec)) {
+            if (!found.empty()) throw std::runtime_error("Multiple ISOs found. Keep only the supported Ratchet 1 PAL ISO in /switch/openrac/.");
+            found = it->path();
+        }
+    }
+    return found;
+}
+void prepare(PadState& pad) {
+    std::string current_step;
+    std::ofstream setup_log;
+    try {
+        if (appletGetAppletType() != AppletType_Application
+            && appletGetAppletType() != AppletType_SystemApplication) {
+            notice = "Disc setup needs full application mode. Exit and relaunch Homebrew Menu that way.";
+            return;
+        }
+        const auto image = setup_image();
+        if (image.empty()) { notice = "Copy your supported PAL ISO into /switch/openrac/, then press A here."; return; }
+        if (card_directory(kRoot)) setup_log.open(std::filesystem::path(kRoot) / "setup.log",std::ios::trunc);
+        auto last_draw = std::chrono::steady_clock::time_point{};
+        std::string last_text;
+        scene::prepare_switch_disc(image,kRoot,[&](const std::string& text,unsigned done,unsigned total) {
+            current_step = text;
+            if (!appletMainLoop()) return false;
+            padUpdate(&pad);
+            if (padGetButtonsDown(&pad) & HidNpadButton_Plus) return false;
+            const auto now = std::chrono::steady_clock::now();
+            if (text != last_text || now - last_draw > std::chrono::milliseconds(250)) {
+                if (text != last_text) { setup_log << done << '/' << total << ' ' << text << '\n'; setup_log.flush(); }
+                consoleClear();
+                std::printf("\x1b[36m\n  OPENRAC-NX / FIRST-LAUNCH DISC SETUP\n  ================================================================\x1b[0m\n\n");
+                std::printf("  %.70s\n\n",text.c_str());
+                if (total) std::printf("  Progress: %u / %u  (%u%%)\n\n",done,total,unsigned(std::min(100ull,100ull*done/total)));
+                std::printf("  The first setup can take a while. Keep the console powered.\n\n  Leave your ISO on the SD card. It is not duplicated.\n  Finished levels are reused if setup is interrupted.\n\n  [+] Cancel and return to menu\n");
+                consoleUpdate(nullptr); last_draw = now; last_text = text;
+            }
+            return true;
+        });
+        notice = "Disc setup complete. Open Play and press A to start.";
+    } catch (const std::exception& e) {
+        notice = current_step.empty() ? e.what() : current_step + ": " + e.what();
+        setup_log << "ERROR: " << notice << '\n';
+    }
+}
 constexpr const char* kDisplay[] = {"Picture shape", "HUD position", "Render scale", "Anti-aliasing", "Texture filter", "Anisotropy", "Scenery detail", "VSync", "Frame rate", "Frame cap", "Frame counter"};
 constexpr const char* kAudio[] = {"Master volume", "Music volume", "Sound effects", "Playback mode"};
 constexpr const char* kGameplay[] = {"Language", "Start skips cutscenes", "Detailed logging"};
@@ -166,9 +243,12 @@ void draw(int tab, int selected, const Data& d) {
         std::printf("  Stored files: %d%s\n\n", count, ec ? " (unable to read all folders)" : "");
         std::printf("  Save through the game's own Save menu.\n  Wait for saving to finish before exiting or powering off.\n\n  Back up the entire memcard folder to keep your progress.\n  Existing saves are kept when replacing the NRO.\n\n  [X] Recheck storage (does not change your saves)\n");
     } else if (tab == 6) {
-        std::printf("  INSTALLATION\n\n  Prepare your own PAL ISO on a PC; no mounting needed.\n  Run tools/extractor.py, then editor/extract.py.\n\n  SD:/switch/openrac/\n    openrac-rac1-pal.nro\n    data/iso_data/rac1/disc.iso\n    data/iso_data/rac1/SCES_509.16\n    data/iso_data/rac1/buildinfo.json\n    data/port/pal/level_XX/  (all exported levels)\n\n  Full instructions: github.com/BIGGZ22/OpenRAC-NX\n  Branch: codex/switch-port\n\n  Start Homebrew Menu in full application mode.\n");
+        std::printf("  ON-DEVICE INSTALLATION\n\n  1. Copy this NRO to SD:/switch/openrac/\n  2. Put your own Ratchet 1 PAL v2.00 ISO in the same folder.\n  3. Launch in full application mode. Setup starts automatically.\n\n  [A] Prepare / resume / repair disc data\n\n  Setup verifies the complete ISO and creates boot files and\n  renderer caches. Allow several GB of additional free SD space.\n  Your ISO stays where you copied it and is required during play.\n\n  Completed levels are reused; saves and settings are kept.\n  PC-prepared data remains supported.\n\n  Supported disc: SCES_509.16, Europe/Australia v2.00\n");
     }
-    std::printf("\n\x1b[33m  %.76s\x1b[0m\n", notice.c_str());
+    std::printf("\n\x1b[33m");
+    for (std::size_t n = 0; n < notice.size() && n < 216; n += 72)
+        std::printf("  %.*s\n",int(std::min(std::size_t{72},notice.size()-n)),notice.c_str()+n);
+    std::printf("\x1b[0m");
     std::printf("\n\x1b[36m  [L/R] Tabs  [Up/Down] Select  [Left/Right/A] Change\n  [B] Play page   [X] Check files   [+] Exit\x1b[0m\n");
 }
 } // namespace
@@ -183,6 +263,17 @@ int switch_launcher() {
     padInitializeDefault(&pad);
     int tab = 0, selected = 0;
     Data data = inspect();
+#ifdef OPENRAC_FRONTEND
+    std::error_code pending;
+    std::ifstream complete(std::filesystem::path(kRoot) / "port/pal/setup-complete");
+    unsigned cache_version = 0;
+    const bool old_cache = complete.is_open()
+        && (!(complete >> cache_version) || cache_version != scene::kDiscCacheVersion);
+    if (!data.levels || old_cache || std::filesystem::exists(std::filesystem::path(kRoot) / "port/pal/setup-in-progress",pending)) {
+        prepare(pad);
+        data = inspect();
+    }
+#endif
     bool dirty = true;
     while (appletMainLoop()) {
         padUpdate(&pad);
@@ -195,6 +286,9 @@ int switch_launcher() {
         if (b & HidNpadButton_B) { tab = 0; selected = 0; dirty = true; }
         if (b & HidNpadButton_X) { data = inspect(); notice = data.ready() ? "Installation and save storage ready." : "Some checks failed. See the Play / Saves pages."; dirty = true; }
 #ifdef OPENRAC_FRONTEND
+        if (tab == 6 && (b & HidNpadButton_A)) {
+            prepare(pad); data = inspect(); dirty = true;
+        }
         const int n = rows(tab);
         if (n > 0) {
             if (b & HidNpadButton_Up) selected = (selected + n - 1) % n;

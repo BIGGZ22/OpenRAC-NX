@@ -2,6 +2,7 @@
 // Copyright (c) 2026 the OpenRAC contributors
 
 #include "scene/level.h"
+#include "scene/disc_cache.h"
 
 #include <algorithm>
 #include <cgltf.h>
@@ -463,6 +464,10 @@ Vec3 bounds_centre(const Model& model, const Mat4& matrix) {
 }
 
 bool load_level(const fs::path& dir, LevelData& out, std::string& error, const fs::path& edited) {
+    std::error_code cached;
+    if (edited.empty() && fs::is_regular_file(dir / "scene.orcache", cached)) {
+        return read_disc_cache(dir / "scene.orcache", out, error);
+    }
     out = LevelData{};
     out.dir = dir;
     if (!edited.empty()) {

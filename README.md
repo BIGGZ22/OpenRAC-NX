@@ -23,6 +23,7 @@ and strafe changes still need more console testing.
 
 Included features:
 
+- First-launch ISO validation and asset preparation on the Switch, with resumable level caches.
 - A controller-operated setup launcher and an OpenGL game frontend.
 - Gamepad input, audio output and compact guest-memory backing.
 - Corrected full-tilt diagonal stick movement.
@@ -34,13 +35,53 @@ Switch build. The original Ratchet 1 animations are retained.
 
 **No ISO, PS2 executable, extracted models, textures, sounds or prepared game
 data is included. You must provide your own supported disc image.** The NRO
-alone is not enough to play; it also needs the disc files and exported levels.
+needs your supported ISO. This build can prepare its boot files and renderer caches directly on the Switch.
 
-## What you need
+## Install a released NRO: no PC extraction needed
+
+1. Copy `openrac-rac1-pal.nro` into `SD:/switch/openrac/`.
+2. Copy your own **Ratchet & Clank 1 PAL Europe/Australia v2.00 ISO** into the
+   same folder. For example, name it `Ratchet.iso`. Keep only one ISO in that
+   folder so setup can choose it unambiguously. The older installed location
+   `data/iso_data/rac1/disc.iso` is also supported.
+3. Leave **at least 2 GiB of additional free SD space** for generated caches
+   and working space. The full-disc PC test generated about 936 MiB of caches;
+   setup checks available space before writing each level.
+4. Launch OpenRAC through Homebrew Menu in **full application mode**.
+5. First-launch setup validates the complete ISO, extracts the boot files and
+   prepares all 21 renderer scenes. A progress screen shows its current step.
+   Keep the console powered and allow time for the initial setup.
+6. When setup completes, press **A** on the Play tab to start.
+
+```text
+SD:/switch/openrac/
+  openrac-rac1-pal.nro
+  Ratchet.iso                 <- your supported disc image
+  data/                       <- created by the application
+```
+
+**Leave the ISO in place:** gameplay still reads sectors from it. Setup stores
+its path and does not make a second copy. The boot files and versioned renderer
+caches are created under `data/iso_data/rac1/` and `data/port/pal/`. Saves remain
+under `memcard/SCES_509.16/` and settings under `settings/`.
+
+Press **+** during setup to cancel. Completed, checksum-verified level caches
+are kept and reused on the next attempt; incomplete files are not accepted as
+finished levels. In the **Setup** tab, press **A** to prepare, resume or repair.
+If you run out of space, free space and restart. Existing saves are preserved.
+Setup errors are also recorded in `data/setup.log`; review logs for personal paths before sharing them.
+PC-prepared installations continue to work.
+
+This installation path has been compiled for Switch and exercised on a PC
+against the supported disc, including comparison with the PC exporter. Its
+first-launch performance and gameplay with generated caches still need console
+testing. Report any setup error with the step shown on screen.
+
+## Building from source (optional for release users)
 
 - A homebrew-capable Nintendo Switch with Homebrew Menu, preferably running
   in full application mode for the memory needed by levels and textures.
-- A PC for building and preparing your disc data.
+- A PC if building the NRO yourself or using the optional PC extraction route.
 - Your own supported Ratchet & Clank 1 PAL ISO.
 - [devkitPro](https://devkitpro.org/) with devkitA64, libnx and Switch tools.
 - The `switch-sdl2` and `switch-mesa` portlibs.
@@ -93,7 +134,7 @@ toolchain at `/opt/devkitpro/cmake/Switch.cmake` and builds only Ratchet 1 PAL.
 See the [detailed Switch guide](port/platform/switch/README.md) for the explicit
 CMake command and implementation details.
 
-## 3. Prepare your disc data on the PC
+## 3. Optional: prepare your disc data on the PC
 
 **You do not mount the ISO.** The tools open it directly. From the repository
 root, run the following, replacing the example ISO path with your own:
@@ -118,7 +159,7 @@ are `build/switch-data/iso_data/` and `build/switch-data/port/`.
 The extractor rejects unrecognized disc revisions. Renaming another game's
 ISO or executable will not make it compatible.
 
-## 4. Copy the application and data to the SD card
+## 4. Copy PC-prepared data to the SD card
 
 Create `/switch/openrac/` on the SD card. Copy the NRO into it, then copy both
 prepared data folders into `/switch/openrac/data/`:
@@ -202,7 +243,7 @@ the NRO and does not require installing a separate mod.
 ## Troubleshooting and updates
 
 - **Files missing:** check the SD layout above. A raw ISO alone is not the
-  complete installation; exported `data/port/pal` levels are required too.
+  complete installation until first-launch preparation finishes. Use the Setup tab to prepare or repair it.
 - **Startup or memory trouble:** use Homebrew Menu in full application mode.
 - **Movie sound or strafe problems:** report the scene/planet, what happened,
   and which build you tested. These changes still need hardware feedback.

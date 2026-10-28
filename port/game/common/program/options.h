@@ -51,6 +51,8 @@ fs::path levels_or_flat(const fs::path& own);
 
 // Where the levels are without --levels.
 fs::path default_levels(const fs::path& data);
+// On-device installs keep the original ISO in place, with a small path record.
+fs::path installed_disc(const fs::path& data);
 
 // Reads the command line into Options, with the defaults where an option is not given. Prints the
 // usage and ends the program (exit code 64) on an unknown option, a missing value, or no data
