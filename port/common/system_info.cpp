@@ -17,8 +17,12 @@
 #include <sys/sysctl.h>
 #include <sys/utsname.h>
 #else
+#if !defined(__SWITCH__)
 #include <sys/sysinfo.h>
+#endif
+#if !defined(__SWITCH__)
 #include <sys/utsname.h>
+#endif
 #endif
 #if defined(__ANDROID__)
 #include <cmath>
@@ -44,7 +48,7 @@ std::string sysctl_text(const char* name) {
 }
 #endif
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__SWITCH__)
 std::string uname_text() {
     utsname u{};
     if (uname(&u) != 0) {
@@ -57,6 +61,11 @@ std::string uname_text() {
         static_cast<const char*>(u.release),
         static_cast<const char*>(u.machine)
     );
+}
+#endif
+#if defined(__SWITCH__)
+std::string uname_text() {
+    return "Nintendo Switch (Horizon)";
 }
 #endif
 
@@ -100,6 +109,7 @@ std::string gigabytes(unsigned long long bytes) {
 
 }  // namespace
 
+#ifndef __SWITCH__
 std::string os() {
 #if defined(_WIN32)
     // GetVersionEx answers what the program's manifest claims; ntdll's RtlGetVersion the truth.
@@ -131,8 +141,13 @@ std::string os() {
     }
     return std::format("{} ({})", name, uname_text());
 #endif
+#else
+std::string os() {
+    return "Nintendo Switch (Horizon)";
 }
+#endif
 
+#ifndef __SWITCH__
 std::string cpu() {
     std::string name;
 #if defined(_WIN32)
@@ -169,8 +184,13 @@ std::string cpu() {
         name = "unknown processor";
     }
     return std::format("{}, {} threads", name, std::thread::hardware_concurrency());
+#else
+std::string cpu() {
+    return "ARM Cortex-A57";
 }
+#endif
 
+#ifndef __SWITCH__
 std::string memory() {
 #if defined(_WIN32)
     MEMORYSTATUSEX m{};
@@ -191,7 +211,11 @@ std::string memory() {
     }
 #endif
     return "unknown";
+#else
+std::string memory() {
+    return "1GB";  // Nintendo Switch typically has 1GB RAM
 }
+#endif
 
 std::string cpu_clocks() {
 #if defined(__linux__)

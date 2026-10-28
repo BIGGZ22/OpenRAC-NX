@@ -30,7 +30,7 @@
 #include <utility>
 #include <vector>
 
-#include <SDL3/SDL.h>
+#include "platform/sdl.h"
 
 #include "common/env.h"
 #include "common/log.h"

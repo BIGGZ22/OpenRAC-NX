@@ -10,6 +10,20 @@
 # that open a window need SDL3, found on the system or fetched by CMake.
 cmake_minimum_required(VERSION 3.24)
 project(openrac_port LANGUAGES C CXX)
+if(SWITCH)
+  # Native mod loading is stubbed on libnx; there is no libdl to link.
+  set(CMAKE_DL_LIBS "")
+  # Keep newlib's POSIX declarations (setenv/unsetenv, etc.) visible in strict C++.
+  add_compile_definitions(_DEFAULT_SOURCE=1)
+endif()
+# devkitA64's Windows compiler writes drive-letter paths into GCC depfiles.
+# MSYS Makefiles treat their colons as rule separators. Use CMake's own header
+# scanner for this host/target combination, including fetched dependencies.
+if(SWITCH AND CMAKE_HOST_SYSTEM_NAME STREQUAL "MSYS" AND CMAKE_GENERATOR STREQUAL "Unix Makefiles")
+  set(CMAKE_DEPENDS_USE_COMPILER FALSE)
+  set(CMAKE_C_DEPENDS_USE_COMPILER FALSE)
+  set(CMAKE_CXX_DEPENDS_USE_COMPILER FALSE)
+endif()
 # macOS: the menu bar's code is Objective-C++ (platform/macos_app.mm), and an SDL3 that is built
 # here (Dependencies.cmake) is Objective-C. Enabled here, for every directory below.
 if(APPLE)
@@ -40,11 +54,21 @@ endif()
 # by default, so a build with it draws as one without it until a player turns it on (renderer/gl.h).
 # OFF leaves it out altogether.
 option(OPENRAC_ENHANCED_RENDERING "Compile in the experimental Vulkan lighting and shadows (off at run time by default)" ON)
-if(OPENRAC_ENHANCED_RENDERING)
+if(OPENRAC_ENHANCED_RENDERING AND NOT SWITCH)
   add_compile_definitions(OPENRAC_ENHANCED_RENDERING=1)
 endif()
 
-option(OPENRAC_PORT_WINDOW "Build the programs that open a window (needs SDL3)" ON)
+# Apply this here, rather than in our optional toolchain file: users can also
+# configure with devkitPro's Switch.cmake. Upstream SDL3 has no Switch backend.
+set(openrac_window_default ON)
+if(SWITCH)
+  set(openrac_window_default OFF)
+endif()
+option(OPENRAC_PORT_WINDOW "Build the programs that open a window (needs SDL3)" ${openrac_window_default})
+if(SWITCH AND OPENRAC_PORT_WINDOW)
+  set(OPENRAC_VULKAN OFF CACHE BOOL "Vulkan is not available in the Switch portlibs" FORCE)
+  set(OPENRAC_ENHANCED_RENDERING OFF CACHE BOOL "Switch uses the base OpenGL renderer" FORCE)
+endif()
 option(OPENRAC_GPU_MARKERS "Compile opt-in Vulkan GPU profiler labels" OFF)
 option(OPENRAC_PORT_GAMES "Build the games from their decompilations (needs Clang and Python 3)" ON)
 
@@ -108,12 +132,17 @@ openrac_add_test(stats LIBS openrac_common)
 openrac_add_test(perf_capture LIBS openrac_common)
 openrac_add_test(zip_writer LIBS openrac_common)
 openrac_add_test(parallel LIBS openrac_common Threads::Threads)
-openrac_add_test(slow_cpu LIBS openrac_common)
+if(NOT SWITCH)
+  # The test measures per-thread CPU time, which libnx does not expose.
+  openrac_add_test(slow_cpu LIBS openrac_common)
+endif()
 openrac_add_test(sampler LIBS openrac_common)
 openrac_add_test(result INCLUDES .)
 openrac_add_test(c_boundary LIBS openrac_common)
 openrac_add_test(frame_pacing INCLUDES .)
 openrac_add_test(frame_counter INCLUDES .)
+openrac_add_test(stick_rim SOURCES tests/stick_rim_test.cpp platform/pad.cpp INCLUDES .)
+openrac_add_c_test(strafe_smoothing INCLUDES . MATH)
 openrac_add_test(render_worker SOURCES tests/render_worker_test.cpp
   game/common/frontend/render_worker.cpp INCLUDES . LIBS openrac_common Threads::Threads)
 openrac_add_test(settings SOURCES tests/settings_test.cpp game/common/settings.cpp
@@ -226,6 +255,7 @@ openrac_add_c_test(rac4_io
           game/common/lib/pad.c
   INCLUDES runtime/include game/common/include)
 openrac_add_c_test(graph_dma INCLUDES runtime/include game/common/include)
+openrac_add_c_test(compact_guest INCLUDES runtime/include DEFINITIONS OPENRAC_COMPACT_GUEST_MEMORY)
 
 # ---- assets, media, audio, the extractor: no window ----
 openrac_add_c_test(crate_init NO_STRICT_ALIASING WRAPV NO_FP_CONTRACT)
@@ -276,8 +306,12 @@ openrac_add_c_test(scene_actors NO_STRICT_ALIASING WRAPV
   INCLUDES tests/rac1_host game/common/include runtime/include game/rac1-pal/host)
 
 # The shared rac1 host C's bigger moby pool, with PAL's table and the same stand-in.
-openrac_add_c_test(moby_pool NO_STRICT_ALIASING WRAPV
-  INCLUDES tests/rac1_host game/common/include runtime/include game/rac1-pal/host)
+# This test reserves a sparse guest address space with mmap/VirtualAlloc;
+# libnx does not provide those desktop virtual-memory APIs.
+if(NOT SWITCH)
+  openrac_add_c_test(moby_pool NO_STRICT_ALIASING WRAPV
+    INCLUDES tests/rac1_host game/common/include runtime/include game/rac1-pal/host)
+endif()
 
 openrac_add_c_test(resource_bank NO_STRICT_ALIASING)
 openrac_add_c_test(exe_moby_grid NO_STRICT_ALIASING)
@@ -319,4 +353,15 @@ if(OPENRAC_PORT_GAMES)
   set_tests_properties(rac1-ntsc_hand_xcheck PROPERTIES SKIP_RETURN_CODE 77)
   add_test(NAME xcheck_tool
            COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/versionmap/test_xcheck.py")
+endif()
+
+if(SWITCH)
+  # Console builds ship the games and NROs. Desktop inspection programs and
+  # test executables remain explicit targets, rather than part of every build.
+  get_property(openrac_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+  foreach(target IN LISTS openrac_targets)
+    if(target MATCHES "_test($|_)" OR target STREQUAL "openrac-viewer")
+      set_target_properties(${target} PROPERTIES EXCLUDE_FROM_ALL ON)
+    endif()
+  endforeach()
 endif()

@@ -59,6 +59,9 @@
 #include "openrac/memory.h"
 #include "openrac/sound_engine.h"
 #include "program/program.h"
+#ifdef __SWITCH__
+#include "platform/switch/launcher.h"
+#endif
 
 #ifdef OPENRAC_FRONTEND
 #include "debug_overlay.h"
@@ -77,6 +80,9 @@
 #endif
 
 extern "C" {
+#ifdef OPENRAC_SWITCH_LOCK_STRAFE
+int openrac_switch_strafe_load(const openrac_api*, openrac_mod*);
+#endif
 const char* openrac_game_disc_image = nullptr;
 const char* openrac_game_card_dir = nullptr;
 const char* openrac_game_mods_dir = nullptr;
@@ -233,6 +239,12 @@ void load_mods() {
     }
     host.now = now;
     log::header(std::format("mods      {}", mods::load(host)));
+#ifdef OPENRAC_SWITCH_LOCK_STRAFE
+    // Console control feature, statically linked independently of external mods.
+    if (g_window) {
+        mods::load_switch_lock_strafe(host, openrac_switch_strafe_load);
+    }
+#endif
     std::atexit([] { mods::unload(); });
 }
 
@@ -260,6 +272,26 @@ int run_game_as_the_ee() {
 }  // namespace
 
 int main(int argc, char** argv) {
+#ifdef __SWITCH__
+    // Homebrew Menu starts the setup dashboard. Explicit arguments retain CLI use.
+    if (argc <= 1) {
+        const int launch = openrac::platform::switch_launcher();
+        if (launch == 0) return 0;
+        static char app[] = "openrac-rac1-pal";
+        static char data_flag[] = "--data";
+        static char data[] = "sdmc:/switch/openrac/data";
+        static char frames_flag[] = "--frames";
+        static char frames[] = "300";
+        static char skip[] = "--skip-movies";
+        static char mods[] = "--no-mods";
+        static char stop[] = "--stop-on-missing";
+        static char window[] = "--window";
+        static char* game_args[] = {app, data_flag, data, window, mods, nullptr};
+        static char* boot_args[] = {app, data_flag, data, frames_flag, frames, skip, mods, stop, nullptr};
+        argc = launch == 2 ? 5 : 8;
+        argv = launch == 2 ? game_args : boot_args;
+    }
+#endif
 #if defined(_WIN32)
     // Windows sleeps in steps of 15.6 ms unless a program asks for 1 ms: the wait for the next
     // 20 ms tick would overshoot by up to a step, and the frames stagger.

@@ -82,12 +82,56 @@ __extension__ typedef unsigned __int128 openrac_u128;
  * runtime before any game code runs. */
 extern OPENRAC_GUEST_GLOBAL uint8_t* openrac_guest_base;
 
+#if defined(__SWITCH__) || defined(OPENRAC_COMPACT_GUEST_MEMORY)
+/* Compact backing for platforms without sparse virtual mappings. RAM aliases
+ * resolve to the same bytes; registers, scratchpad and host storage follow RAM. */
+#define OPENRAC_COMPACT_REGS GUEST_RAM_SIZE
+#define OPENRAC_COMPACT_SCRATCH (OPENRAC_COMPACT_REGS + 0x22000u)
+#define OPENRAC_COMPACT_PORT (OPENRAC_COMPACT_SCRATCH + GUEST_SCRATCHPAD_SIZE)
+#define OPENRAC_COMPACT_SIZE (OPENRAC_COMPACT_PORT + GUEST_PORT_SIZE)
+static inline uint32_t openrac_guest_offset(gaddr a) {
+    if (a < GUEST_RAM_SIZE) return a;
+    if (a >= GUEST_RAM_UNCACHED && a - GUEST_RAM_UNCACHED < GUEST_RAM_SIZE)
+        return a - GUEST_RAM_UNCACHED;
+    if (a >= GUEST_RAM_UNCACHED_ACCEL && a - GUEST_RAM_UNCACHED_ACCEL < GUEST_RAM_SIZE)
+        return a - GUEST_RAM_UNCACHED_ACCEL;
+    if (a >= GUEST_EE_REGS && a - GUEST_EE_REGS < GUEST_EE_REGS_SIZE)
+        return OPENRAC_COMPACT_REGS + a - GUEST_EE_REGS;
+    if (a >= GUEST_VU_MEM && a - GUEST_VU_MEM < GUEST_VU_MEM_SIZE)
+        return OPENRAC_COMPACT_REGS + 0x10000u + a - GUEST_VU_MEM;
+    if (a >= GUEST_GS_REGS && a - GUEST_GS_REGS < GUEST_GS_REGS_SIZE)
+        return OPENRAC_COMPACT_REGS + 0x20000u + a - GUEST_GS_REGS;
+    if (a >= GUEST_SCRATCHPAD && a - GUEST_SCRATCHPAD < GUEST_SCRATCHPAD_SIZE)
+        return OPENRAC_COMPACT_SCRATCH + a - GUEST_SCRATCHPAD;
+    if (a >= GUEST_PORT && a - GUEST_PORT < GUEST_PORT_SIZE)
+        return OPENRAC_COMPACT_PORT + a - GUEST_PORT;
+    __builtin_trap();
+}
+static inline gaddr openrac_guest_address(const void* p) {
+    const uintptr_t offset = (uintptr_t)p - (uintptr_t)openrac_guest_base;
+    if (offset < GUEST_RAM_SIZE) return (gaddr)offset;
+    if (offset < OPENRAC_COMPACT_REGS + 0x10000u)
+        return GUEST_EE_REGS + (gaddr)(offset - OPENRAC_COMPACT_REGS);
+    if (offset < OPENRAC_COMPACT_REGS + 0x20000u)
+        return GUEST_VU_MEM + (gaddr)(offset - OPENRAC_COMPACT_REGS - 0x10000u);
+    if (offset < OPENRAC_COMPACT_SCRATCH)
+        return GUEST_GS_REGS + (gaddr)(offset - OPENRAC_COMPACT_REGS - 0x20000u);
+    if (offset < OPENRAC_COMPACT_PORT)
+        return GUEST_SCRATCHPAD + (gaddr)(offset - OPENRAC_COMPACT_SCRATCH);
+    if (offset < OPENRAC_COMPACT_SIZE)
+        return GUEST_PORT + (gaddr)(offset - OPENRAC_COMPACT_PORT);
+    __builtin_trap();
+}
+#define G(a) ((void*)(openrac_guest_base + openrac_guest_offset((gaddr)(a))))
+#define GADDR(p) openrac_guest_address(p)
+#else
 /* The host pointer for a game address, and an lvalue of type T there. */
 #define G(a) ((void*)(openrac_guest_base + (gaddr)(a)))
-#define GREF(T, a) (*(T*)G(a))
 
 /* The game address of a host pointer into game memory. */
 #define GADDR(p) ((gaddr)((const uint8_t*)(p) - openrac_guest_base))
+#endif
+#define GREF(T, a) (*(T*)G(a))
 
 /* The host compiler does not know that RAM and its uncached aliases are the
  * same memory: a write through one alias and a read through another in the

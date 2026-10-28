@@ -20,6 +20,7 @@
 #define NOMINMAX
 #include <windows.h>
 #else
+#ifndef __SWITCH__
 #include <csignal>
 #include <fcntl.h>
 #include <unistd.h>
@@ -27,6 +28,9 @@
 #include <sys/mman.h>
 #if defined(__ANDROID__)
 #include <sys/syscall.h>
+#endif
+#else
+// Nintendo Switch stubs for memory management - skip POSIX headers since they don't exist on libnx
 #endif
 #endif
 
@@ -184,6 +188,7 @@ void Memory::map_all() {
 }
 
 #else  // POSIX
+#ifndef __SWITCH__
 
 namespace {
 
@@ -249,6 +254,16 @@ void Memory::map_all() {
     }
 }
 
+#else  // Nintendo Switch: G/GADDR translate into compact backing storage.
+void Memory::map_all() {
+    base_ = static_cast<std::uint8_t*>(std::aligned_alloc(0x1000, OPENRAC_COMPACT_SIZE));
+    if (base_ == nullptr) {
+        log::fatal("could not allocate compact game memory (about 49 MB)");
+    }
+    aliases_ = true;
+}
+#endif
+
 #endif
 
 Memory& Memory::create() {
@@ -295,24 +310,31 @@ std::span<std::uint8_t> Memory::bytes(gaddr address, std::size_t size) {
     if (!mapped(address, size)) {
         log::fatalf("game memory {:#010x}+{:#x} is not mapped", address, size);
     }
-    return {base_ + address, size};
+    return {static_cast<std::uint8_t*>(G(address)), size};
 }
 
 void Memory::clear() {
-    std::memset(base_ + GUEST_RAM, 0, GUEST_RAM_SIZE);
+    std::memset(G(GUEST_RAM), 0, GUEST_RAM_SIZE);
     for (const Region& r : kPlainRegions) {
-        std::memset(base_ + r.address, 0, r.size);
+        std::memset(G(r.address), 0, r.size);
     }
     openrac_guest_sp = GUEST_STACK_TOP;
 }
 
 bool Memory::contains(const void* host, gaddr* address) const {
+#ifdef __SWITCH__
+    const auto offset = reinterpret_cast<std::uintptr_t>(host) - reinterpret_cast<std::uintptr_t>(base_);
+    if (offset >= OPENRAC_COMPACT_SIZE) return false;
+    *address = GADDR(host);
+    return true;
+#else
     auto* p = static_cast<const std::uint8_t*>(host);
     if (p < base_ || p >= base_ + kReservation) {
         return false;
     }
     *address = static_cast<gaddr>(p - base_);
     return true;
+#endif
 }
 
 }  // namespace openrac::runtime

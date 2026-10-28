@@ -25,10 +25,17 @@ include(FetchContent)
 # OPENRAC_STATIC_SDL (the `standalone` preset): never the system's, so that the program an
 # installer carries needs no SDL on the player's machine.
 option(OPENRAC_STATIC_SDL "Build SDL3 into the programs even when the system has one" OFF)
-if(NOT OPENRAC_STATIC_SDL)
+if(SWITCH)
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(SWITCH_SDL2 REQUIRED IMPORTED_TARGET sdl2)
+  add_library(openrac_sdl3 INTERFACE)
+  target_link_libraries(openrac_sdl3 INTERFACE PkgConfig::SWITCH_SDL2)
+elseif(NOT OPENRAC_STATIC_SDL)
   find_package(SDL3 CONFIG QUIET)
 endif()
-if(SDL3_FOUND)
+if(SWITCH)
+  message(STATUS "Switch graphics: SDL2 and Mesa from devkitPro portlibs")
+elseif(SDL3_FOUND)
   message(STATUS "SDL3: system (${SDL3_VERSION})")
 else()
   message(STATUS "SDL3: not installed; fetching release-3.2.24")
@@ -118,9 +125,11 @@ if(NOT TARGET openrac_imgui)
     "${imgui_SOURCE_DIR}/imgui_draw.cpp"
     "${imgui_SOURCE_DIR}/imgui_tables.cpp"
     "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
-    "${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
-    "${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp"
   )
+  if(NOT SWITCH)
+    target_sources(openrac_imgui PRIVATE "${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp"
+      "${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp")
+  endif()
   target_include_directories(openrac_imgui SYSTEM PUBLIC "${imgui_SOURCE_DIR}" "${imgui_SOURCE_DIR}/backends")
   target_link_libraries(openrac_imgui PUBLIC openrac_sdl3)
   if(ANDROID)

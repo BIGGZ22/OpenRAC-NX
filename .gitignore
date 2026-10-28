@@ -6,6 +6,15 @@
 /build/
 /assets/
 /active/
+# Local Switch builds, verification logs, and editor backups.
+/port/build-switch*/
+/port/*.log
+/port/*.backup
+# Disc images and extracted disc files are supplied by each player.
+*.[iI][sS][oO]
+iso_data/
+# Homebrew applications belong in release downloads, not the source tree.
+*.[nN][rR][oO]
 /toolchains/*
 !/toolchains/README.md
 # tools/openrac.py setup links each game's toolchain path to toolchains/.

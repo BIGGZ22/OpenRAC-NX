@@ -1,5 +1,15 @@
 # Third-party notices
 
+## Switch lock-strafe adaptation
+
+The Switch control extension uses the OpenRAC contributors' GPL-3.0-or-later
+[rac1-mods lock-strafe](https://github.com/OpenRAC/rac1-mods/tree/2c5139c106de03a7ae2d0ef55a703a1d7c290d09/lock-strafe),
+pinned at `2c5139c106de03a7ae2d0ef55a703a1d7c290d09`. Its copyright and license
+headers are retained in the fetched source. Switch-specific changes select
+ZL, use compact guest-memory access, and smooth facing and lateral movement.
+The dependency is fetched by `port/cmake/SwitchStrafe.cmake`; source and the
+GPL license are available at the pinned repository revision. See `COPYING`.
+
 Third-party code and data used by OpenRAC's shared components. Each game
 directory lists its own in its `THIRD_PARTY_NOTICES.md` and source comments:
 

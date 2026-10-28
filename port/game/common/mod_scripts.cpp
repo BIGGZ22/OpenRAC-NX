@@ -227,7 +227,7 @@ void check_address(lua_State* L, std::uint64_t address, std::size_t size) {
 
 void push_memory(lua_State* L, std::uint8_t kind, std::uint32_t address) {
     check_address(L, address, kind_size(kind));
-    const std::uint8_t* p = openrac_guest_base + address;
+    const auto* p = static_cast<const std::uint8_t*>(G(address));
     switch (kind) {
         case OPENRAC_SV_U8:
             lua_pushnumber(L, *p);
@@ -270,7 +270,7 @@ void push_memory(lua_State* L, std::uint8_t kind, std::uint32_t address) {
 
 void write_memory(lua_State* L, std::uint8_t kind, std::uint32_t address, double value) {
     check_address(L, address, kind_size(kind));
-    std::uint8_t* p = openrac_guest_base + address;
+    auto* p = static_cast<std::uint8_t*>(G(address));
     if (kind == OPENRAC_SV_F32) {
         const float v = static_cast<float>(value);
         std::memcpy(p, &v, 4);
@@ -416,7 +416,7 @@ int api_pvars(lua_State* L) {
     for (int i = 0; i < m->class_count; ++i) {
         if (m->classes[i].number == number) {
             std::uint32_t base;
-            std::memcpy(&base, openrac_guest_base + moby + m->pvars_offset, 4);
+            std::memcpy(&base, G(moby + m->pvars_offset), 4);
             auto* p = static_cast<Pvars*>(lua_newuserdata(L, sizeof(Pvars)));
             *p = {&m->classes[i], base};
             luaL_getmetatable(L, "openrac.pvars");

@@ -11,7 +11,7 @@
 
 #include <cmath>
 
-#include <SDL3/SDL.h>
+#include "platform/sdl.h"
 
 #include "common/log.h"
 #include "debug_overlay.h"

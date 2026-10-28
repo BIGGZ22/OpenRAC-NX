@@ -1935,6 +1935,16 @@ class TypeStrings(unittest.TestCase):
 
 
 class Preparation(unittest.TestCase):
+    def test_guest_newlib_names_do_not_collide_with_host(self):
+        src = ('struct _reent { struct _Bigint *p; };\n'
+               'typedef int __Long; typedef unsigned __ULong;\n'
+               'const char *s = "_reent"; /* _Bigint */\n')
+        out = prep.prepare(src)
+        self.assertIn('struct openrac_guest_reent { struct openrac_guest_Bigint *p; };', out)
+        self.assertIn('typedef int openrac_guest__Long;', out)
+        self.assertIn('typedef unsigned openrac_guest__ULong;', out)
+        self.assertIn('"_reent"; /* _Bigint */', out)
+
     def test_readable_names_are_written_as_their_address_names(self):
         # rac1/pal's names.h: a definition under its readable name is still the matched C of
         # func_0022F4C8, so the port's own copy of that function steps aside.

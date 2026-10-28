@@ -10,7 +10,9 @@
 #define NOMINMAX
 #include <windows.h>
 #else
+#ifndef __SWITCH__
 #include <dlfcn.h>
+#endif
 #endif
 
 namespace openrac::mods::library {
@@ -56,7 +58,7 @@ const void* base_of(const void* address) {
 }
 
 #else
-
+#ifndef __SWITCH__
 void* open(const std::filesystem::path& path, std::string& error) {
     void* library = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
     if (library == nullptr) {
@@ -78,7 +80,28 @@ const void* base_of(const void* address) {
     Dl_info info{};
     return dladdr(address, &info) != 0 ? info.dli_fbase : nullptr;
 }
+#else
+// Nintendo Switch stub implementations
+void* open(const std::filesystem::path& path, std::string& error) {
+    // No dynamic loading on Nintendo Switch - just return null to indicate failure
+    error = "Dynamic library loading not supported on Nintendo Switch";
+    return nullptr;
+}
 
+void* symbol(void* library, const char* name) {
+    // No symbol lookup on Nintendo Switch
+    return nullptr;
+}
+
+void close(void* library) {
+    // Nothing to do on Nintendo Switch
+}
+
+const void* base_of(const void* address) {
+    // No dynamic loading on Nintendo Switch - no base address available
+    return nullptr;
+}
+#endif
 #endif
 
 }  // namespace openrac::mods::library

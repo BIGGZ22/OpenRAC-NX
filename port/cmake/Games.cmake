@@ -15,8 +15,17 @@
 # The decompilations are only read: hostgen works on copies in the build tree.
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
+if(SWITCH AND CMAKE_HOST_SYSTEM_NAME STREQUAL "MSYS")
+  find_program(OPENRAC_HOST_CLANG NAMES clang
+    HINTS /mingw64/bin /clang64/bin NO_CMAKE_FIND_ROOT_PATH REQUIRED)
+  execute_process(COMMAND /usr/bin/cygpath -m "${OPENRAC_HOST_CLANG}"
+    OUTPUT_VARIABLE openrac_clang_native OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ERROR_IS_FATAL ANY)
+  set(openrac_hostgen_env "OPENRAC_CLANG=${openrac_clang_native}")
+endif()
 include(MacApp)
 include(Differences)
+set(OPENRAC_GAME_IDS "" CACHE STRING "Game IDs to build (semicolon-separated; empty builds all available games)")
 
 # hostgen uses every core itself: one game's translation at a time (Ninja).
 set_property(GLOBAL APPEND PROPERTY JOB_POOLS openrac_hostgen=1)
@@ -61,6 +70,9 @@ add_test(NAME sound_engine COMMAND sound_engine_test)
 function(openrac_add_game config)
   file(READ "${config}" json)
   string(JSON id GET "${json}" id)
+  if(OPENRAC_GAME_IDS AND NOT id IN_LIST OPENRAC_GAME_IDS)
+    return()
+  endif()
   string(JSON source GET "${json}" source)
   get_filename_component(config_dir "${config}" DIRECTORY)
   string(TOUPPER "${id}" ID)
@@ -88,7 +100,8 @@ function(openrac_add_game config)
 
   # What hostgen will write, known now so the build can depend on it.
   execute_process(
-    COMMAND "${Python3_EXECUTABLE}" "${OPENRAC_HOSTGEN}" --game "${config}"
+    COMMAND "${CMAKE_COMMAND}" -E env ${openrac_hostgen_env}
+            "${Python3_EXECUTABLE}" "${OPENRAC_HOSTGEN}" --game "${config}"
             --source "${game_source}" --out "${gen}" --list
     OUTPUT_VARIABLE listing
     RESULT_VARIABLE status)
@@ -199,7 +212,8 @@ function(openrac_add_game config)
   add_custom_command(
     OUTPUT "${gen}/hostgen.stamp"
     BYPRODUCTS ${outputs}
-    COMMAND "${Python3_EXECUTABLE}" "${OPENRAC_HOSTGEN}" --game "${config}"
+    COMMAND "${CMAKE_COMMAND}" -E env ${openrac_hostgen_env}
+            "${Python3_EXECUTABLE}" "${OPENRAC_HOSTGEN}" --game "${config}"
             --source "${game_source}" --out "${gen}" --quiet ${asm_args}
     COMMAND "${CMAKE_COMMAND}" -E touch "${gen}/hostgen.stamp"
     DEPENDS ${inputs} ${tool} ${tables}
@@ -268,6 +282,24 @@ function(openrac_add_game config)
   else()
     add_executable(openrac-${id} "${OPENRAC_GAME_DIR}/common/main.cpp")
     set(targets openrac-${id})
+    if(SWITCH)
+      target_sources(openrac-${id} PRIVATE "${PROJECT_SOURCE_DIR}/platform/switch/launcher.cpp")
+      target_sources(openrac-${id} PRIVATE "${PROJECT_SOURCE_DIR}/platform/switch/pad.cpp")
+      if(id MATCHES "^rac1-")
+        include(SwitchStrafe)
+        target_link_libraries(openrac-${id} PRIVATE openrac_switch_strafe)
+        target_compile_definitions(openrac-${id} PRIVATE OPENRAC_SWITCH_LOCK_STRAFE=1)
+      endif()
+      if(NOT OPENRAC_PORT_WINDOW)
+        target_sources(openrac-${id} PRIVATE "${PROJECT_SOURCE_DIR}/platform/pad.cpp")
+      endif()
+      if(COMMAND nx_create_nro)
+        set(nacp "${CMAKE_CURRENT_BINARY_DIR}/openrac-${id}.nacp")
+        nx_generate_nacp(OUTPUT "${nacp}" NAME "OpenRAC - ${id}"
+          AUTHOR "OpenRAC contributors" VERSION "0.1.0")
+        nx_create_nro(openrac-${id} NACP "${nacp}")
+      endif()
+    endif()
   endif()
   # The game fixes of this disc (cmake/Differences.cmake), which the game's host C reads through
   # openrac_game_fix: in every program, with a window or without.
@@ -296,9 +328,15 @@ function(openrac_add_game config)
     endif()
     # The window: the renderer draws what the game holds in memory (game/common/frontend.h).
     if(TARGET openrac_scene_renderer AND TARGET openrac_platform)
+      if(SWITCH)
+        set(openrac_debug_overlay "${PROJECT_SOURCE_DIR}/platform/switch/debug_overlay.cpp")
+        set(debug_sources "")
+      else()
+        set(openrac_debug_overlay "${OPENRAC_GAME_DIR}/common/debug_overlay.cpp")
+      endif()
       target_sources(${target} PRIVATE "${OPENRAC_GAME_DIR}/common/frontend.cpp"
                                        "${OPENRAC_GAME_DIR}/common/debug_menu.cpp"
-                                       "${OPENRAC_GAME_DIR}/common/debug_overlay.cpp"
+                                       "${openrac_debug_overlay}"
                                        "${OPENRAC_GAME_DIR}/common/options_menu.cpp"
                                        "${OPENRAC_GAME_DIR}/common/settings.cpp"
                                        "${OPENRAC_GAME_DIR}/common/ui_colors.cpp"

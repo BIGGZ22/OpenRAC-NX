@@ -34,6 +34,10 @@
 #include "openrac/sound_engine.h"
 #include "program/program.h"
 #include "program/undrawn_ticks.h"
+#ifdef __SWITCH__
+#include <switch.h>
+#include "platform/switch/launcher.h"
+#endif
 
 #ifdef OPENRAC_FRONTEND
 #include "debug_overlay.h"
@@ -224,6 +228,16 @@ void finish() {
 // ---- The vertical blank ----
 
 int vsync() {
+#ifdef __SWITCH__
+    if (!appletMainLoop()) std::exit(0);
+    static PadState exit_pad;
+    static bool exit_pad_ready = false;
+    if (!exit_pad_ready) { padInitializeDefault(&exit_pad); exit_pad_ready = true; }
+    padUpdate(&exit_pad);
+    const u64 exit_buttons = HidNpadButton_L | HidNpadButton_R | HidNpadButton_Minus;
+    if ((padGetButtons(&exit_pad) & exit_buttons) == exit_buttons) std::exit(0);
+    platform::switch_update_console();
+#endif
     // [debug tools] The game's own code stops here and goes on when this returns: its time is the
     // tick's (common/stats.h). The tick's frame of measurements begins.
     stats::game_yielded();

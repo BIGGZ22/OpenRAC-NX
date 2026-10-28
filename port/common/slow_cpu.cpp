@@ -11,6 +11,10 @@
 #include <ctime>
 #endif
 
+#ifdef __SWITCH__
+#define _GNU_SOURCE
+#endif
+
 #include "common/sampler.h"
 
 namespace openrac::slow_cpu {
@@ -24,10 +28,18 @@ double thread_seconds() {
     return -1.0;
 #else
     timespec now{};
+#ifdef CLOCK_THREAD_CPUTIME_ID
     if (clock_gettime(CLOCK_THREAD_CPUTIME_ID, &now) != 0) {
         return -1.0;
     }
     return static_cast<double>(now.tv_sec) + static_cast<double>(now.tv_nsec) * 1e-9;
+#else
+    // Fallback for platforms without CLOCK_THREAD_CPUTIME_ID (like Switch)
+    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
+        return -1.0;
+    }
+    return static_cast<double>(now.tv_sec) + static_cast<double>(now.tv_nsec) * 1e-9;
+#endif
 #endif
 }
 

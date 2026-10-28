@@ -26,6 +26,8 @@ public:
     Memory(const Memory&) = delete;
     Memory& operator=(const Memory&) = delete;
 
+    // Starts with contiguous main RAM. On Switch, other guest addresses must
+    // use G/bytes instead of adding offsets to base (compact backing storage).
     std::uint8_t* base() const { return base_; }
 
     // True when main RAM is visible at its uncached addresses as well

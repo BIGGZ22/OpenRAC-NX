@@ -435,8 +435,21 @@ def unalias(text: str, aliases: dict[str, str]) -> str:
     return _ALIAS_TOKEN.sub(one, text)
 
 
+def name_guest_libc_types(text: str) -> str:
+    """Keep the console's newlib types separate from a host that also uses newlib."""
+    names = re.compile(r"\b(?:_Bigint|_reent|__Long|__ULong)\b")
+    out = []
+    pos = 0
+    for m in _SKIP.finditer(text):
+        out.append(names.sub(lambda word: "openrac_guest" + word.group(0), text[pos:m.start()]))
+        out.append(m.group(0))
+        pos = m.end()
+    out.append(names.sub(lambda word: "openrac_guest" + word.group(0), text[pos:]))
+    return "".join(out)
+
+
 def prepare(text: str) -> str:
-    return rename_va_builtins(own_va_list(name_wide_casts(name_cast_records(expand_cast_macros(widen_long(split_multiline_strings(blank_file_scope_asm(text))))))))
+    return name_guest_libc_types(rename_va_builtins(own_va_list(name_wide_casts(name_cast_records(expand_cast_macros(widen_long(split_multiline_strings(blank_file_scope_asm(text)))))))))
 
 
 # The path may be several adjacent strings over as many lines (the NTSC decomp's long paths).

@@ -18,7 +18,7 @@
 
 #include <cstdint>
 
-#include <SDL3/SDL.h>
+#include "platform/sdl.h"
 
 namespace openrac::frontend::debug_menu {
 

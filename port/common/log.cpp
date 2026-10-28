@@ -106,7 +106,11 @@ void open_file(const char* path, const char* mode) {
     g_limit_told = false;
     if (path != nullptr && path[0] != '\0') {
         g_file = std::fopen(path, mode);
+#if !defined(__SWITCH__)
         g_fd = g_file != nullptr ? fileno(g_file) : -1;
+#else
+        g_fd = -1; // Switch doesn't have fileno
+#endif
     }
 }
 

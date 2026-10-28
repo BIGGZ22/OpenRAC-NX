@@ -31,8 +31,10 @@
 #include <sys/stat.h>
 #pragma comment(lib, "dbghelp.lib")
 #else
+#if !defined(__SWITCH__)
 #include <dlfcn.h>
 #include <execinfo.h>
+#endif
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/stat.h>
@@ -277,6 +279,7 @@ void write_state(Out& out) {
 void* g_frames[64];
 int g_frame_count = 0;
 
+#if !defined(__SWITCH__)
 void capture() {
 #if defined(_WIN32)
     g_frame_count = CaptureStackBackTrace(0, 62, g_frames, nullptr);
@@ -284,7 +287,14 @@ void capture() {
     g_frame_count = backtrace(g_frames, 64);
 #endif
 }
+#else
+void capture() {
+    // Dummy implementation for Switch
+    g_frame_count = 0;
+}
+#endif
 
+#if !defined(__SWITCH__)
 // The library holding a code address: where the system loaded it, or null.
 const void* module_base(const void* address) {
 #if defined(_WIN32)
@@ -299,6 +309,12 @@ const void* module_base(const void* address) {
     return dladdr(address, &info) != 0 ? info.dli_fbase : nullptr;
 #endif
 }
+#else
+const void* module_base(const void* address) {
+    // Dummy implementation for Switch
+    return nullptr;
+}
+#endif
 
 // The mods loaded, and the frames of the backtrace that are in one of them (docs/port/MODS.md,
 // section 7).
@@ -326,6 +342,7 @@ void write_mods(Out& out) {
     }
 }
 
+#if !defined(__SWITCH__)
 void write_backtrace(Out& out) {
     out.str("\nBacktrace (the newest call first):\n");
     out.flush();
@@ -383,6 +400,13 @@ void write_backtrace(Out& out) {
     }
     write_mods(out);
 }
+#else
+void write_backtrace(Out& out) {
+    // Dummy implementation for Switch
+    out.str("\nBacktrace (dummy for Switch):\n");
+    out.flush();
+}
+#endif
 
 void write_head(Out& out, const char* reason, Kind kind, long long now) {
     char when[40];
@@ -530,6 +554,7 @@ long local_offset() {
 
 // ---- Set-up ----
 
+#if !defined(__SWITCH__)
 void configure(const std::filesystem::path& folder, const std::string& program, const std::string& session) {
     copy(g_folder, sizeof(g_folder), folder.string());
     copy(g_folder_shown, sizeof(g_folder_shown), log::tidy(folder.string()));
@@ -553,7 +578,20 @@ void configure(const std::filesystem::path& folder, const std::string& program, 
     }
 #endif
 }
+#else
+void configure(const std::filesystem::path& folder, const std::string& program, const std::string& session) {
+    // Dummy implementation for Switch
+    copy(g_folder, sizeof(g_folder), folder.string());
+    copy(g_folder_shown, sizeof(g_folder_shown), log::tidy(folder.string()));
+    copy(g_program, sizeof(g_program), program);
+    copy(g_version, sizeof(g_version),
+         std::string("OpenRAC ") + build_info::version() + ", commit " + build_info::commit());
+    copy(g_session, sizeof(g_session), session);
+    g_offset = local_offset();
+}
+#endif
 
+#if !defined(__SWITCH__)
 void prepare_thread() {
 #if !defined(_WIN32)
     thread_local bool done = false;
@@ -571,6 +609,11 @@ void prepare_thread() {
     }
 #endif
 }
+#else
+void prepare_thread() {
+    // Dummy implementation for Switch
+}
+#endif
 
 void set_state(const GameState& s) {
     g_state = s;

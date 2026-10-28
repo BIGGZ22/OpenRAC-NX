@@ -36,7 +36,9 @@ namespace {
 // OpenRAC's folder in the player's data home, as the launcher finds it
 // (launcher/core/src/saves.rs, data_home).
 fs::path data_home() {
-#if defined(__APPLE__)
+#if defined(__SWITCH__)
+    fs::path base = "sdmc:/switch/openrac";
+#elif defined(__APPLE__)
     const std::optional<std::string> home = env::system_variable("HOME");
     fs::path base = fs::path(home.value_or(".")) / "Library/Application Support/OpenRAC";
 #elif defined(_WIN32)

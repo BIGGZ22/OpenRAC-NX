@@ -57,6 +57,10 @@ struct Host {
 // Loads the mods the list has on. Returns the session header's line: "lock-strafe 1.0.0", "none",
 // "none (purist mode)". Called once, after the game's functions are registered, before it runs.
 std::string load(const Host& host);
+#ifdef __SWITCH__
+// Statically linked console control extension; no shared-library loader needed.
+bool load_switch_lock_strafe(const Host& host, openrac_mod_load_fn entry);
+#endif
 
 // Each loaded mod's openrac_mod_unload, last first (at exit).
 void unload();

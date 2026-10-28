@@ -31,6 +31,12 @@ if(NOT luau_POPULATED)
   endif()
 endif()
 
+if(SWITCH AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  # Luau's builtins use LLONG_MIN without including the standard limits header.
+  # devkitA64 does not supply it through Luau's other headers.
+  target_compile_options(Luau.VM PRIVATE -include climits)
+endif()
+
 if(NOT TARGET openrac_luau)
   # Only what the port links is built: Luau's own targets stay out of `all`.
   foreach(t Luau.Ast Luau.Compiler Luau.VM Luau.Analysis Luau.CodeGen Luau.Config Luau.EqSat

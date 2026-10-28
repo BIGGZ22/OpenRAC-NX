@@ -59,6 +59,22 @@
         "ANDROID_STL": "c++_shared",
         "OPENRAC_PORT_LTO": "ON"
       }
+    },
+    {
+      "name": "switch-aarch64",
+      "displayName": "Ratchet & Clank 1 PAL on Switch (platform/switch/README.md)",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build-switch",
+      "toolchainFile": "/opt/devkitpro/cmake/Switch.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "OPENRAC_PORT_LTO": "OFF",
+        "SWITCH": "ON",
+        "OPENRAC_PORT_WINDOW": "ON",
+        "OPENRAC_GAME_IDS": "rac1-pal",
+        "OPENRAC_VULKAN": "OFF",
+        "OPENRAC_ENHANCED_RENDERING": "OFF"
+      }
     }
   ],
   "buildPresets": [
@@ -67,7 +83,8 @@
     {"name": "standalone", "configurePreset": "standalone"},
     {"name": "debug", "configurePreset": "debug"},
     {"name": "headless", "configurePreset": "headless"},
-    {"name": "android-arm64", "configurePreset": "android-arm64"}
+    {"name": "android-arm64", "configurePreset": "android-arm64"},
+    {"name": "switch-aarch64", "configurePreset": "switch-aarch64", "targets": ["openrac-rac1-pal_nro"]}
   ],
   "testPresets": [
     {"name": "release", "configurePreset": "release", "output": {"outputOnFailure": true}},

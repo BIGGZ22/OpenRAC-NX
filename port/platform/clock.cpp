@@ -5,16 +5,30 @@
 
 #include <utility>
 
+#ifdef __SWITCH__
+#include <chrono>
+#include <thread>
+#else
 #include <SDL3/SDL_timer.h>
+#endif
 
 namespace openrac::platform {
 
 Nanoseconds now_ns() {
+#ifdef __SWITCH__
+    return static_cast<Nanoseconds>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count());
+#else
     return SDL_GetTicksNS();
+#endif
 }
 
 void sleep_ns(Nanoseconds duration) {
+#ifdef __SWITCH__
+    std::this_thread::sleep_for(std::chrono::nanoseconds(duration));
+#else
     SDL_DelayPrecise(duration);
+#endif
 }
 
 Rate field_rate(VideoStandard standard) {

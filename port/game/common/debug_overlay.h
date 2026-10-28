@@ -21,7 +21,7 @@
 #include <span>
 #include <string>
 
-#include <SDL3/SDL.h>
+#include "platform/sdl.h"
 
 #include "game/common/profile.h"
 #include "renderer/math.h"

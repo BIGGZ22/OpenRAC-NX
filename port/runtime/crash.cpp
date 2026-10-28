@@ -17,16 +17,20 @@
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
+#define NOMINIMAX
 #include <windows.h>
 
 #include <csignal>
 #else
+#ifndef __SWITCH__
 #include <csignal>
 #include <sys/mman.h>
 #include <unistd.h>
 #if defined(__linux__)
 #include <ucontext.h>
+#endif
+#else
+// Nintendo Switch - skip POSIX headers since they don't exist on libnx
 #endif
 #endif
 
@@ -114,7 +118,7 @@ void on_abort(int) {
 }
 
 #else
-
+#ifndef __SWITCH__
 // OPENRAC_GUARD (guard_writes): the guarded range and the pages it lies in, read-only while armed.
 gaddr g_guard_low = 0, g_guard_high = 0;
 std::uint8_t* g_guard_page = nullptr;
@@ -183,12 +187,13 @@ void on_fault(int sig, siginfo_t* info, void*) {
     }
     report(sig == SIGABRT ? nullptr : info->si_addr, what, crash::Kind::Signal);
 }
-
+#endif
 #endif
 
 }  // namespace
 
 void guard_writes(gaddr address, std::uint32_t bytes, std::uint32_t skip) {
+#ifndef __SWITCH__
 #if !defined(_WIN32)
     const auto page = static_cast<std::uintptr_t>(sysconf(_SC_PAGESIZE));
     const auto first = reinterpret_cast<std::uintptr_t>(openrac_guest_base + address) & ~(page - 1);
@@ -215,6 +220,12 @@ void guard_writes(gaddr address, std::uint32_t bytes, std::uint32_t skip) {
     (void)bytes;
     (void)skip;
 #endif
+#else
+    // Nintendo Switch stub - no memory protection on libnx
+    (void)address;
+    (void)bytes;
+    (void)skip;
+#endif
 }
 
 void install_crash_handler() {
@@ -224,6 +235,7 @@ void install_crash_handler() {
     SetUnhandledExceptionFilter(on_unhandled);
     std::signal(SIGABRT, on_abort);
 #else
+#ifndef __SWITCH__
     crash::prepare_thread();
     struct sigaction action {};
 
@@ -237,6 +249,9 @@ void install_crash_handler() {
     sigaction(SIGFPE, &action, nullptr);
     sigaction(SIGABRT, &action, nullptr);
     sigaction(SIGTRAP, &action, nullptr);  // OPENRAC_GUARD replaces it with its single step
+#else
+    // Nintendo Switch stub - no signal handling on libnx
+#endif
 #endif
 }
 

@@ -88,6 +88,16 @@ int play_movie(uint32_t lsn, uint32_t bytes, int channel, int start_skips) {
         sequence.fps_den,
         player->movie().audio_channel() ? int(*player->movie().audio_channel()) : -1
     );
+#ifdef __SWITCH__
+    // The SDL2 Switch backend has one default output device. The gameplay
+    // callback must release it before the movie opens its queued PCM output.
+    // Declared before `output` so the movie device closes before restoration,
+    // on normal playback, skipping and exceptions alike.
+    close_sound();
+    struct RestoreGameSound {
+        ~RestoreGameSound() { if (!audio_ticked()) open_sound(false); }
+    } restore_game_sound;
+#endif
     std::string error;
     auto output = platform::AudioOutput::open(error);
 

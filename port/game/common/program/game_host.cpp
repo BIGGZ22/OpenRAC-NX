@@ -37,6 +37,9 @@
 #include "openrac/guest.h"
 #include "openrac/memory.h"
 #include "program/program.h"
+#ifdef __SWITCH__
+#include "platform/switch/input.h"
+#endif
 
 #ifdef OPENRAC_FRONTEND
 #include "frontend.h"
@@ -510,6 +513,9 @@ void openrac_game_pad_after_mods(int port, uint8_t* report, int size) {
 
 int openrac_game_pad(int port, uint16_t* buttons, uint8_t analog[4]) {
     return c_boundary::call("openrac_game_pad", 0, [&]() -> int {
+#ifdef __SWITCH__
+        return platform::switch_read_pad(port, buttons, analog);
+#endif
 #ifdef OPENRAC_FRONTEND
         if (g_window && frontend::pad(port, buttons, analog)) {
             log_pad(port, buttons, analog);

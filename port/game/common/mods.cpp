@@ -556,6 +556,39 @@ bool load_one(const fs::path& folder, const Candidate& c, std::unique_ptr<openra
 
 }  // namespace
 
+#ifdef __SWITCH__
+bool load_switch_lock_strafe(const Host& host, openrac_mod_load_fn entry) {
+    if (host.game != "rac1" || entry == nullptr) return false;
+    static Host kept;
+    kept = host;
+    g_host = &kept;
+    fill_api(kept);
+    auto mod = std::make_unique<openrac_mod>();
+    mod->id = "switch-lock-strafe";
+    mod->version = "1.0.0";
+    mod->file = "built-in ZL controls";
+    mod->manifest.hooks = {"Pad_ProcessReport", "Hero_UpdateMotionInput", "Hero_TurnToHeading",
+        "Hero_SetPlanarVelocity", "FollowCamera_ApplyOverrides", "Hero_AdvanceAnimation"};
+    SettingValue mode;
+    mode.type = SettingType::String;
+    mode.s = "hold";
+    mod->settings["mode"] = mode;
+    g_loading = mod.get();
+    const int result = c_boundary::call("Switch lock-strafe load", 1, [&] {
+        return entry(&g_api, mod.get());
+    });
+    g_loading = nullptr;
+    if (result != 0 || mod->hook_refused) {
+        undo(mod.get());
+        log::warn("Switch lock-strafe unavailable: {}", mod->failure);
+        return false;
+    }
+    log::info("Switch controls: hold ZL for lock-strafe ({} hooks)", mod->hooks.size());
+    g_loaded.push_back(std::move(mod));
+    return true;
+}
+#endif
+
 std::string load(const Host& host) {
     if (host.purist) {
         log::info("mods: purist mode (--no-mods), none loaded");

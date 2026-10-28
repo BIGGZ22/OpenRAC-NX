@@ -24,7 +24,11 @@
 #include <string>
 #include <vector>
 
+#ifdef __SWITCH__
+typedef struct _SDL_AudioStream SDL_AudioStream;
+#else
 struct SDL_AudioStream;
+#endif
 
 namespace openrac::platform {
 
@@ -71,6 +75,9 @@ private:
     static void feed(void* self, SDL_AudioStream* stream, int additional, int total);
 
     SDL_AudioStream* m_stream = nullptr;
+#ifdef __SWITCH__
+    std::uint32_t m_switch_device = 0;
+#endif
     Callback m_callback;
     std::vector<std::int16_t> m_scratch;
     float m_gain = 1.0f;

@@ -1,3 +1,22 @@
+# OpenRAC-NX
+
+An experimental Nintendo Switch fork of [OpenRAC](https://github.com/OpenRAC/OpenRAC),
+currently focused on Ratchet & Clank 1 PAL (`SCES_509.16`).
+
+The Switch build includes an SDL2/Mesa OpenGL frontend, controller support,
+compact guest memory, a setup launcher, movie-audio handoff, and ZL lock-strafe
+with movement smoothing. Basic gameplay has been reported working on hardware;
+this is still an early port, not a verified complete playthrough.
+
+See the [Switch build and disc setup guide](port/platform/switch/README.md).
+You must supply your own supported disc image. No ISO, extracted game assets,
+or prepared game-data folder is distributed in this source repository.
+
+Upstream licenses, credits and notices remain in effect. The upstream project
+overview follows below.
+
+---
+
 <h1 align="center">
   <a href="https://openrac.dev/">
     <picture>

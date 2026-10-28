@@ -43,6 +43,7 @@ ProcessMemory process_memory() {
         m.peak = info.resident_size_peak;
     }
 #else
+#if !defined(__SWITCH__)
     // /proc/self/statm: sizes in pages; the second is the resident set.
     if (std::FILE* f = std::fopen("/proc/self/statm", "r")) {
         unsigned long long total = 0, resident = 0;
@@ -55,6 +56,11 @@ ProcessMemory process_memory() {
     if (getrusage(RUSAGE_SELF, &usage) == 0) {
         m.peak = static_cast<std::uint64_t>(usage.ru_maxrss) * 1024u;  // kilobytes on Linux
     }
+#endif
+#if defined(__SWITCH__)
+    // Switch doesn't have rusage, set peak to 0
+    m.peak = 0;
+#endif
 #endif
     return m;
 }

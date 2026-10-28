@@ -27,7 +27,11 @@
 #define NOMINMAX
 #include <windows.h>
 #else
+#ifndef __SWITCH__
 #include <execinfo.h>
+#else
+// Nintendo Switch - skip backtrace functionality since it's not available on libnx
+#endif
 #endif
 
 #include "common/env.h"
@@ -591,8 +595,12 @@ void openrac_guest_missing(const char* name) {
             std::fprintf(stderr, "%p\n", frames[i]);
         }
 #else
+#ifndef __SWITCH__
         const int count = backtrace(frames, 16);
         backtrace_symbols_fd(frames, count, 2);
+#else
+        // Nintendo Switch - skip backtrace functionality since it's not available on libnx
+#endif
 #endif
     }
     if (g_stop_on_missing) {
@@ -736,6 +744,7 @@ void openrac_host_caller(int depth, char* text, size_t size) {
         std::snprintf(text, size, "%p", frames[0]);
     }
 #else
+#ifndef __SWITCH__
     if (backtrace(frames, want + 1) <= want) {
         return;
     }
@@ -744,6 +753,9 @@ void openrac_host_caller(int depth, char* text, size_t size) {
         std::snprintf(text, size, "%s", names[0]);
         std::free(names);
     }
+#else
+    // Nintendo Switch - skip backtrace functionality since it's not available on libnx
+#endif
 #endif
 }
 

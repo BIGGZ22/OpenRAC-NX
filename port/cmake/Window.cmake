@@ -47,6 +47,11 @@ function(openrac_embed_shaders target name namespace)
 endfunction()
 
 # ---- platform ----
+if(SWITCH)
+  add_library(openrac_platform STATIC platform/switch/graphics.cpp platform/switch/audio.cpp
+    platform/clock.cpp platform/gpu_driver.cpp platform/pad.cpp
+    platform/performance_hint.cpp platform/touch_pad.cpp)
+else()
 add_library(openrac_platform STATIC
   platform/audio.cpp
   platform/clock.cpp
@@ -58,6 +63,7 @@ add_library(openrac_platform STATIC
   platform/touch_pad.cpp
   platform/window.cpp
 )
+endif()
 target_link_libraries(openrac_platform PUBLIC openrac_common openrac_sdl3)
 openrac_warnings(openrac_platform)
 # Android: the player's own GPU driver package (platform/gpu_driver.h, cmake/Android.cmake).
