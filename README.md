@@ -24,7 +24,8 @@ and strafe changes still need more console testing.
 Included features:
 
 - First-launch ISO validation and asset preparation on the Switch, with resumable level caches.
-- A controller-operated setup launcher and an OpenGL game frontend.
+- A graphical controller/touch launcher, saved settings and visual setup progress.
+- An OpenGL game frontend and an experimental deko3d launcher presenter.
 - Gamepad input, audio output and compact guest-memory backing.
 - Corrected full-tilt diagonal stick movement.
 - Movie/gameplay audio-device handoff for full-screen cutscenes.
@@ -202,6 +203,22 @@ tabs. Use **L/R** to switch tabs, **Up/Down** to select, and **Left/Right** or
 saved to `/switch/openrac/settings/rac1-pal.ini` and applied at game startup;
 the menu reports a failure if settings cannot be written.
 
+The launcher now uses a graphical sidebar, cards, switches and a progress bar,
+with the Switch's shared system font. Touch a sidebar page or use L/R; touch
+a setting's value or use Left/Right to adjust it.
+
+**Display > Launcher graphics** switches the menu between **OpenGL** (default)
+and **deko3d (experimental)**. The deko3d path uploads the custom UI into native
+scanout images without an OpenGL context. It is currently a launcher backend,
+**not a deko3d game renderer**: gameplay still uses OpenGL, shown separately in
+the header. A full deko3d gameplay backend and gameplay-renderer switching are
+not implemented yet. Both launch paths compile; console validation is required.
+
+If native menu startup fails, the launcher tries the other presenter. An
+unfinished deko3d startup is detected at the next launch and restores OpenGL.
+You can also reset `switch_launcher_deko3d = 0` in
+`/switch/openrac/settings/rac1-pal.ini` on the SD card.
+
 Display options include picture shape, HUD position, resolution scale,
 anti-aliasing, texture filtering, anisotropy, scenery detail, VSync, frame rate,
 frame cap and frame counter. Audio offers master, music and sound volumes and
@@ -261,7 +278,8 @@ and the decompilation projects listed in [CREDITS.md](CREDITS.md). The
 lock-strafe extension is adapted from
 [OpenRAC/rac1-mods](https://github.com/OpenRAC/rac1-mods), with Switch-specific
 input, memory access and smoothing changes. The Switch toolchain and platform
-libraries come from devkitPro/libnx, SDL and Mesa.
+libraries come from devkitPro/libnx, SDL, Mesa and deko3d. The graphical
+launcher loads the Switch's shared system font on device; no font file is bundled.
 
 Existing licenses and notices are retained. See [LICENSE.md](LICENSE.md),
 [COPYING](COPYING) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Source

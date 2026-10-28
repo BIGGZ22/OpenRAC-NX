@@ -120,6 +120,7 @@ struct Settings {
     bool mute_unfocused = false;  // silence while another window has the keyboard
     bool skip_cutscenes = true;   // Start skips an in-game cutscene (without the game's L1 L2 R1 R2 hold)
     int volume = 100;  // of everything the port plays, 0 (nothing at all) to 100 (as mixed)
+    bool switch_launcher_deko3d = false;  // graphical launcher only; game rendering remains OpenGL
     // The on-screen pad (platform/touch_pad.h): its controls' size and the camera's speed, in
     // percent of the pad's own, and where the player moved its groups (TouchPad::layout()).
     int touch_scale = 75;

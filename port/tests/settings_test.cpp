@@ -267,11 +267,16 @@ int main() {
     // Replacing settings repeatedly must work on filesystems that refuse an
     // overwrite rename. A stop after moving the previous file is recoverable.
     settings::set_volume(35);
+    settings::get().switch_launcher_deko3d = true;
     CHECK(settings::save());
+    settings::load(file);
+    CHECK(settings::get().switch_launcher_deko3d);
+    settings::get().switch_launcher_deko3d = false;
     settings::set_volume(70);
     CHECK(settings::save());
     settings::load(file);
     CHECK(settings::get().volume == 70);
+    CHECK(!settings::get().switch_launcher_deko3d);
     const auto previous = std::filesystem::path(file.string() + ".previous");
     std::filesystem::rename(file, previous);
     settings::load(file);

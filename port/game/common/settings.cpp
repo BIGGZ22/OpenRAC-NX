@@ -308,6 +308,8 @@ void load(const std::filesystem::path& file) {
             known = parse_bool(value, s.original_lod);
         } else if (key == "skip_cutscenes") {
             known = parse_bool(value, s.skip_cutscenes);
+        } else if (key == "switch_launcher_deko3d") {
+            known = parse_bool(value, s.switch_launcher_deko3d);
         } else if (key == "strafe" || key == "lock_strafe") {
             old_strafe = true;
         } else if (key == "volume") {
@@ -436,6 +438,7 @@ bool save() {
         << "original_lod = " << (s.original_lod ? 1 : 0) << "\n"
         << "skip_cutscenes = " << (s.skip_cutscenes ? 1 : 0) << "\n"
         << "volume = " << s.volume << "\n"
+        << "switch_launcher_deko3d = " << (s.switch_launcher_deko3d ? 1 : 0) << "\n"
         << "touch_scale = " << s.touch_scale << "\n"
         << "touch_camera = " << s.touch_camera << "\n";
     if (!s.touch_layout.empty()) {

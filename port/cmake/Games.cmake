@@ -284,6 +284,15 @@ function(openrac_add_game config)
     set(targets openrac-${id})
     if(SWITCH)
       target_sources(openrac-${id} PRIVATE "${PROJECT_SOURCE_DIR}/platform/switch/launcher.cpp")
+      if(OPENRAC_PORT_WINDOW)
+        target_sources(openrac-${id} PRIVATE
+          "${PROJECT_SOURCE_DIR}/platform/switch/launcher_canvas.cpp"
+          "${PROJECT_SOURCE_DIR}/platform/switch/launcher_font.c"
+          "${PROJECT_SOURCE_DIR}/platform/switch/launcher_graphics.cpp")
+        set_source_files_properties("${PROJECT_SOURCE_DIR}/platform/switch/launcher_font.c"
+          PROPERTIES COMPILE_OPTIONS "-w")
+        target_link_libraries(openrac-${id} PRIVATE deko3d)
+      endif()
       target_sources(openrac-${id} PRIVATE "${PROJECT_SOURCE_DIR}/platform/switch/pad.cpp")
       if(id MATCHES "^rac1-")
         include(SwitchStrafe)

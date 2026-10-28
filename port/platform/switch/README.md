@@ -7,11 +7,20 @@ Starting without arguments opens the controller-operated launch menu. L/R select
 a tab: Play, Display, Audio, Gameplay, Game fixes, Saves or Setup. Up/Down selects
 a row and Left/Right or A changes it. Changes persist in
 `sdmc:/switch/openrac/settings/rac1-pal.ini`. B returns to Play, X checks the
-installation and save storage, and + exits. This uses libnx's text console.
+installation and save storage, and + exits. The launcher is graphical and supports touch as well as controller input.
 A on the Play page, or ZL, starts the game once disc, assets and writable save
 storage checks pass. The Saves tab reports write/close/read-back health and the
 number of stored files under `/switch/openrac/memcard/SCES_509.16/`.
 B in game is PS2 Cross, A is Circle, X is Triangle and Y is Square.
+
+The Display page's **Launcher graphics** setting selects OpenGL or an
+experimental native deko3d menu presenter. This switches the launcher only;
+gameplay remains OpenGL. A deko3d gameplay backend is not implemented.
+The deko3d presenter uses two native scanout images, GPU copy commands and
+explicit queue completion before releasing or changing its resources. It uses
+no GL context. The shared UI canvas draws custom cards and text from the
+Switch's shared font; no system font file is distributed. An interrupted native
+startup restores OpenGL on the next run. Both paths require console testing.
 
 During gameplay, hold **ZL** for third-person lock-strafe: left stick moves
 independently of Ratchet's facing and right stick turns the camera/aim. Release
