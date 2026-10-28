@@ -2,6 +2,10 @@
 
 **Ratchet & Clank 1 on Nintendo Switch, built natively from OpenRAC's decompiled code.**
 
+> **Very early WIP / experimental preview.** This is an unfinished port for
+> testing and feedback, with bugs and incomplete features expected. A complete
+> playthrough has not been verified. Back up your saves before updating.
+
 OpenRAC-NX is an experimental Switch fork of [OpenRAC](https://github.com/OpenRAC/OpenRAC).
 It rebuilds the game for Switch through devkitPro/libnx and an SDL2/Mesa OpenGL
 frontend. It does not run a PS2 emulator.
@@ -17,28 +21,75 @@ dependencies below. The Switch changes are on **`codex/switch-port`**; use that
 branch when cloning. A build on a completely fresh computer has not yet been
 verified.
 
-Basic gameplay has been reported working on a Switch. This is an early port:
-complete playthroughs, performance across levels, and the latest movie-audio
-and strafe changes still need more console testing.
+Basic gameplay has been reported working on a Switch. Releases should be
+treated as **early WIP builds**, not stable releases. Performance and behavior
+can vary between planets and scenes. See the testing limits below before
+reporting a problem.
 
-Included features:
+## Features in this WIP build
 
-- First-launch ISO validation and asset preparation on the Switch, with resumable level caches.
-- A graphical controller/touch launcher, saved settings and visual setup progress.
-- An OpenGL game frontend and saved controller settings with button rebinding.
-- Gamepad input, audio output and compact guest-memory backing.
-- Corrected full-tilt diagonal stick movement.
-- Movie/gameplay audio-device handoff for full-screen cutscenes.
-- Hold-ZL third-person lock-strafe, with facing and movement smoothing.
+- **Ratchet & Clank 1 PAL gameplay:** a native Switch build using an OpenGL
+  renderer, controller input and audio output.
+- **ISO setup on the Switch:** validates your supported ISO and prepares the
+  boot files and all 21 renderer scenes on first launch. No PC extraction or
+  ISO mounting is needed for the normal installation.
+- **Resumable setup:** visual progress, completed-cache checksums, free-space
+  checks, cancellation and a Setup page to resume or repair preparation.
+- **Graphical launcher:** a sidebar, cards, switches, progress bars and the
+  Switch system font, with controller and touch navigation.
+- **Saved display settings:** picture shape, HUD placement, resolution scale,
+  anti-aliasing, texture filtering, anisotropy, scenery detail, VSync, frame-rate
+  options, frame cap and frame counter.
+- **Audio and gameplay settings:** master/music/effects volume, playback mode,
+  language, cutscene skipping, logging and the supported upstream game fixes.
+- **Controller customization:** separate movement and camera deadzones,
+  horizontal/vertical camera sensitivity, axis inversion and stick swapping.
+- **Button rebinding:** capture or cycle gameplay bindings, clear a binding,
+  swap occupied assignments and restore controller defaults. Settings persist
+  between launches; menu navigation and the exit shortcut retain fixed controls.
+- **Full-speed stick movement fix:** corrects full-tilt diagonal directions
+  that could make Ratchet walk instead of run.
+- **Third-person lock-strafe:** hold ZL by default to strafe while the right
+  stick aims. Facing and lateral movement smoothing includes direction changes;
+  release ZL for normal movement. Included in the NRO, with no separate mod install.
+- **Full-screen movie audio fix:** movie/gameplay audio-device handoff changes
+  address silent full-screen cutscenes; broader console testing is still needed.
+- **Memory-card saves:** automatic save-folder creation, flushed file writes,
+  a launcher storage check and a fix for the missing PS2 directory entries
+  that caused the PAL game to reject existing save folders after restarting.
+- **Persistent configuration:** launcher options are stored in an INI file;
+  existing data, settings and save folders can be kept when replacing the NRO.
 
-Desktop debug panels, Vulkan, enhanced lighting and FSR are disabled in this
-Switch build. The original Ratchet 1 animations are retained.
+The renderer is **OpenGL only**. The experimental deko3d renderer and renderer
+switch have been removed. The original Ratchet 1 animations are retained;
+lock-strafe does not add Ratchet 2/3 animation assets.
+
+## Known limitations and testing status
+
+- Only **Ratchet & Clank 1 PAL Europe/Australia v2.00 (`SCES_509.16`)** is the
+  validated disc target. Other games and revisions are unsupported by this build.
+- Complete playthroughs, performance across all planets, long sessions and
+  every combination of settings have not been verified on console.
+- First-launch preparation has been compared with PC-exported data. Its speed
+  and gameplay with the generated caches still need more Switch testing.
+- The latest movie-audio and lock-strafe changes need more hardware feedback.
+- The save fix passes the PAL game's actual directory validator and separate
+  process file-reload tests. A complete in-game save, exit and reload on Switch
+  still needs confirmation. The launcher's storage check alone cannot prove it.
+- Desktop debug panels, Vulkan, enhanced lighting and FSR are unavailable.
+- Use Homebrew Menu in **full application mode**; applet mode has insufficient
+  memory for this port's intended use.
 
 **No ISO, PS2 executable, extracted models, textures, sounds or prepared game
 data is included. You must provide your own supported disc image.** The NRO
 needs your supported ISO. This build can prepare its boot files and renderer caches directly on the Switch.
 
 ## Install a released NRO: no PC extraction needed
+
+Download `openrac-rac1-pal.nro` from the
+[GitHub releases page](https://github.com/BIGGZ22/OpenRAC-NX/releases).
+The source-code ZIP is for developers; it is not the ready-to-run application.
+Release assets contain the application only. You supply the supported ISO.
 
 1. Copy `openrac-rac1-pal.nro` into `SD:/switch/openrac/`.
 2. Copy your own **Ratchet & Clank 1 PAL Europe/Australia v2.00 ISO** into the
@@ -286,7 +337,8 @@ the NRO and does not require installing a separate mod.
 - **Logs:** the session log is
   `SD:/switch/openrac/data/openrac-rac1-pal.log`. Review logs for personal
   paths or other private information before posting them publicly.
-- **Updating the application:** replace the NRO with your newly built version.
+- **Updating the application:** back up your saves, then replace only the NRO
+  with the version downloaded from a release or built from this branch.
   Keep your existing game data, saves and settings unless an update explicitly
   requires a new level export. Saves are under `/switch/openrac/memcard/`.
 
