@@ -1,5 +1,8 @@
 # Ratchet & Clank 1 on Switch: experimental renderer build
 
+For cloning the public Switch branch, prerequisites, installation and controls,
+start with the [OpenRAC-NX README](../../../README.md).
+
 Starting without arguments opens a controller-operated dashboard. A checks the
 SD-card files, X opens the setup guide, Y shows port status, B returns home,
 and + exits. This uses libnx's text console, not an in-game graphical HUD.
@@ -93,5 +96,6 @@ Copy `build-switch/openrac-rac1-pal.nro` to the location above and select it
 in Homebrew Menu. The dashboard opens even before disc files are copied.
 Use the NRO output; an ELF alone is not a Homebrew Menu application.
 
-Compilation and packaging can be checked here. Controller behavior, display
-and SD-card checks still need testing on actual Switch hardware.
+Compilation and packaging have been checked, and basic gameplay has been
+reported working on a Switch. Broader testing of display, controller behavior,
+movie audio and complete playthroughs is still needed.
