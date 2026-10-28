@@ -151,13 +151,31 @@ supported. Your SD filesystem must be able to store that file.
 ## 5. Start the game
 
 1. Open Homebrew Menu in full application mode and select **OpenRAC**.
-2. Press **A** in the setup launcher to check the files.
-3. Press **ZL** to start the game once the disc and title/first-level assets
+2. Check that the Play page shows the disc, exported levels and save storage as ready. Press **X** to recheck.
+3. Press **A** on the Play page, or **ZL**, to start once the disc and title/first-level assets
    are found.
 
-The setup launcher can open before game data is installed. Its other controls
-are **X** for the setup guide, **Y** for status, **B** for its home page and
-**+** to exit. **R** starts a diagnostic headless boot test, not normal gameplay.
+The launch menu has **Play, Display, Audio, Gameplay, Game fixes, Saves and Setup**
+tabs. Use **L/R** to switch tabs, **Up/Down** to select, and **Left/Right** or
+**A** to change a setting. **B** returns to Play and **+** exits. Changes are
+saved to `/switch/openrac/settings/rac1-pal.ini` and applied at game startup;
+the menu reports a failure if settings cannot be written.
+
+Display options include picture shape, HUD position, resolution scale,
+anti-aliasing, texture filtering, anisotropy, scenery detail, VSync, frame rate,
+frame cap and frame counter. Audio offers master, music and sound volumes and
+playback mode. Gameplay offers language, cutscene skipping and detailed logs.
+The Game fixes tab exposes this disc's upstream fix switches. Vulkan, FSR and
+desktop window/monitor controls are unavailable on Switch.
+
+The **Saves** tab shows the memory-card folder and performs a write/close/read-back
+check. Save normally through the game's own menu, wait for completion, and exit
+with L + R + Minus before restarting. Back up the entire
+`/switch/openrac/memcard/SCES_509.16/` folder to preserve progress. Save writes
+are flushed to the SD card before reporting success. An unavailable or
+unwritable card is shown as an error; existing saves are not reset.
+
+On the Play tab, **Y** starts a 300-frame headless diagnostic.
 
 ## Gameplay controls
 

@@ -11,6 +11,9 @@
 #include <format>
 #include <fstream>
 #include <system_error>
+#ifdef __SWITCH__
+#include <unistd.h>
+#endif
 
 #include "common/log.h"
 #include "fixes.h"
@@ -180,6 +183,14 @@ Settings& get() {
 }
 
 void load(const std::filesystem::path& file) {
+    // Some devices cannot rename over an existing file. Recover the previous
+    // settings if a shutdown interrupted that device's replacement sequence.
+    std::error_code recovered;
+    const auto previous = std::filesystem::path(file.string() + ".previous");
+    if (!std::filesystem::exists(file, recovered)
+        && std::filesystem::is_regular_file(previous, recovered)) {
+        std::filesystem::rename(previous, file, recovered);
+    }
     g_file = file;
     g_settings = Settings{};
     fixes::reset();
@@ -364,9 +375,9 @@ std::string summary() {
     );
 }
 
-void save() {
+bool save() {
     if (g_file.empty()) {
-        return;
+        return false;
     }
     std::error_code made;
     std::filesystem::create_directories(g_file.parent_path(), made);
@@ -377,7 +388,7 @@ void save() {
     std::ofstream out(written, std::ios::trunc);
     if (!out) {
         log::warn("the settings could not be written to {}", g_file.string());
-        return;
+        return false;
     }
     const Settings& s = g_settings;
     out << "# OpenRAC: the port's settings (the Video options page of the game's menu changes them;\n"
@@ -445,13 +456,40 @@ void save() {
     }
     out.close();
     std::error_code moved;
+#ifdef __SWITCH__
+    // The stream must reach the SD before replacing the last good settings.
+    if (!out.fail()) {
+        FILE* sync = std::fopen(written.string().c_str(), "r+b");
+        bool ok = sync && fsync(fileno(sync)) == 0;
+        if (sync && std::fclose(sync) != 0) ok = false;
+        if (!ok) {
+            log::warn("the settings could not be flushed to {}", written.string());
+            return false;
+        }
+    }
+#endif
     if (!out.fail()) {
         std::filesystem::rename(written, g_file, moved);
+        if (moved == std::errc::file_exists || moved == std::errc::permission_denied) {
+            std::error_code backup_error;
+            if (std::filesystem::is_regular_file(g_file, backup_error)) {
+                const auto previous = std::filesystem::path(g_file.string() + ".previous");
+                std::filesystem::remove(previous, backup_error);
+                if (!backup_error) std::filesystem::rename(g_file, previous, backup_error);
+                if (!backup_error) {
+                    std::filesystem::rename(written, g_file, moved);
+                    if (moved) std::filesystem::rename(previous, g_file, backup_error);
+                    else std::filesystem::remove(previous, backup_error);
+                }
+            }
+        }
     }
     if (out.fail() || moved) {
         log::warn("the settings could not be written to {}", g_file.string());
         std::filesystem::remove(written, moved);
+        return false;
     }
+    return true;
 }
 
 void set_volume(int volume) {

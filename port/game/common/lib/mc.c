@@ -30,6 +30,8 @@
 #define make_dir(p) mkdir((p), 0755)
 #endif
 
+#include "card_storage.h"
+
 #ifndef S_ISDIR
 #define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
 #endif
@@ -126,9 +128,9 @@ static int card_present(int port) {
         return 0;
     }
     if (port == 0) {
-        make_dir(path); /* the first card is always inserted */
+        if (!card_directory(path)) return 0;
     }
-    return stat(path, &st) == 0;
+    return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
 }
 
 /* sceMcInit */
@@ -202,9 +204,9 @@ int openrac_lib_sceMcClose(int fd) {
     if (fd < 0 || fd >= MAX_FILES || files[fd] == NULL) {
         return finish(MC_CLOSE, MC_FAILED);
     }
-    fclose(files[fd]);
+    const int closed = fclose(files[fd]);
     files[fd] = NULL;
-    return finish(MC_CLOSE, MC_OK);
+    return finish(MC_CLOSE, closed == 0 ? MC_OK : MC_FAILED);
 }
 
 /* sceMcSeek(fd, offset, whence) */
@@ -229,7 +231,11 @@ int openrac_lib_sceMcWrite(int fd, gaddr buffer, int size) {
         return finish(MC_WRITE, MC_FAILED);
     }
     const size_t n = fwrite(G(buffer), 1, (size_t)size, files[fd]);
-    fflush(files[fd]);
+    if (fflush(files[fd]) != 0) return finish(MC_WRITE, MC_FAILED);
+#if defined(__SWITCH__)
+    /* Flush the SD file itself before telling the game its save completed. */
+    if (fsync(fileno(files[fd])) != 0) return finish(MC_WRITE, MC_FAILED);
+#endif
     return finish(MC_WRITE, (int)n);
 }
 
@@ -338,6 +344,9 @@ static int matches(const char* pattern, const char* name) {
     if (strcmp(pattern, "*") == 0) {
         return 1;
     }
+    /* The game's directory scans may use a prefix followed by '*'. */
+    const char* star = strchr(pattern, '*');
+    if (star && star[1] == '\0') return strncmp(pattern, name, (size_t)(star - pattern)) == 0;
     return strcmp(pattern, name) == 0;
 }
 
@@ -399,6 +408,8 @@ int openrac_lib_sceMcGetDir(
     if (mode == 0) {
         list(port, (const char*)G(name));
     }
+    /* libmc's count-only query has no destination table. */
+    if (max < 0) return finish(MC_GET_DIR, listing_count);
     int n = 0;
     while (n < max && listing_next < listing_count) {
         memcpy(G(table + (gaddr)n * sizeof(mc_entry)), &listing[listing_next++], sizeof(mc_entry));

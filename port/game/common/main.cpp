@@ -347,6 +347,10 @@ int main(int argc, char** argv) {
     static std::string disc_path = disc.string();
     std::error_code made;
     fs::create_directories(g_options.cards, made);
+    if (made) {
+        log::error("Save storage could not be created at {}: {}", g_options.cards.string(), made.message());
+    }
+    log::info("Memory card 1: {}", g_options.cards.string());
     static std::string cards_path = g_options.cards.string();
     openrac_game_disc_image = disc_path.c_str();
     openrac_game_card_dir = cards_path.c_str();

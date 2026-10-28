@@ -264,6 +264,24 @@ int main() {
     CHECK(settings::step_listed(settings::kTouchScales, 150, 1) == 150);
     CHECK(settings::step_listed(settings::kTouchScales, 50, -1) == 50);
     CHECK(settings::step_listed(settings::kTouchCameraSpeeds, 300, 1) == 300);
+    // Replacing settings repeatedly must work on filesystems that refuse an
+    // overwrite rename. A stop after moving the previous file is recoverable.
+    settings::set_volume(35);
+    CHECK(settings::save());
+    settings::set_volume(70);
+    CHECK(settings::save());
+    settings::load(file);
+    CHECK(settings::get().volume == 70);
+    const auto previous = std::filesystem::path(file.string() + ".previous");
+    std::filesystem::rename(file, previous);
+    settings::load(file);
+    CHECK(settings::get().volume == 70);
+    CHECK(std::filesystem::is_regular_file(file));
+    const auto blocked = folder / "blocked";
+    std::ofstream(blocked) << "not a directory";
+    settings::load(blocked / "settings.ini");
+    CHECK(!settings::save());
+    std::filesystem::remove(blocked);
     // Only this test's file and newly created empty folder are removed.
     std::filesystem::remove(file);
     std::filesystem::remove(folder);

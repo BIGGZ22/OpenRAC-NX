@@ -143,6 +143,8 @@ openrac_add_test(frame_pacing INCLUDES .)
 openrac_add_test(frame_counter INCLUDES .)
 openrac_add_test(stick_rim SOURCES tests/stick_rim_test.cpp platform/pad.cpp INCLUDES .)
 openrac_add_c_test(strafe_smoothing INCLUDES . MATH)
+openrac_add_c_test(memory_card SOURCES tests/memory_card_test.c game/common/lib/mc.c
+  INCLUDES runtime/include game/common/include)
 openrac_add_test(render_worker SOURCES tests/render_worker_test.cpp
   game/common/frontend/render_worker.cpp INCLUDES . LIBS openrac_common Threads::Threads)
 openrac_add_test(settings SOURCES tests/settings_test.cpp game/common/settings.cpp

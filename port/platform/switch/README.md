@@ -3,13 +3,15 @@
 For cloning the public Switch branch, prerequisites, installation and controls,
 start with the [OpenRAC-NX README](../../../README.md).
 
-Starting without arguments opens a controller-operated dashboard. A checks the
-SD-card files, X opens the setup guide, Y shows port status, B returns home,
-and + exits. This uses libnx's text console, not an in-game graphical HUD.
-ZL starts the game with the SDL2/Mesa OpenGL renderer when the disc and the
-exported title/first-level assets are present. B (the bottom Switch face button)
-is PS2 Cross, A is Circle, X is Triangle, Y is Square, Plus is Start, and Minus
-is Select. Both sticks and the shoulder buttons are mapped.
+Starting without arguments opens the controller-operated launch menu. L/R selects
+a tab: Play, Display, Audio, Gameplay, Game fixes, Saves or Setup. Up/Down selects
+a row and Left/Right or A changes it. Changes persist in
+`sdmc:/switch/openrac/settings/rac1-pal.ini`. B returns to Play, X checks the
+installation and save storage, and + exits. This uses libnx's text console.
+A on the Play page, or ZL, starts the game once disc, assets and writable save
+storage checks pass. The Saves tab reports write/close/read-back health and the
+number of stored files under `/switch/openrac/memcard/SCES_509.16/`.
+B in game is PS2 Cross, A is Circle, X is Triangle and Y is Square.
 
 During gameplay, hold **ZL** for third-person lock-strafe: left stick moves
 independently of Ratchet's facing and right stick turns the camera/aim. Release
@@ -28,7 +30,7 @@ The implementation is adapted from OpenRAC/rac1-mods' GPL-3.0-or-later
 pinned at `2c5139c106de03a7ae2d0ef55a703a1d7c290d09`. CMake fetches that source
 and generates a ZL-only variant using the compact guest-memory accessors.
 
-With valid disc files, R starts a headless boot test capped at 300 game frames.
+On the Play tab, with valid disc files, Y starts a headless boot test capped at 300 game frames.
 It stops earlier if it reaches an untranslated function. This is a diagnostic,
 not gameplay: no game picture is drawn. Hold L + R + Minus to exit at a game
 frame boundary. Its session log is `data/openrac-rac1-pal.log` on the SD card.
