@@ -6,6 +6,11 @@
 > testing and feedback, with bugs and incomplete features expected. A complete
 > playthrough has not been verified. Back up your saves before updating.
 
+**Overclock required for playable performance in this early build.** Stock
+Switch clock speeds are not sufficient for the current port. Configure your
+overclock before playing; the application does not apply one automatically.
+No specific clock profile has been validated for every Switch model.
+
 OpenRAC-NX is an experimental Switch fork of [OpenRAC](https://github.com/OpenRAC/OpenRAC).
 It rebuilds the game for Switch through devkitPro/libnx and an SDL2/Mesa OpenGL
 frontend. It does not run a PS2 emulator.
@@ -90,6 +95,9 @@ Download `openrac-rac1-pal.nro` from the
 [GitHub releases page](https://github.com/BIGGZ22/OpenRAC-NX/releases).
 The source-code ZIP is for developers; it is not the ready-to-run application.
 Release assets contain the application only. You supply the supported ISO.
+
+**Before playing:** an overclock is required for playable performance. Full
+application mode is also required; it does not replace the overclock requirement.
 
 1. Copy `openrac-rac1-pal.nro` into `SD:/switch/openrac/`.
 2. Copy your own **Ratchet & Clank 1 PAL Europe/Australia v2.00 ISO** into the
