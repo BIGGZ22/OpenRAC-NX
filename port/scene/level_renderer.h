@@ -260,6 +260,7 @@ private:
     };
 
     struct Group {
+        bool may_glow = true;  // conservative until instance data is filled
         bool hero_shadow_caster = false;
         bool shadow_solid_instances = false;  // tint/glow cannot discard opaque static faces
         std::uint32_t model = 0;
@@ -284,7 +285,35 @@ private:
         int camera_count = 0;
         bool camera_valid = false;
         renderer::Mat4 camera_clip{};
+        // The squared distance from the eye to the nearest kept instance's box centre, when the
+        // camera culling last ran (OPENRAC_STATIC_FRONT_TO_BACK orders the opaque passes by it).
+        float nearest = 0.0f;
     };
+    std::vector<std::size_t> m_group_order;  // draw_layer's group order for a pass
+
+    // OPENRAC_TERRAIN_BATCH=1 (experiment): the terrain's solid pass drawn as a few draws a frame.
+    // The level's terrain is a thousand one-instance groups (a fragment each); those the camera
+    // kept, with identical instance data, are drawn together: their solid primitives' indices
+    // copied in material order into one index buffer of the batch, one draw a material, with the
+    // first member's instance (equal to every member's). Rebuilt only when the kept set or the
+    // PVS mask changes.
+    struct TerrainBatch {
+        std::size_t representative = 0;     // the member whose place and vertex array draw it
+        std::vector<std::size_t> members;   // group indices, in group order
+        std::vector<Primitive> primitives;  // one a material, first_index into `indices`
+        unsigned indices = 0;               // GL element buffer
+        std::uint64_t signature = 0;
+        std::size_t index_count = 0;
+    };
+    std::vector<TerrainBatch> m_terrain_batches;
+    std::vector<int> m_terrain_batch_of;  // by group index: its batch, -1 none
+    struct TerrainBatchStats {
+        std::uint64_t batches = 0, members = 0, rebuilds = 0, draws_replaced = 0;
+    } m_terrain_batch_stats;
+    void build_terrain_batches(
+        const std::vector<Group>& groups, const std::vector<bool>& visible, bool use_pvs,
+        const Pvs::Mask& pvs_mask
+    );
 
     void draw_sky(const renderer::FrameInput& input, renderer::RenderState& state);
     void prepare_hero_shadow(const renderer::FrameInput& input, renderer::RenderState& state);

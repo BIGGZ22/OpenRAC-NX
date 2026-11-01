@@ -45,6 +45,9 @@ struct Config {
     // The window to present to (made with SDL_WINDOW_VULKAN), or null: drawing without a screen,
     // for the tests (glReadPixels reads the default framebuffer).
     SDL_Window* window = nullptr;
+    // Optional native Switch NWindow. SDL2's Switch window always creates an
+    // EGL surface, so it cannot own the display at the same time as NVK.
+    void* native_window = nullptr;
     int width = 0;   // the default framebuffer without a window
     int height = 0;
     bool vsync = true;
@@ -149,6 +152,8 @@ inline constexpr std::size_t kCommandKinds = static_cast<std::size_t>(Command::O
 // as the frame's vk_* gauges while the debug tools measure (common/stats.h).
 struct SubmissionCounters {
     std::uint64_t validation_errors = 0;
+    // Queue acceptance, separate from ended frames (which include offscreen work).
+    std::uint64_t presents_accepted = 0, presents_failed = 0;
     std::uint64_t uniform_writes = 0, uniform_writes_skipped = 0;
     std::uint64_t uniform_uploads = 0, uniform_upload_bytes = 0;
     std::uint64_t descriptor_sets = 0, descriptor_reuses = 0;
@@ -241,6 +246,9 @@ bool wait_for_present(std::chrono::nanoseconds timeout);
 
 // Shows the default framebuffer and starts the next frame.
 void present();
+// Sticky fatal display/driver failure; empty during ordinary resize/retry.
+const std::string& presentation_error();
+std::uint64_t accepted_presents();
 
 // The wait for the display, as platform::SwapInterval counts it: -1 adaptive, 0 none, 1 vsync.
 // Returns what the screen allows: the nearest of those.
@@ -251,6 +259,10 @@ const std::string& device_name();
 const std::string& driver_version();
 const std::string& api_version();
 bool software();
+
+// Several lines for a startup report: memory heaps and types, the material path, GPU timestamps
+// and the presentation modes the surface offers. Empty with no context.
+std::string device_report();
 
 // True when the open device has memory that is device-local and not host-visible, where a static
 // buffer's staged copy goes (docs/port/RENDER_PERF.md, "R-05"). False with no context, and on a

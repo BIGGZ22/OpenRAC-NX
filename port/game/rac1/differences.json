@@ -53,11 +53,12 @@
     },
     {
       "id": "bigger-moby-pool",
-      "kind": "port",
+      "kind": "fix",
       "name": "More room for effects",
       "discs": ["pal", "ntsc"],
-      "original": "Each level has 255 slots for the mobys the game makes as it plays (sparks, debris, bolts, enemies a spawner sends). Busy effects can fill them: Gaspar's lava sparks reach 254. A full pool makes the game drop new ones, and a few callers read through the missing moby.",
-      "port": "More room for effects than on a PS2: the port gives each level 767 slots, so effects and the enemies mods add fit beside each other. Rilgar, Blarg Station and Quartu keep 255, since their memory has no room for more. The tick's list of mobys to target keeps the console's 511 entries, where the game would write past it with more.",
+      "original": "Each level has 255 slots for the mobys the game makes as it plays (sparks, debris, bolts, enemies a spawner sends). Busy effects can fill them: Gaspar's lava sparks reach 254. A full pool makes the game drop new ones, and a few callers read through the missing moby. The tick's list of mobys to target has room for 511 and nothing bounds it: past that the game writes on into the next table.",
+      "port": "More room for effects than on a PS2: the port gives each level 767 slots, so effects and the enemies mods add fit beside each other. Rilgar, Blarg Station and Quartu keep 255, since their memory has no room for more. The tick's list of mobys to target stops at 511, which the bigger pool could otherwise pass. Off: the disc's 255 slots and the console's unbounded list, as a run on a PS2 has them (from the next level load).",
+      "setting": { "key": "fix_bigger_moby_pool", "default": true },
       "refs": ["port/game/rac1/host/moby_pool.c", "docs/port/KNOWN_ISSUES.md"]
     },
     {
@@ -102,7 +103,7 @@
       "name": "Start skips cutscenes",
       "discs": ["pal", "ntsc"],
       "original": "Start alone skips a scene only on Veldin once it is beaten, or in a replay; elsewhere Start needs L1, L2, R1 and R2 held with it.",
-      "port": "With the Skip cutscenes setting on (the default), Start alone skips an in-game scene: the port holds the four shoulder buttons for it, so the game's own skip ends the scene.",
+      "port": "With the Skip cutscenes setting on (the default), Start alone skips an in-game scene: the port holds the four shoulder buttons for it, so the game's own skip ends the scene. Off, Start works as on a console.",
       "refs": ["commit 0f17ce2e", "port/game/common/frontend.cpp"]
     },
     {

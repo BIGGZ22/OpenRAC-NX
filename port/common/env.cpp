@@ -9,7 +9,9 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
+#include <string>
 
 namespace openrac::env {
 namespace {
@@ -295,6 +297,9 @@ constexpr std::array<Variable, kVariableCount> kVariables = {{
     {Var::SoundLog, "OPENRAC_SOUND_LOG",
      Kind::Flag, Truth::Set, "off",
      "each command the game sends its sound driver, on stderr"},
+    {Var::StaticTranslucentCullOff, "OPENRAC_STATIC_TRANSLUCENT_CULL_OFF",
+     Kind::Flag, Truth::Set, "off",
+     "reference: static translucent passes draw all PVS-visible instances"},
     {Var::Strict, "OPENRAC_STRICT",
      Kind::Flag, Truth::LeadingOne, "off",
      "a call to a code address no function has stops the program"},
@@ -402,6 +407,7 @@ using Snapshot = std::array<std::optional<std::string>, kVariableCount>;
 
 // Reads every variable of the table from the environment.
 Snapshot read_environment() {
+    load_switch_file();  // a static constructor may read first, before main loads the file
     Snapshot values;
     for (const Variable& row : kVariables) {
         // std::getenv wants the name ending in a NUL, which a view need not have.
@@ -425,6 +431,42 @@ const Snapshot& snapshot() {
 }
 
 }  // namespace
+
+void load_switch_file() {
+#if defined(__SWITCH__)
+    static bool loaded = false;
+    if (loaded) {
+        return;
+    }
+    loaded = true;
+    std::FILE* in = std::fopen("sdmc:/switch/openrac/env.txt", "r");
+    if (in == nullptr) {
+        std::remove("sdmc:/switch/openrac/env-applied.log");
+        return;
+    }
+    std::FILE* report = std::fopen("sdmc:/switch/openrac/env-applied.log", "w");
+    const auto trim = [](const std::string& text) {
+        const auto first = text.find_first_not_of(" \t\r\n");
+        if (first == std::string::npos) return std::string();
+        const auto last = text.find_last_not_of(" \t\r\n");
+        return text.substr(first, last - first + 1);
+    };
+    char buffer[1024];
+    while (std::fgets(buffer, sizeof buffer, in) != nullptr) {
+        const std::string line = trim(buffer);
+        if (line.empty() || line[0] == '#') continue;
+        const auto eq = line.find('=');
+        if (eq == std::string::npos) continue;
+        const std::string key = trim(line.substr(0, eq));
+        const std::string value = trim(line.substr(eq + 1));
+        if (key.empty()) continue;
+        setenv(key.c_str(), value.c_str(), 1);
+        if (report != nullptr) std::fprintf(report, "%s=%s\n", key.c_str(), value.c_str());
+    }
+    std::fclose(in);
+    if (report != nullptr) std::fclose(report);
+#endif
+}
 
 std::span<const Variable> all() {
     return kVariables;

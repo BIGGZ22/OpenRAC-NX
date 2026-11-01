@@ -5,6 +5,7 @@
 // GS's TEST 0x5360b does, so a near glow face hides the far ones (the parked ship's thrusters).
 
 #include <cstddef>
+#include <limits>
 
 #include "renderer/world/gs_pass.h"
 #include "scene/moby_passes.h"
@@ -49,8 +50,34 @@ void test_the_reference_is_the_moby_test() {
 
 }  // namespace
 
+// A moby texture is known by either importer's name: the GLB export's and the Switch's disc import
+// (scene/disc_import.cpp: group 1). Other tables' textures, the metal maps (5) and the sky (6) are
+// not mobys'.
+void test_moby_texture_paths() {
+    CHECK(moby_texture_path("levels/Novalis/textures/moby_0412.png"));
+    CHECK(moby_texture_path("native/1/0"));
+    CHECK(moby_texture_path("native/1/123"));
+    CHECK(moby_texture_path("native/1/-1"));
+    CHECK(!moby_texture_path("native/0/12"));   // terrain
+    CHECK(!moby_texture_path("native/2/1"));    // ties
+    CHECK(!moby_texture_path("native/5/-2"));   // the chrome map
+    CHECK(!moby_texture_path("native/11/3"));
+    CHECK(!moby_texture_path("levels/Novalis/textures/tie_0048.png"));
+    CHECK(!moby_texture_path("moby_0412.png"));
+    CHECK(!moby_texture_path(""));
+}
+
 int main() {
+    CHECK(!moby_instance_may_glow(1.0f,0.0f));
+    CHECK(!moby_instance_may_glow(0.0f,123.0f));
+    CHECK(!moby_instance_may_glow(0.5f,123.0f));
+    CHECK(!moby_instance_may_glow(1.0f,0.5f));
+    CHECK(moby_instance_may_glow(1.0f,1.0f));
+    CHECK(moby_instance_may_glow(-1.0f,1.0f));
+    CHECK(moby_instance_may_glow(2.0f,1.0f));
+    CHECK(moby_instance_may_glow(std::numeric_limits<float>::quiet_NaN(),0.0f));
     test_glow_writes_depth_before_the_blended_passes();
     test_the_reference_is_the_moby_test();
+    test_moby_texture_paths();
     return openrac::test::result();
 }

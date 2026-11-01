@@ -17,6 +17,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <stdarg.h>
+#ifdef __SWITCH__
+#include <switch.h>
+#endif
 
 #include <sys/stat.h>
 
@@ -71,6 +75,41 @@ enum {
 #define MC_ATTR_FILE 0x8497
 #define MC_ATTR_DIR 0x8427
 
+/* Keep diagnostics outside the card itself: an extra file in a PS2 save folder
+ * can make the game's exact file-count validator reject an otherwise good save. */
+static int card_trace_enabled(void) {
+#ifdef __SWITCH__
+    static int enabled = -1;
+    if (enabled < 0) {
+        const char* value = getenv("OPENRAC_MC_TRACE");
+        enabled = value && strcmp(value, "1") == 0;
+    }
+    return enabled;
+#else
+    return 0;
+#endif
+}
+
+static void card_trace(const char* format, ...) {
+#ifdef __SWITCH__
+    if (!card_trace_enabled()) return;
+    const int saved_errno = errno;
+    const Result fs_result = fsdevGetLastResult();
+    FILE* trace = fopen("sdmc:/switch/openrac/memory-card.log", "a");
+    if (trace) {
+        va_list args;
+        va_start(args, format);
+        vfprintf(trace, format, args);
+        va_end(args);
+        fprintf(trace, " [errno=%d fs=0x%X]\n", saved_errno, fs_result);
+        fclose(trace);
+    }
+    errno = saved_errno;
+#else
+    (void)format;
+#endif
+}
+
 /* The command that has finished and its result, for sceMcSync: in the game's memory where the game
  * says the console's library kept them (openrac_game_mc_state), else here. */
 static int pending_cmd;
@@ -81,6 +120,7 @@ static gaddr state_command, state_result;
 void openrac_game_mc_state(gaddr command, gaddr result) {
     state_command = command;
     state_result = result;
+    card_trace("SESSION root=%s command=0x%X result=0x%X", openrac_game_card_dir ? openrac_game_card_dir : "memcard", command, result);
 }
 
 static int no_name(gaddr name) {
@@ -193,8 +233,10 @@ int openrac_lib_sceMcOpen(int port, int slot, gaddr name, int mode) {
         f = fopen(path, "rb");
     }
     if (f == NULL) {
+        card_trace("OPEN FAILED port=%d mode=0x%X path=%s", port, mode, path);
         return finish(MC_OPEN, MC_NOT_FOUND);
     }
+    card_trace("OPEN fd=%d port=%d mode=0x%X path=%s", fd, port, mode, path);
     files[fd] = f;
     return finish(MC_OPEN, fd);
 }
@@ -205,6 +247,7 @@ int openrac_lib_sceMcClose(int fd) {
         return finish(MC_CLOSE, MC_FAILED);
     }
     const int closed = fclose(files[fd]);
+    card_trace("CLOSE fd=%d result=%d", fd, closed);
     files[fd] = NULL;
     return finish(MC_CLOSE, closed == 0 ? MC_OK : MC_FAILED);
 }
@@ -222,7 +265,9 @@ int openrac_lib_sceMcRead(int fd, gaddr buffer, int size) {
     if (fd < 0 || fd >= MAX_FILES || files[fd] == NULL) {
         return finish(MC_READ, MC_FAILED);
     }
-    return finish(MC_READ, (int)fread(G(buffer), 1, (size_t)size, files[fd]));
+    const size_t n = fread(G(buffer), 1, (size_t)size, files[fd]);
+    card_trace("READ fd=%d bytes=%d read=%u", fd, size, (unsigned)n);
+    return finish(MC_READ, (int)n);
 }
 
 /* sceMcWrite(fd, buffer, size) */
@@ -231,11 +276,18 @@ int openrac_lib_sceMcWrite(int fd, gaddr buffer, int size) {
         return finish(MC_WRITE, MC_FAILED);
     }
     const size_t n = fwrite(G(buffer), 1, (size_t)size, files[fd]);
-    if (fflush(files[fd]) != 0) return finish(MC_WRITE, MC_FAILED);
+    if (fflush(files[fd]) != 0) {
+        card_trace("WRITE fflush failed fd=%d bytes=%d written=%u", fd, size, (unsigned)n);
+        return finish(MC_WRITE, MC_FAILED);
+    }
 #if defined(__SWITCH__)
     /* Flush the SD file itself before telling the game its save completed. */
-    if (fsync(fileno(files[fd])) != 0) return finish(MC_WRITE, MC_FAILED);
+    if (fsync(fileno(files[fd])) != 0) {
+        card_trace("WRITE fsync failed fd=%d bytes=%d written=%u", fd, size, (unsigned)n);
+        return finish(MC_WRITE, MC_FAILED);
+    }
 #endif
+    card_trace("WRITE fd=%d bytes=%d written=%u", fd, size, (unsigned)n);
     return finish(MC_WRITE, (int)n);
 }
 
@@ -403,6 +455,11 @@ static void list(int port, const char* spec) {
 #else
     DIR* d = opendir(path);
     if (d == NULL) {
+        static char last_missing[1024];
+        if (strcmp(last_missing, path) != 0) {
+            snprintf(last_missing, sizeof last_missing, "%s", path);
+            card_trace("LIST opendir failed port=%d spec=%s path=%s", port, spec, path);
+        }
         return;
     }
     list_dot_entries(path, pattern);
@@ -412,6 +469,21 @@ static void list(int port, const char* spec) {
     }
     closedir(d);
 #endif
+    /* Avoid filling the log with identical polling scans. Record changed listings
+     * with exact sizes/attributes, which the PAL game validates before loading. */
+    if (card_trace_enabled()) {
+    static unsigned last_hash;
+    unsigned hash = 2166136261u;
+    for (const unsigned char* p = (const unsigned char*)listing;
+         p < (const unsigned char*)(listing + listing_count); ++p) hash = (hash ^ *p) * 16777619u;
+    for (const unsigned char* p = (const unsigned char*)path; *p; ++p) hash = (hash ^ *p) * 16777619u;
+    if (hash != last_hash) {
+        last_hash = hash;
+        card_trace("LIST port=%d spec=%s path=%s entries=%d", port, spec, path, listing_count);
+        for (int i = 0; i < listing_count; ++i)
+            card_trace("  name=%s size=%u attr=0x%X", listing[i].name, listing[i].size, listing[i].attributes);
+    }
+    }
 }
 
 /* sceMcGetDir(port, slot, name, mode, max entries, table): mode 0 starts a

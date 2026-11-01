@@ -9,12 +9,16 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <chrono>
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <deque>
+#include <format>
 #include <memory>
 #include <mutex>
 #include <span>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -72,6 +76,15 @@ std::array<std::int32_t, audio::kVolumeGroups> g_master = [] {
 // A track read from the disc and decoded on a thread of its own; `ready` (or `failed`) is set
 // under g_lock.
 struct Track {
+    bool trace=false;
+    std::uint32_t sector=0;
+    std::int64_t requested_ns=0;
+    // OPENRAC_AUDIO_TRACE's tick view (openrac_sound_trace_tick), game thread only: the tick the
+    // stream was asked for, the tick its first sound was seen at, the next tick to report at.
+    std::uint64_t requested_tick=0, sounding_tick=0, report_tick=0;
+    unsigned reports=0;
+    mutable std::atomic<std::int64_t> consumed_ns{0};
+    mutable std::atomic<bool> consumed_reported{false};
     std::vector<std::int16_t> samples;
     std::uint32_t rate = 44100;
     // The samples the header announces (28 per 16-byte frame), known when the stream starts: the
@@ -79,6 +92,11 @@ struct Track {
     std::size_t length = 0;
     bool ready = false;
     bool failed = false;
+    // The samples the mixer may play (under g_lock): all of them once ready, or, with
+    // OPENRAC_STREAM_EARLY_START, those decoded so far while `complete` is false (the mixer then
+    // holds at the end of them, silent, until the reader has more).
+    std::size_t available = 0;
+    bool complete = false;
 };
 
 struct Part {
@@ -98,6 +116,66 @@ struct Stream {
 
 std::vector<std::unique_ptr<Stream>> g_streams;
 std::uint32_t g_next_stream = 1;
+
+std::int64_t audio_clock_ns() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+// The tick openrac_sound_trace_tick last saw (game thread; 0 before the first).
+std::uint64_t g_trace_tick = 0;
+
+// OPENRAC_STREAM_EARLY_START=1 (experiment, off by default): a stream starts to sound once its
+// first part is decoded, the rest decoded in parts while it plays, instead of after the whole file
+// has been read and decoded (read_track). A track of minutes is a megabyte or more read from the SD
+// card and decoded before its first sound; the game's scene goes on meanwhile, so the speech of a
+// scene starts late (the landing's). The samples are the same; only when they may first sound
+// changes. The mixer never plays past what is decoded: should the reader fall behind, the stream
+// holds silent where it is, as it held before its first sound.
+bool stream_early_start() {
+    static const bool on=[] {
+        const auto* v=std::getenv("OPENRAC_STREAM_EARLY_START");
+        const bool set=v && std::strcmp(v,"1")==0;
+        if(set) openrac::log::info("sound: EXPERIMENT OPENRAC_STREAM_EARLY_START=1: streams sound from their first decoded part");
+        return set;
+    }();
+    return on;
+}
+
+bool audio_trace_enabled() {
+    static const bool on=[] {
+        const auto* v=std::getenv("OPENRAC_AUDIO_TRACE");return v && std::strcmp(v,"1")==0;
+    }();
+    return on;
+}
+
+// Traced tracks whose first mixer consumption has not been logged yet (g_lock). The mixer only
+// stores a timestamp in the track; game-thread calls drain this list and log outside the lock, so
+// a track the game never queries (a cutscene's speech) is still reported.
+std::vector<std::shared_ptr<Track>> g_traced;
+
+// Called from game-side queries only. Never write files from the mixer callback.
+void report_consumed(const std::shared_ptr<Track>& track) {
+    if(!track || !track->trace) return;
+    const auto at=track->consumed_ns.load(std::memory_order_relaxed);
+    if(at && !track->consumed_reported.exchange(true))
+        log::info("audio trace sector {}: first mixer consumption at {:.3f} ms, {:.3f} ms after request (not speaker latency)",
+            track->sector,double(at)/1e6,double(at-track->requested_ns)/1e6);
+}
+
+// Game thread only (stream calls and sound commands): never from the mixer.
+void drain_traced() {
+    if(!audio_trace_enabled()) return;
+    std::vector<std::shared_ptr<Track>> consumed;
+    {
+        std::lock_guard lock(g_lock);
+        std::erase_if(g_traced,[&](const std::shared_ptr<Track>& t) {
+            if(t->consumed_ns.load(std::memory_order_relaxed)) { consumed.push_back(t); return true; }
+            // Failed, or no stream or reader holds it any more: it will never be consumed.
+            return t->failed || t.use_count()==1;
+        });
+    }
+    for(const auto& t:consumed) report_consumed(t);
+}
 
 Stream* find_stream(std::uint32_t handle) {
     if ((handle & 0xFF000000u) != OPENRAC_STREAM_TAG) {
@@ -133,6 +211,8 @@ bool read_vag_header(std::FILE* disc, std::uint32_t sector, std::uint32_t& size,
 }
 
 void read_track(std::uint32_t sector, std::shared_ptr<Track> track) {
+    const auto started=track->trace ? audio_clock_ns() : 0;
+    std::int64_t read_done=started,decode_done=started;
     // The program is leaving: nothing to read for.
     {
         std::lock_guard lock(g_lock);
@@ -152,10 +232,12 @@ void read_track(std::uint32_t sector, std::shared_ptr<Track> track) {
             std::vector<std::uint8_t> file(kVagHeader + size);
             if (size > 0 && size < 64u * 1024 * 1024 && seek_disc(disc, at)
                 && std::fread(file.data(), 1, file.size(), disc) == file.size()) {
+                if(track->trace) read_done=audio_clock_ns();
                 try {
                     const assets::VagFile vag = assets::parse_vag(file);
                     rate = vag.header.sample_rate;
                     samples = assets::decode_adpcm(vag.body);
+                    if(track->trace) decode_done=audio_clock_ns();
                 } catch (const std::exception& e) {
                     log::warn("music: the stream at sector {}: {}", sector, e.what());
                 }
@@ -163,15 +245,116 @@ void read_track(std::uint32_t sector, std::shared_ptr<Track> track) {
         }
         std::fclose(disc);
     }
-    std::lock_guard lock(g_lock);
-    if (samples.empty() || rate == 0) {
+    {
+        std::lock_guard lock(g_lock);
+        if (samples.empty() || rate == 0) {
+            log::warn("music: no VAG stream at sector {}", sector);
+            track->failed = true;
+            return;
+        }
+        track->samples = std::move(samples);
+        track->rate = rate;
+        track->available = track->samples.size();
+        track->complete = true;
+        track->ready = true;
+    }
+    if(track->trace) log::info("audio trace sector {}: read/header {:.3f} ms, decode {:.3f} ms, ready {:.3f} ms after request; ready at {:.3f} ms",
+        sector,double(read_done-started)/1e6,double(decode_done-read_done)/1e6,
+        double(audio_clock_ns()-track->requested_ns)/1e6,double(audio_clock_ns())/1e6);
+}
+
+// read_track for OPENRAC_STREAM_EARLY_START: the body read and decoded in parts, each published to
+// the mixer as it is done (Track::available), the first small so that the stream sounds soon. The
+// decoding is read_track's (assets::decode_adpcm: every whole 16-byte frame from zero history,
+// rounded), frame by frame with the history carried, so the samples are the same.
+void read_track_early(std::uint32_t sector, std::shared_ptr<Track> track) {
+    const auto started=track->trace ? audio_clock_ns() : 0;
+    {
+        std::lock_guard lock(g_lock);
+        if (g_stopping) {
+            track->failed = true;
+            return;
+        }
+    }
+    std::FILE* disc = openrac_game_disc_image ? std::fopen(openrac_game_disc_image, "rb") : nullptr;
+    std::uint32_t size = 0;
+    std::uint32_t rate = 0;
+    const bool header = disc != nullptr && read_vag_header(disc, sector, size, rate) && rate != 0
+                        && size >= assets::kAdpcmFrameBytes && size < 64u * 1024 * 1024;
+    if (!header) {
+        if (disc != nullptr) {
+            std::fclose(disc);
+        }
+        std::lock_guard lock(g_lock);
         log::warn("music: no VAG stream at sector {}", sector);
         track->failed = true;
         return;
     }
-    track->samples = std::move(samples);
-    track->rate = rate;
-    track->ready = true;
+    const std::size_t frames = size / assets::kAdpcmFrameBytes;
+    // Sized once, before the mixer can see it: the reader writes past `available`, the mixer reads
+    // before it, and the vector itself does not change again.
+    std::vector<std::int16_t> whole(frames * assets::kAdpcmFrameSamples);
+    std::int16_t* const out = whole.data();
+    // The first part about a tenth of a second at 44.1 kHz; the rest in parts of about 2.6 s.
+    constexpr std::size_t kFirstFrames = 160;
+    constexpr std::size_t kPartFrames = 4096;
+    std::vector<std::uint8_t> part(kPartFrames * assets::kAdpcmFrameBytes);
+    assets::AdpcmHistory history;
+    std::size_t done = 0;
+    bool published = false;
+    bool short_read = false;
+    std::int64_t first_ns = 0;
+    if (!seek_disc(disc, static_cast<std::uint64_t>(sector) * 2048 + kVagHeader)) {
+        short_read = true;
+    }
+    while (!short_read && done < frames) {
+        const std::size_t want = std::min(published ? kPartFrames : kFirstFrames, frames - done);
+        const std::size_t got = std::fread(part.data(), 1, want * assets::kAdpcmFrameBytes, disc);
+        // The whole frames read; a file that ends before its header says ends the track there.
+        const std::size_t take = got / assets::kAdpcmFrameBytes;
+        short_read = take < want;
+        if (take == 0) {
+            break;
+        }
+        for (std::size_t f = 0; f < take; ++f) {
+            const auto pcm = assets::decode_adpcm_frame(
+                part.data() + f * assets::kAdpcmFrameBytes, history, assets::AdpcmRounding::Rounded
+            );
+            std::copy(pcm.begin(), pcm.end(), out + (done + f) * assets::kAdpcmFrameSamples);
+        }
+        done += take;
+        std::lock_guard lock(g_lock);
+        if (!published) {
+            track->samples = std::move(whole);
+            track->rate = rate;
+            track->ready = true;
+            published = true;
+            if (track->trace) first_ns = audio_clock_ns();
+        }
+        track->available = done * assets::kAdpcmFrameSamples;
+        track->complete = done == frames;
+        if (g_stopping) {
+            break;  // leaving: what is decoded stays, the reader ends
+        }
+    }
+    std::fclose(disc);
+    {
+        std::lock_guard lock(g_lock);
+        if (!published) {
+            log::warn("music: no VAG stream at sector {}", sector);
+            track->failed = true;
+            return;
+        }
+        // A file shorter than its header says, or the program leaving: what was decoded is the
+        // track.
+        track->complete = true;
+    }
+    if (short_read) {
+        log::warn("music: the stream at sector {} ends early ({} of {} frames)", sector, done, frames);
+    }
+    if(track->trace) log::info("audio trace sector {}: first part ready {:.3f} ms after request (reader start {:.3f} ms); whole track {:.3f} ms after request (OPENRAC_STREAM_EARLY_START)",
+        sector,double(first_ns-track->requested_ns)/1e6,double(started-track->requested_ns)/1e6,
+        double(audio_clock_ns()-track->requested_ns)/1e6);
 }
 
 // Adds the streams to `out`. A part not decoded yet holds its stream silent; an ended part gives
@@ -193,7 +376,14 @@ void mix_streams(std::span<std::int16_t> out) {
             if (!t.ready) {
                 break;
             }
-            const std::size_t n = t.samples.size();
+            // The samples that may be played: all of a whole track, the decoded ones of one still
+            // being read (OPENRAC_STREAM_EARLY_START).
+            const std::size_t n = t.available;
+            if (!t.complete && static_cast<std::size_t>(s.position) >= n) {
+                break;  // the reader has not got this far: silent until it has
+            }
+            if(t.trace && !t.consumed_ns.load(std::memory_order_relaxed))
+                t.consumed_ns.store(audio_clock_ns(),std::memory_order_relaxed);
             const double step = static_cast<double>(t.rate) / audio::kOutputRate;
             for (; f < frames; ++f) {
                 auto i = static_cast<std::size_t>(s.position);
@@ -210,6 +400,9 @@ void mix_streams(std::span<std::int16_t> out) {
                         static_cast<std::int16_t>(std::clamp(mixed, -32768.0, 32767.0));
                 }
                 s.position += step;
+            }
+            if (!t.complete) {
+                break;  // held at the end of what is decoded; the rest comes on a later call
             }
             if (static_cast<std::size_t>(s.position) >= n) {
                 s.position -= static_cast<double>(n);
@@ -383,6 +576,7 @@ void openrac_sound_continue_groups(uint32_t mask) {
 }
 
 uint32_t openrac_sound_command(uint32_t command, const void* data, uint32_t size) {
+    drain_traced();  // game thread, every sound command: cheap unless OPENRAC_AUDIO_TRACE=1
     const auto* d = static_cast<const std::uint8_t*>(data);
     switch (command) {
         case OPENRAC_SND_PLAY_VOL_PAN_PMPB:  // bank, sound, volume, pan, pitch mod, pitch bend
@@ -421,6 +615,11 @@ uint32_t openrac_stream_play(
         return 0;
     }
     auto track = std::make_shared<Track>();
+    drain_traced();
+    static std::atomic<unsigned> traced{0};
+    track->trace=audio_trace_enabled() && traced.fetch_add(1)<32;
+    track->sector=sector;
+    if(track->trace) { track->requested_ns=audio_clock_ns(); track->requested_tick=g_trace_tick; }
     // The header now, the body on the reader's thread: the game asks how long the stream has left
     // from the next frame on, long before a track of minutes is read and decoded.
     if (std::FILE* disc =
@@ -433,11 +632,32 @@ uint32_t openrac_stream_play(
         }
         std::fclose(disc);
     }
+    if(track->trace) log::info("audio trace sector {}: requested at {:.3f} ms, tick {}; header done {:.3f} ms after request; group {} queue {} flags {:#x}",
+        sector,double(track->requested_ns)/1e6,track->requested_tick,double(audio_clock_ns()-track->requested_ns)/1e6,group,queue_on,flags);
     std::uint32_t handle;
+    // OPENRAC_AUDIO_TRACE: what plays before a part queued behind a live stream (its first sound
+    // waits for them: queued playback, not a late read).
+    std::string queued_behind;
     {
         std::lock_guard lock(g_lock);
         handle = OPENRAC_STREAM_TAG | (g_next_stream++ & 0x00FFFFFFu);
         Stream* stream = find_stream(queue_on);
+        if (track->trace && stream != nullptr && !stream->parts.empty()) {
+            double ahead_ms = 0.0;
+            bool looping = false;
+            for (std::size_t i = 0; i < stream->parts.size(); ++i) {
+                const Track& t = *stream->parts[i].track;
+                const std::size_t length = t.ready ? t.samples.size() : t.length;
+                const double left = static_cast<double>(length) - (i == 0 ? stream->position : 0.0);
+                ahead_ms += t.rate != 0 ? std::max(0.0, left) * 1000.0 / t.rate : 0.0;
+                looping = looping || stream->parts[i].loop;
+            }
+            queued_behind = std::format(
+                "queued behind {} part(s) of sector {} with about {:.0f} ms left{}{}",
+                stream->parts.size(), stream->parts.front().track->sector, ahead_ms,
+                looping ? " (the last loops until this part replaces it at the end of a pass)" : "",
+                stream->paused ? " (the stream is paused)" : "");
+        }
         if (stream == nullptr) {
             g_streams.push_back(std::make_unique<Stream>());
             stream = g_streams.back().get();
@@ -451,9 +671,15 @@ uint32_t openrac_stream_play(
         }
         stream->parts.push_back({track, (flags & 4) != 0});
         stream->handles.push_back(handle);
+        if(track->trace) g_traced.push_back(track);
     }
+    if (!queued_behind.empty()) {
+        log::info("audio trace sector {}: {}", sector, queued_behind);
+    }
+    // The whole file first, or (OPENRAC_STREAM_EARLY_START) part by part as it plays.
+    const auto reader = stream_early_start() ? read_track_early : read_track;
     if (g_read_at_once) {
-        read_track(sector, track);
+        reader(sector, track);
     } else {
         std::lock_guard lock(g_lock);
         if (g_stopping) {
@@ -471,8 +697,8 @@ uint32_t openrac_stream_play(
             return true;
         });
         auto done = std::make_shared<std::atomic<bool>>(false);
-        g_readers.push_back({std::thread([sector, track, done] {
-                                 read_track(sector, track);
+        g_readers.push_back({std::thread([reader, sector, track, done] {
+                                 reader(sector, track);
                                  done->store(true);
                              }),
                              done});
@@ -503,23 +729,33 @@ void openrac_stream_read_at_once(int at_once) {
 }
 
 int openrac_stream_live(uint32_t stream) {
+    drain_traced();
     std::lock_guard lock(g_lock);
     return find_stream(stream) != nullptr;
 }
 
 int openrac_stream_buffered(uint32_t stream) {
-    std::lock_guard lock(g_lock);
-    const Stream* s = find_stream(stream);
-    return s != nullptr && !s->parts.empty() && s->parts.front().track->ready;
+    std::shared_ptr<Track> track;
+    bool ready=false;
+    {
+        std::lock_guard lock(g_lock);
+        const Stream* s=find_stream(stream);
+        if(s && !s->parts.empty()) {track=s->parts.front().track;ready=track->ready;}
+    }
+    report_consumed(track);
+    return ready;
 }
 
 int32_t openrac_stream_remaining_ms(uint32_t stream) {
+    std::shared_ptr<Track> traced;
+    const auto remaining=[&]() -> int32_t {
     std::lock_guard lock(g_lock);
     const Stream* s = find_stream(stream);
     if (s == nullptr || s->parts.empty()) {
         return 0;
     }
     const Track& t = *s->parts.front().track;
+    if(t.trace) traced=s->parts.front().track;
     // Not decoded yet: all of it is left, as its header gives it (the stream holds silent at its
     // start until then). RAC1's crossfade measures the old music's fade against the first answer
     // it gets for the transition (music_Update, case 2), so a made-up length there cut the old
@@ -530,17 +766,23 @@ int32_t openrac_stream_remaining_ms(uint32_t stream) {
     }
     const double left = static_cast<double>(length) - s->position;
     return static_cast<int32_t>(std::max(0.0, left) * 1000.0 / t.rate);
+    }();
+    report_consumed(traced);
+    return remaining;
 }
 
 void openrac_stream_stop(uint32_t stream) {
-    std::lock_guard lock(g_lock);
-    if (stream == 0) {
-        g_streams.clear();
-        return;
+    {
+        std::lock_guard lock(g_lock);
+        if (stream == 0) {
+            g_streams.clear();
+        } else {
+            std::erase_if(g_streams, [&](const std::unique_ptr<Stream>& s) {
+                return std::find(s->handles.begin(), s->handles.end(), stream) != s->handles.end();
+            });
+        }
     }
-    std::erase_if(g_streams, [&](const std::unique_ptr<Stream>& s) {
-        return std::find(s->handles.begin(), s->handles.end(), stream) != s->handles.end();
-    });
+    drain_traced();  // a stopped track that was already consumed is still reported
 }
 
 void openrac_stream_pause(uint32_t stream, int paused) {
@@ -561,6 +803,58 @@ void openrac_sound_render(int16_t* interleaved, size_t frames) {
     std::lock_guard lock(g_lock);
     player().render(std::span(interleaved, frames * 2));
     mix_streams(std::span(interleaved, frames * 2));
+}
+
+void openrac_sound_trace_tick(uint64_t tick, int ticks_a_second) {
+    g_trace_tick = tick;
+    if (!audio_trace_enabled() || ticks_a_second <= 0) {
+        return;
+    }
+    // Where each traced stream that sounds is: its audio played against the game's time since
+    // its first sound. Audio ahead and growing: the game's ticks run slower than real time while
+    // the audio plays in real time. A fixed lead from the start: the stream started late or early
+    // (requested tick against first-sound tick). The position is the mixer's, which renders a
+    // little ahead of the speaker (the output's buffer), not what is heard.
+    std::vector<std::string> lines;
+    {
+        std::lock_guard lock(g_lock);
+        for (const auto& s : g_streams) {
+            if (s->parts.empty()) {
+                continue;
+            }
+            Track& t = *s->parts.front().track;
+            const std::int64_t sounded = t.consumed_ns.load(std::memory_order_relaxed);
+            if (!t.trace || sounded == 0 || t.rate == 0) {
+                continue;
+            }
+            if (t.sounding_tick == 0) {
+                t.sounding_tick = tick;
+                t.report_tick = tick;
+                lines.push_back(std::format(
+                    "audio trace sector {}: first sound seen at tick {} ({} ticks = {:.3f} s of "
+                    "game time after its request at tick {}; {:.3f} ms of wall time)",
+                    t.sector, tick, tick - t.requested_tick,
+                    double(tick - t.requested_tick) / ticks_a_second, t.requested_tick,
+                    double(sounded - t.requested_ns) / 1e6));
+            }
+            if (tick < t.report_tick || t.reports >= 120) {
+                continue;
+            }
+            t.report_tick = tick + static_cast<std::uint64_t>(ticks_a_second);
+            ++t.reports;
+            const double audio = s->position / t.rate;
+            const double game = double(tick - t.sounding_tick) / ticks_a_second;
+            const double wall = double(audio_clock_ns() - sounded) / 1e9;
+            lines.push_back(std::format(
+                "audio trace sector {}: {:.2f} s of wall time after its first sound: audio played "
+                "{:.2f} s, the game advanced {} ticks = {:.2f} s; audio ahead of the game by {:+.2f} s{}",
+                t.sector, wall, audio, tick - t.sounding_tick, game, audio - game,
+                s->paused ? " (paused)" : !t.complete ? " (still being read)" : ""));
+        }
+    }
+    for (const auto& line : lines) {
+        log::info("{}", line);
+    }
 }
 
 }  // extern "C"

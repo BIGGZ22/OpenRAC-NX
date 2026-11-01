@@ -140,6 +140,7 @@ enum class Var : std::uint16_t {
     SlowFrame,
     SoftwareGl,
     SoundLog,
+    StaticTranslucentCullOff,
     Strict,
     SunInstanceCullOff,
     SunReceiverCullOff,
@@ -189,6 +190,11 @@ struct Variable {
 // table has no such variable. For the C entry point (openrac/host_env.h), which names variables by
 // their strings; C++ names them by their Var.
 [[nodiscard]] std::optional<Var> find(std::string_view name);
+
+// Switch only (a no-op elsewhere): puts the KEY=VALUE lines of sdmc:/switch/openrac/env.txt into
+// the environment once, writing what it applied to env-applied.log. Called before the variables
+// are first read, also when that first read happens in a static constructor before main.
+void load_switch_file();
 
 // Returns the value `var` was set to, or nothing when it is unset. The view stays valid for the
 // life of the program, and its data() ends in a NUL, so it can be handed to C as a string.

@@ -5,7 +5,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
+#include <format>
 #include <iterator>
 #include <stdexcept>
 
@@ -18,7 +20,11 @@
 #include "scene/hero_shadow.h"
 #include "scene/moby_passes.h"
 #include "scene/shadow_atlas.h"
+#include "scene/terrain_batch.h"
 #include "scene_shaders.h"
+#if defined(OPENRAC_DKGL_SELFTEST)
+#include "scene/dkgl_selftest.h"
+#endif
 #if defined(OPENRAC_VULKAN)
 #include "renderer/vulkan/vkgl.h"
 #endif
@@ -29,6 +35,40 @@ using namespace openrac::gl;
 using renderer::Bucket;
 
 namespace {
+
+// The baked camera visibility (PVS) and its compacted terrain indices: on Vulkan, and on the
+// Switch's native deko3d renderer when OPENRAC_DK_PVS=1 asks (an opt-in performance check: it
+// draws less of the level each frame, so leave it off while comparing pictures).
+bool pvs_backend() {
+    static const bool on = [] {
+        if (gl::is_vulkan()) {
+            return true;
+        }
+        const char* want = std::getenv("OPENRAC_DK_PVS");
+        const auto* name = glGetString(GL_RENDERER);
+        const bool deko3d = name != nullptr && std::strstr(reinterpret_cast<const char*>(name), "deko3d") != nullptr;
+        const bool enabled = deko3d && want != nullptr && std::strcmp(want, "1") == 0;
+        if (deko3d) {
+            log::info("deko3d: baked camera visibility (PVS) {}", enabled ? "on (OPENRAC_DK_PVS=1)" : "off (OPENRAC_DK_PVS=1 turns it on)");
+        }
+        return enabled;
+    }();
+    return on;
+}
+
+// OPENRAC_TERRAIN_BATCH=1 (experiment, off by default): LevelScene::TerrainBatch. Read where the
+// level is uploaded (it keeps the CPU index copy the batches are made from) and where it draws.
+bool terrain_batch_on() {
+    static const bool on = [] {
+        const char* v = std::getenv("OPENRAC_TERRAIN_BATCH");
+        const bool set = v != nullptr && std::string_view(v) == "1";
+        if (set) {
+            log::info("scene: EXPERIMENT OPENRAC_TERRAIN_BATCH=1: terrain solid pass drawn as per-material batches");
+        }
+        return set;
+    }();
+    return on;
+}
 
 bool gpu_driven() {
 #if defined(OPENRAC_VULKAN)
@@ -159,6 +199,9 @@ bool LevelScene::upload(
         || !m_sky.build("sky", shaders::sky_vert, shaders::sky_frag, error)) {
         return false;
     }
+#if defined(OPENRAC_DKGL_SELFTEST)
+    dkgl_selftest(m_mesh);
+#endif
     if (m_early_capable) {
         std::string early = m_lighting->early_fragment(shaders::mesh_frag), early_solid(early);
         early_solid.insert(early_solid.find('\n') + 1, "#define OPENRAC_SOLID 1\n");
@@ -323,12 +366,35 @@ bool LevelScene::upload(
     // The cutout materials' moby textures (the hologram's lettering, fences, foliage) with one
     // level, bilinear: the GS samples moby textures without mip levels (TEX1 MXL 0), and a mipmap
     // chain averages a cutout's alpha away at a distance (thin, broken letters).
-    std::vector<bool> cutout_moby(level.images.size(), false);
-    for (const Material& m : level.materials) {
-        if (m.cutout && m.image >= 0 && static_cast<std::size_t>(m.image) < level.images.size()
-            && level.image_paths[static_cast<std::size_t>(m.image)].find("/textures/moby_") != std::string::npos) {
-            cutout_moby[static_cast<std::size_t>(m.image)] = true;
+    // OPENRAC_NATIVE_CUTOUT_MOBY_MIPS=1 (reference): the Switch's disc-imported levels keep the
+    // mipmap chain on these, as before the import's names were recognised (moby_texture_path).
+    static const bool native_mips = [] {
+        const char* v = std::getenv("OPENRAC_NATIVE_CUTOUT_MOBY_MIPS");
+        const bool set = v != nullptr && std::string_view(v) == "1";
+        if (set) {
+            log::info("scene: REFERENCE OPENRAC_NATIVE_CUTOUT_MOBY_MIPS=1: disc-imported cutout moby "
+                      "textures keep their mipmap chain");
         }
+        return set;
+    }();
+    std::vector<bool> cutout_moby(level.images.size(), false);
+    std::size_t native_cutout_mobys = 0;
+    for (const Material& m : level.materials) {
+        if (!m.cutout || m.image < 0 || static_cast<std::size_t>(m.image) >= level.images.size()) {
+            continue;
+        }
+        const std::string& path = level.image_paths[static_cast<std::size_t>(m.image)];
+        const bool native = path.starts_with("native/");
+        if (moby_texture_path(path) && !(native && native_mips)
+            && !cutout_moby[static_cast<std::size_t>(m.image)]) {
+            cutout_moby[static_cast<std::size_t>(m.image)] = true;
+            native_cutout_mobys += native ? 1 : 0;
+        }
+    }
+    if (native_cutout_mobys != 0) {
+        log::info("scene: {} disc-imported cutout moby textures with one level, bilinear (as the GS "
+                  "samples them; OPENRAC_NATIVE_CUTOUT_MOBY_MIPS=1 keeps their mipmaps)",
+                  native_cutout_mobys);
     }
     for (std::size_t i = 0; i < level.images.size(); ++i) {
         m_textures.push_back(
@@ -339,7 +405,7 @@ bool LevelScene::upload(
         );
     }
 
-    m_pvs = gl::is_vulkan() ? level.pvs : Pvs{};
+    m_pvs = pvs_backend() ? level.pvs : Pvs{};
     // The static layers' models again, their primitives in material order, for the opaque pass:
     // the level's terrain is one model of a primitive per fragment and material, two thousand
     // draws in a frame, and in material order a material's fragments are one run of indices,
@@ -404,9 +470,11 @@ bool LevelScene::upload(
         }
     }
 
-    if (gl::is_vulkan()) {
+    if (pvs_backend()) {
         m_cpu_indices = indices;
         m_pvs_models.resize(m_models.size());
+    } else if (terrain_batch_on()) {
+        m_cpu_indices = indices;  // the terrain batches copy from it (TerrainBatch)
     }
     // A material's opaque flag alone does not guarantee coverage: vertex alpha
     // may still cut holes. Sorted copies use the same vertices and their new indices.
@@ -575,6 +643,9 @@ LevelScene::Group LevelScene::make_group(std::uint32_t model) {
 // storage rather than wait for the frame still drawing from the old one).
 void LevelScene::fill_group(Group& g, const std::vector<InstanceData>& list, unsigned usage) {
     g.count = static_cast<int>(list.size());
+    g.may_glow=std::any_of(list.begin(),list.end(),[](const InstanceData& instance) {
+        return moby_instance_may_glow(instance.moby_light[3],instance.moby_ambient[3]);
+    });
     glBindBuffer(GL_ARRAY_BUFFER, g.instances);
     glBufferData(
         GL_ARRAY_BUFFER,
@@ -962,6 +1033,13 @@ void LevelScene::choose_scenery(
         }
         set_instances(layer, chosen);
         rebuilt = true;
+        // The first changes of a run, in the log: how much of the layer the game's distances keep.
+        static unsigned told = 0;
+        if (told < 24) {
+            ++told;
+            log::info("scenery (original draw distances): {} {} of {} drawn", layer_name(layer),
+                      chosen.size(), scenery.source.size());
+        }
     }
     // How often the layers are grouped again (a frame's average: the share of frames).
     if (stats::enabled()) {
@@ -1096,8 +1174,17 @@ void LevelScene::set_palette(const std::vector<JointColumns>& matrices) {
         return;
     }
 
-    m_palette_data.assign(rows * per_row, JointColumns{});
+    // Reuse storage and overwrite actual joints once; only padding needs zeroing.
+    // The old path cleared the entire palette immediately before copying over it.
+    // OPENRAC_PALETTE_COPY_REFERENCE=1 (reference): "1" only; it was any value, "=0" included.
+    static const bool copy_reference=[] {
+        const char* v=std::getenv("OPENRAC_PALETTE_COPY_REFERENCE");
+        return v!=nullptr && std::string_view(v)=="1";
+    }();
+    if(copy_reference) m_palette_data.assign(rows * per_row, JointColumns{});
+    else m_palette_data.resize(rows * per_row);
     std::copy(matrices.begin(), matrices.end(), m_palette_data.begin());
+    std::fill(m_palette_data.begin()+matrices.size(),m_palette_data.end(),JointColumns{});
     glBindTexture(GL_TEXTURE_2D, m_palette);
     // The texture keeps its storage while the palettes fit in it: only its texels are sent.
     if (rows > m_palette_rows) {
@@ -1968,6 +2055,13 @@ void LevelScene::release() {
         m_palette = 0;
     }
     m_palette_rows = 0;
+    for (TerrainBatch& batch : m_terrain_batches) {
+        if (batch.indices != 0) {
+            glDeleteBuffers(1, &batch.indices);
+        }
+    }
+    m_terrain_batches.clear();
+    m_terrain_batch_of.clear();
     for (auto* all : {&m_groups, &m_idle}) {
         for (auto& groups : *all) {
             for (Group& g : groups) {
@@ -2229,6 +2323,130 @@ bool LevelScene::colour_blend_barrier(Layer layer) const {
     return false;
 }
 
+void LevelScene::build_terrain_batches(
+    const std::vector<Group>& groups, const std::vector<bool>& visible, bool use_pvs,
+    const Pvs::Mask& pvs_mask
+) {
+    m_terrain_batch_of.assign(groups.size(), -1);
+    // The indices are copied from the CPU copy, which the level keeps only with the PVS backend.
+    if (m_cpu_indices.empty()) {
+        return;
+    }
+    // Buckets of eligible groups: one instance the camera kept, not blended, and the same
+    // instance data and shadow role as the bucket's first member (byte for byte).
+    std::vector<std::vector<std::size_t>> buckets;
+    for (std::size_t gi = 0; gi < groups.size(); ++gi) {
+        const Group& g = groups[gi];
+        if (!visible[gi] || g.count != 1 || g.camera_count != 1 || g.blend != 0
+            || g.cpu_instances.size() != 1) {
+            continue;
+        }
+        std::size_t b = 0;
+        for (; b < buckets.size(); ++b) {
+            const Group& first = groups[buckets[b].front()];
+            if (first.hero_shadow_caster == g.hero_shadow_caster
+                && std::memcmp(&first.cpu_instances[0], &g.cpu_instances[0], sizeof(InstanceData)) == 0) {
+                break;
+            }
+        }
+        if (b == buckets.size()) {
+            if (buckets.size() >= 16) {
+                continue;  // few distinct instance records expected; the rest draw as before
+            }
+            buckets.emplace_back();
+        }
+        buckets[b].push_back(gi);
+    }
+    std::size_t used = 0;
+    for (auto& members : buckets) {
+        if (members.size() < 2) {
+            continue;
+        }
+        // What decides the batch's content: its members and the PVS mask (FNV-1a).
+        std::uint64_t signature = 1469598103934665603ull;
+        const auto mix = [&signature](std::uint64_t v) {
+            for (int k = 0; k < 8; ++k) {
+                signature = (signature ^ ((v >> (8 * k)) & 0xFF)) * 1099511628211ull;
+            }
+        };
+        for (const std::size_t gi : members) {
+            mix(gi);
+            mix(groups[gi].model);
+        }
+        mix(use_pvs ? 1 : 0);
+        if (use_pvs) {
+            for (const std::uint8_t byte : pvs_mask) {
+                mix(byte);
+            }
+        }
+        if (used == m_terrain_batches.size()) {
+            m_terrain_batches.emplace_back();
+        }
+        TerrainBatch& batch = m_terrain_batches[used];
+        batch.representative = members.front();
+        batch.members = members;
+        bool complete = batch.signature == signature && batch.indices != 0;
+        if (!complete) {
+            // The solid primitives of every member (the material-ordered model the solid pass
+            // draws), minus those the PVS rules out, then grouped by material: within a material
+            // in group order, then the member's own order.
+            std::vector<terrain_batch::Piece> pieces;
+            complete = true;
+            for (const std::size_t gi : members) {
+                const std::uint32_t model =
+                    groups[gi].model < m_opaque.size() ? m_opaque[groups[gi].model] : groups[gi].model;
+                for (const Primitive& p : m_models[model].primitives) {
+                    const Material& m = m_materials[static_cast<std::size_t>(p.material)];
+                    if (m.metal || m.cutout || (use_pvs && !Pvs::visible(pvs_mask, p.occlusion))) {
+                        continue;
+                    }
+                    if (static_cast<std::size_t>(p.first_index) + p.index_count > m_cpu_indices.size()) {
+                        complete = false;  // never drop a member's geometry: this bucket draws as before
+                        break;
+                    }
+                    pieces.push_back({p.material, p.first_index, p.index_count});
+                }
+            }
+            std::vector<std::uint32_t> indices;
+            std::vector<terrain_batch::Run> runs;
+            if (!complete || !terrain_batch::build(std::move(pieces), m_cpu_indices, indices, runs)) {
+                batch.signature = 0;
+                continue;
+            }
+            batch.primitives.clear();
+            for (const terrain_batch::Run& r : runs) {
+                Primitive run;
+                run.first_index = r.first;
+                run.index_count = r.count;
+                run.material = r.material;
+                run.glow_vertices = false;
+                batch.primitives.push_back(run);
+            }
+            if (batch.indices == 0) {
+                glGenBuffers(1, &batch.indices);
+            }
+            glBindBuffer(GL_ARRAY_BUFFER, batch.indices);
+            glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(indices.size() * sizeof(std::uint32_t)),
+                         indices.empty() ? nullptr : indices.data(), GL_DYNAMIC_DRAW);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            batch.index_count = indices.size();
+            batch.signature = signature;
+            ++m_terrain_batch_stats.rebuilds;
+        }
+        for (const std::size_t gi : members) {
+            m_terrain_batch_of[gi] = static_cast<int>(used);
+        }
+        ++m_terrain_batch_stats.batches;
+        m_terrain_batch_stats.members += members.size();
+        ++used;
+    }
+    // Batches no longer used keep their buffers for reuse; mark them empty.
+    for (std::size_t b = used; b < m_terrain_batches.size(); ++b) {
+        m_terrain_batches[b].members.clear();
+        m_terrain_batches[b].signature = 0;
+    }
+}
+
 void LevelScene::draw_layer(
     Layer layer, const renderer::FrameInput& input, renderer::RenderState& state
 ) {
@@ -2354,6 +2572,7 @@ void LevelScene::draw_layer(
             }
             if (!group.camera_valid || group.camera_clip != view_projection) {
                 m_camera_survivors.clear();
+                group.nearest = 3.0e38f;
                 for (std::size_t n = 0; n < group.cpu_instances.size(); ++n) {
                     const auto& bounds = group.caster_bounds[n];
                     const bool ui = group.cpu_instances[n].moby_light[3] > 1.5f;
@@ -2364,6 +2583,14 @@ void LevelScene::draw_layer(
                         continue;
                     }
                     m_camera_survivors.push_back(group.cpu_instances[n]);
+                    if (bounds.valid) {
+                        float d = 0.0f;
+                        for (int k = 0; k < 3; ++k) {
+                            const float c = 0.5f * (bounds.low[k] + bounds.high[k]) - input.camera.position[k];
+                            d += c * c;
+                        }
+                        group.nearest = std::min(group.nearest, d);
+                    }
                 }
                 group.camera_count = static_cast<int>(m_camera_survivors.size());
                 if (group.camera_count && group.camera_count != group.count) {
@@ -2481,6 +2708,26 @@ void LevelScene::draw_layer(
     // The static layers: their opaque materials without a cutout (solid), then the opaque texels
     // of the cutout ones, then those cutouts' translucent texels.
     const bool mobys = layer == Layer::Mobys;
+    static const bool empty_glow_skip=[] {
+        const auto* v=std::getenv("OPENRAC_MOBY_EMPTY_GLOW_SKIP");
+        return !v || std::string_view(v)!="0";
+    }();
+    static const unsigned report_every=[] {
+        const auto* v=std::getenv("OPENRAC_SCENE_PASS_COUNTS");
+        return v && std::atoi(v)>0 ? unsigned(std::clamp(std::atoi(v),30,3600)) : 0u;
+    }();
+    const bool report=report_every && input.frame%report_every==0 && !state.depth_prepass;
+    std::array<std::uint64_t,6> pass_draws{},pass_triangles{},empty_glow_groups{},pass_instances{},pass_groups{};
+    // The static layers' blended pass (ties' and shrubs' cutout materials' part-transparent
+    // texels) left out the instances wholly outside the camera's view: their vertices were all
+    // transformed and clipped for no fragment. Session 33: ties translucent 17.8 ms/frame against
+    // ties cutout 7.0 ms for the same cutout materials' geometry, the cutout pass already culled.
+    // The same per-instance boxes and planes as the solid and cutout passes; the survivors keep
+    // their order, so blending order is unchanged. OPENRAC_STATIC_TRANSLUCENT_CULL_OFF=1: as before.
+    static const bool& static_translucent_cull_off = stats::probe(
+        "OPENRAC_STATIC_TRANSLUCENT_CULL_OFF",
+        "Reference: static layers' translucent pass draws every PVS-visible instance of a visible group"
+    );
     const int passes = mobys ? 5 : 3;
     static constexpr const char* moby_pass_names[] =
         {"mobys opaque", "mobys glow", "mobys translucent", "mobys effects", "mobys metal"};
@@ -2601,15 +2848,66 @@ void LevelScene::draw_layer(
             glDepthMask(mobys && moby_step.depth_write ? GL_TRUE : GL_FALSE);
         }
         glUniform1i(program->uniform("glow_split"), glow_split);
-        for (std::size_t gi = 0; gi < groups.size(); ++gi) {
+        // OPENRAC_STATIC_FRONT_TO_BACK=1 (experiment, off by default): the static layers' opaque
+        // passes (solid, cutout) draw their groups nearest first, so the depth test rejects more
+        // of the hidden fragments before they are shaded. Groups only: the instances keep their
+        // order (the translucent pass shares the compacted buffers). Faces at exactly equal depth
+        // may then resolve the other way (GEQUAL lets the later one win), hence opt-in.
+        static const bool front_to_back = [] {
+            const char* v = std::getenv("OPENRAC_STATIC_FRONT_TO_BACK");
+            const bool on = v != nullptr && std::string_view(v) == "1";
+            if (on) {
+                log::info("scene: EXPERIMENT OPENRAC_STATIC_FRONT_TO_BACK=1: static opaque groups drawn nearest first");
+            }
+            return on;
+        }();
+        m_group_order.resize(groups.size());
+        for (std::size_t i = 0; i < groups.size(); ++i) {
+            m_group_order[i] = i;
+        }
+        if (front_to_back && !mobys && pass <= 1 && !state.depth_prepass && !camera_culling_off) {
+            std::stable_sort(m_group_order.begin(), m_group_order.end(), [&groups](std::size_t a, std::size_t b) {
+                return groups[a].nearest < groups[b].nearest;
+            });
+        }
+        // OPENRAC_TERRAIN_BATCH=1 (experiment, off by default; see TerrainBatch). Session 34: the
+        // terrain's solid pass was 1637 draws for 39,464 triangles (about 24 a draw) and cost 11 ms.
+        // Only the solid pass, colour only, CPU culling path. Within the batch the primitives go
+        // in material order, so faces at exactly equal depth from different fragments may resolve
+        // the other way round (hence opt-in); everything else is the same geometry and state.
+        const bool batch_pass = terrain_batch_on() && layer == Layer::Terrain && pass == 0
+                                && !state.depth_prepass && !gpu && !colour_batch && !camera_culling_off;
+        if (batch_pass) {
+            m_terrain_batch_stats = {};
+            build_terrain_batches(groups, visible, use_pvs, pvs_mask);
+        }
+        for (const std::size_t gi : m_group_order) {
             Group& g = groups[gi];
+            const TerrainBatch* terrain_batch_here = nullptr;
+            if (batch_pass && gi < m_terrain_batch_of.size() && m_terrain_batch_of[gi] >= 0) {
+                const TerrainBatch& tb = m_terrain_batches[static_cast<std::size_t>(m_terrain_batch_of[gi])];
+                if (tb.representative != gi) {
+                    continue;  // drawn with its batch, at the representative's place
+                }
+                terrain_batch_here = &tb;
+            }
+            if(mobys && pass==kMobyGlow && empty_glow_skip && !g.may_glow) {
+                if(report) ++empty_glow_groups[std::size_t(step)];
+                continue;
+            }
             if (!visible[gi] || (!metal && (g.blend != 0) != effects)) {
                 continue;
             }
-            const bool culled = !camera_culling_off && (mobys ? !metal : pass <= 1);
+            const bool culled =
+                !camera_culling_off
+                && (mobys ? !metal : pass <= 1 || (pass == 2 && !static_translucent_cull_off));
             const int instances = culled ? g.camera_count : g.pvs_count;
             if (!instances) {
                 continue;
+            }
+            if (report) {
+                ++pass_groups[std::size_t(step)];
+                pass_instances[std::size_t(step)] += std::uint64_t(instances);
             }
             if (effects) {
                 glBlendFuncSeparate(
@@ -2693,6 +2991,10 @@ void LevelScene::draw_layer(
                     set_material = run_material;
                 }
                 submit_instances(batch, run_first, run_count, instances);
+                if(report) {
+                    ++pass_draws[std::size_t(step)];
+                    pass_triangles[std::size_t(step)]+=std::uint64_t(run_count/3)*std::uint64_t(instances);
+                }
                 ++state.stats.draw_calls;
                 state.stats.triangles += static_cast<std::uint64_t>(run_count / 3)
                                          * static_cast<std::uint64_t>(instances);
@@ -2703,7 +3005,13 @@ void LevelScene::draw_layer(
                 pass <= 1 && !mobys && g.model < m_opaque.size() ? m_opaque[g.model] : g.model;
             const auto* primitives = &m_models[model].primitives;
             bool compact_indices = false;
-            if (use_pvs && layer == Layer::Terrain) {
+            if (terrain_batch_here != nullptr) {
+                primitives = &terrain_batch_here->primitives;
+                compact_indices = !primitives->empty();
+                if (compact_indices) {
+                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, terrain_batch_here->indices);
+                }
+            } else if (use_pvs && layer == Layer::Terrain) {
                 auto& cached = m_pvs_models[model];
                 if (!cached.valid || cached.mask != pvs_mask) {
                     cached.primitives.clear();
@@ -2810,6 +3118,28 @@ void LevelScene::draw_layer(
         glActiveTexture(GL_TEXTURE0 + kPaletteUnit);
         glBindTexture(GL_TEXTURE_2D, 0);
         glActiveTexture(GL_TEXTURE0);
+    }
+    if(report && mobys) {
+        log::info("moby pass snapshot frame {}: draws [{},{},{},{},{},{}], triangles [{},{},{},{},{},{}], empty glow groups skipped {}+{} (solid/glow-depth/glow-blend/translucent/effects/metal)",
+                  input.frame,pass_draws[0],pass_draws[1],pass_draws[2],pass_draws[3],pass_draws[4],pass_draws[5],
+                  pass_triangles[0],pass_triangles[1],pass_triangles[2],pass_triangles[3],pass_triangles[4],pass_triangles[5],
+                  empty_glow_groups[1],empty_glow_groups[2]);
+    } else if(report) {
+        // The static layers (OPENRAC_SCENE_PASS_COUNTS): per pass the draws, instanced triangles
+        // submitted, groups drawn and instances drawn (summed over groups), then the layer's
+        // instances: all of them, those the camera culling kept, and those without a box.
+        const auto& cc=m_camera_culling[static_cast<std::size_t>(layer)];
+        log::info("{} pass snapshot frame {}: draws [{},{},{}], triangles [{},{},{}], groups [{},{},{}], instances [{},{},{}] "
+                  "(solid/cutout/translucent); instances {} in {} groups, camera-kept {}, unbounded {}; "
+                  "translucent culled per instance: {}{}",
+                  layer_name(layer),input.frame,pass_draws[0],pass_draws[1],pass_draws[2],
+                  pass_triangles[0],pass_triangles[1],pass_triangles[2],pass_groups[0],pass_groups[1],pass_groups[2],
+                  pass_instances[0],pass_instances[1],pass_instances[2],cc.candidates,groups.size(),cc.submitted,cc.unbounded,
+                  static_translucent_cull_off||camera_culling_off ? "no (reference)" : "yes",
+                  layer==Layer::Terrain && m_terrain_batch_stats.batches
+                      ? std::format("; terrain batch: {} batches of {} groups, {} rebuilt this frame",
+                                    m_terrain_batch_stats.batches,m_terrain_batch_stats.members,m_terrain_batch_stats.rebuilds)
+                      : std::string());
     }
 }
 

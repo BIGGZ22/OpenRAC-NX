@@ -193,6 +193,15 @@ host::GameState read_game_state(std::span<const std::uint8_t> ram, const GameAdd
     s.fog_near_f = at<float>(ram, a.view_context + 0x228);
     s.fog_far_f = at<float>(ram, a.view_context + 0x22C);
 
+    // The level settings' background colour (the gameplay file's first record), which the gameplay
+    // loader puts at +0x23C, +0x240 and +0x244 as three words and hands to SetBackgroundColor:
+    // the RGBAQ of the frame's clear packet. The edges of the sky show it.
+    std::array<float, 3> background{};
+    for (int c = 0; c < 3; ++c) {
+        background[c] = static_cast<float>(at<std::uint32_t>(ram, a.view_context + 0x23C + 4 * c) & 0xFF) / 255.0f;
+    }
+    s.background_colour = background;
+
     // The table starts at the word before moby_first (the mobys the level places, the hero first);
     // moby_first itself is where the spawned ones begin.
     auto first = at<std::uint32_t>(ram, a.moby_first) & 0x01FFFFFF;

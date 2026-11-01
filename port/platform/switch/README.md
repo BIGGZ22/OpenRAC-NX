@@ -3,11 +3,16 @@
 For cloning the public Switch branch, prerequisites, installation and controls,
 start with the [OpenRAC-NX README](../../../README.md).
 
-Starting without arguments opens the controller-operated launch menu. L/R selects
-a tab: Play, Display, Audio, Gameplay, Game fixes, Saves, Setup or Controller. Up/Down selects
-a row and Left/Right or A changes it. Changes persist in
-`sdmc:/switch/openrac/settings/rac1-pal.ini`. B returns to Play, X checks the
-installation and save storage, and + exits. The launcher is graphical and supports touch as well as controller input.
+Starting without arguments opens the controller-operated launch menu. L/R moves between the
+sections along the top: Play, Settings, Saves, Customize, Setup and About. Settings (Display,
+Audio, Gameplay, Controller, Game fixes) and Customize (Artwork, Appearance) open on their page
+list: Up/Down picks a page and A or Right opens it. In a page, Up/Down selects a row and
+Left/Right or A changes it, and a side panel explains the selected row. B goes back to the page
+list, then to Play. Changes persist in `sdmc:/switch/openrac/settings/rac1-pal.ini`. X checks the
+installation and save storage, and + exits. Notices show in the bottom bar for a few seconds.
+The launcher is graphical and supports touch as well as controller input. In the deko3d build it
+is drawn with deko3d too (the picture is drawn on the CPU and copied to the screen by the GPU's
+copy engine), so no OpenGL context is opened before the game.
 A on the Play page, or ZL, starts the game once disc, assets and writable save
 storage checks pass. The Saves tab reports write/close/read-back health and the
 number of stored files under `/switch/openrac/memcard/SCES_509.16/`.
@@ -19,13 +24,41 @@ replacement button; confirm it by releasing it. Left/Right cycles bindings,
 X clears one, and the last row restores defaults. Occupied buttons swap
 assignments. Plus + Minus together or the touch Cancel button cancels capture.
 Menu navigation and the physical L + R + Minus exit chord cannot be remapped.
-The old experimental launcher renderer has been removed; OpenGL is used.
+The launcher was redesigned on 2026-10-29 (dark navy and amber by default; Customize >
+Appearance still changes every colour). The upstream logo and the About page remain.
+The OpenGL and Vulkan builds show the launcher through OpenGL; the deko3d build through deko3d.
+
+The Display page's **Render resolution** selects Auto, 640x480 (4:3),
+854x480 (16:9), 960x540 (16:9), 1280x720 (16:9), 1024x768 (4:3), or
+1920x1080 (16:9). These are internal render sizes, not display output modes.
+Auto retains the picture shape and enforces a 480p minimum, including with
+older saved render scales. Fixed presets set the matching picture shape;
+changing Picture shape returns to Auto. Resolution choices persist between launches.
+Separate Handheld resolution and Docked resolution rows can inherit that common
+resolution or use their own presets. Physical docking selects the profile;
+optional ReverseNX-RT support can force either profile. Status Monitor receives
+measured presented FPS and actual render/output sizes when SaltyNX is available.
+See [overlay support and console tests](../../../docs/port/SWITCH_OVERLAY_STATS.md).
+The renderer and overlay changes still need hardware checks.
 
 During gameplay, hold **ZL** (the default L2 binding) for third-person lock-strafe: left stick moves
 independently of Ratchet's facing and right stick turns the camera/aim. Release
 ZL to return to normal movement. ZR keeps its original behavior. This is a
 built-in console control extension, including when external mods are disabled.
+The Gameplay page's **Lock-strafe camera** switch disables this extension and
+restores the original L2 behavior; it defaults to On and persists between launches.
+The Gameplay page's experimental **Field of view** setting ranges from 85% to
+120% in 5% steps; 100% preserves the original view. It scales both world-camera
+FOV tangents during on-foot gameplay and retains the game's camera zoom changes.
+Menus, movies and non-gameplay camera modes use the original projection. Some
+game-generated edge effects may still pop into view because their original cull
+tests are unchanged; test wider FOV settings on console before relying on them.
 It stays out of cutscenes, menus, vehicles and unsupported movement states.
+
+Launcher edits are handed directly to the game in the same process rather than
+reloaded from disk at launch; settings also persist through the shared INI file.
+Selecting the common Render resolution resets profile overrides to inherit that
+choice. Set Handheld/Docked resolution afterwards if you want separate profiles.
 Facing blends over a short 40 ms response time; grounded lateral movement uses
 30 ms smoothing, or 45 ms when reversing. These are exponential response times,
 not fixed delays. Neutral movement stops without added drift. Blending reads

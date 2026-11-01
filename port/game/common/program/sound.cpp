@@ -45,9 +45,9 @@ void audio_tick() {
         return;
     }
 
-    static std::vector<std::int16_t> samples(
-        static_cast<std::size_t>(platform::kAudioRate / tick_rate()) * 2
-    );
+    // One tick's samples at the tick rate now (it follows the game's time base, vsync.cpp).
+    static std::vector<std::int16_t> samples;
+    samples.resize(static_cast<std::size_t>(platform::kAudioRate / tick_rate()) * 2);
     openrac_sound_render(samples.data(), samples.size() / 2);
 #endif
 }

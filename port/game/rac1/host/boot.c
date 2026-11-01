@@ -156,6 +156,22 @@ static void on_frame(unsigned frame) {
     direct_start(frame);
 }
 
+#ifdef RAC1_TIME_BASE
+/* The game's update rate from its time base (rac1_version.h, RAC1_TIME_BASE): 60 while it reads 1/60 s
+ * a tick, 50 while it reads 1/50 s; 0 for anything else (before the game has set it). */
+static int tick_rate(float *seconds_per_tick) {
+    const float seconds = GREF(float, RAC1_TIME_BASE);
+    *seconds_per_tick = seconds;
+    if (seconds > 0.0199f && seconds < 0.0201f) {
+        return 50;
+    }
+    if (seconds > 0.0166f && seconds < 0.0167f) {
+        return 60;
+    }
+    return 0;
+}
+#endif
+
 /* gBolts (include/names.h). */
 static int bolts(void) {
     return GREF(int, RAC1_ADDR(0x0015EE98u));
@@ -261,6 +277,9 @@ __attribute__((constructor)) static void install_direct_start(void) {
     openrac_game_skip_buttons = skip_buttons;
     openrac_game_skip = skip;
     openrac_game_mode = game_mode;
+#ifdef RAC1_TIME_BASE
+    openrac_game_tick_rate = tick_rate;
+#endif
     openrac_game_hero_position = hero_position;
     openrac_game_hero = hero;
     openrac_game_front_end = &rac1_front_end;

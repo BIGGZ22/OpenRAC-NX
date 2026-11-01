@@ -1161,9 +1161,13 @@ LevelMap& level_pair_map(int from, int loaded) {
          loaded, from, map.code.size(), map.data.size());
     // Which function asked first (the place a level's copy of another level's code starts running).
     for (int depth = 1; depth < 4; ++depth) {
-        char who[256];
+        // Formatted as a C string: libc++ formats a whole char array, past its NUL, and
+        // openrac_host_caller leaves it as it was when it finds no frame.
+        char who[256] = "";
         openrac_host_caller(depth, who, sizeof(who));
-        info("  for {}", who);
+        if (who[0] != '\0') {
+            info("  for {}", static_cast<const char*>(who));
+        }
     }
     return map;
 }

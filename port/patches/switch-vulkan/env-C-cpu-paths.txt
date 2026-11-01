@@ -1,0 +1,5 @@
+# Run C: same as A, plus GPU-driven culling and the render worker off.
+# Compare the scene/submit/gpu/show split with run A.
+OPENRAC_FRAME_COST=120
+OPENRAC_GPU_DRIVEN_OFF=1
+OPENRAC_RENDER_THREAD=0

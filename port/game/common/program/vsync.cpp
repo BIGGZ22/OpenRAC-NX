@@ -9,6 +9,7 @@
 // docs/port/DEBUGGING.md), and ends the program at --frames or when the window closes (finish,
 // leave).
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <csignal>
@@ -27,12 +28,14 @@
 #include "common/env.h"
 #include "common/log.h"
 #include "common/stats.h"
+#include "common/timing_samples.h"
 #include "mods.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
 #include "openrac/memory.h"
 #include "openrac/sound_engine.h"
 #include "program/program.h"
+#include "program/tick_pacing.h"
 #include "program/undrawn_ticks.h"
 #ifdef __SWITCH__
 #include <switch.h>
@@ -42,6 +45,7 @@
 #ifdef OPENRAC_FRONTEND
 #include "debug_overlay.h"
 #include "frontend.h"
+#include "game/common/frontend/tick_phases.h"
 #include "platform/performance_hint.h"
 #endif
 
@@ -124,6 +128,43 @@ void crash_test() {
     }
 }
 
+// A game that sends no picture for this many ticks (20 seconds) is stuck in a wait of its own that
+// never ends; a load sends none for a second or two at most.
+constexpr long kStallTicks = 1200;
+
+// The window keeps the last picture while the game sends none, so a game stuck in a wait looks
+// frozen and leaves nothing in the log (rac1: a flight between planets that never ended). Once a
+// stall, the log says so and names the host functions the wait is in, for a bug report to show
+// which wait it was (on Windows as the module and its offset, for the build's PDB).
+void report_stall(bool sent) {
+    static long undrawn = 0;
+    undrawn = sent ? 0 : undrawn + 1;
+
+    if (undrawn != kStallTicks) {
+        return;
+    }
+
+    const int level = openrac_game_loaded_overlay();
+    std::uint32_t mode = 0;
+    const bool has_mode = openrac_game_mode != nullptr && openrac_game_mode(&mode) != 0;
+    log::warn(
+        "the game has sent no picture for {} ticks (level {}, game mode {}): it waits in",
+        kStallTicks,
+        level == OPENRAC_OVERLAY_EXE ? -1 : level,
+        has_mode ? std::to_string(mode) : "-"
+    );
+
+    for (int depth = 0; depth < 14; ++depth) {
+        // A C string: openrac_host_caller leaves "?" past the stack's end.
+        char who[256] = "";
+        openrac_host_caller(depth, who, sizeof(who));
+
+        if (std::strcmp(who, "?") != 0 && who[0] != '\0') {
+            log::warn("  {}", static_cast<const char*>(who));
+        }
+    }
+}
+
 // OPENRAC_REACH=FILE: the functions without C (and the zero-filled calls) this run reached, with
 // their calls (guest.h, openrac_reach_site; port/tools/regress reach). Written at exit and every
 // 600 frames, so a run that crashes still leaves most of it.
@@ -172,6 +213,44 @@ void apply_writes() {
     }
 }
 
+// The tick rate (tick_rate): 60 a second, or the rate of the time base the game's own timing constants
+// are in, when the game reports one (openrac_game_tick_rate). rac1/pal: its constants are for 50
+// updates a second until its 60 Hz mode reaches them (the title switches the video mode; the next
+// level start switches the constants), and 60 after: ticked at 60 while they are for 50, the game ran
+// 1.2 times too fast. Read before each tick is paced, so a change applies from the next tick.
+// OPENRAC_TICK_RATE_60=1 (reference): always 60, as before.
+int g_tick_rate = 60;
+
+bool tick_rate_fixed() {
+    static const bool fixed = [] {
+        const char* v = std::getenv("OPENRAC_TICK_RATE_60");
+        const bool on = v != nullptr && std::string_view(v) == "1";
+        if (on) {
+            log::info("tick rate: REFERENCE OPENRAC_TICK_RATE_60=1: 60 ticks a second whatever the game's "
+                      "time base");
+        }
+        return on;
+    }();
+    return fixed;
+}
+
+// Takes the game's time base for the next tick; whether the rate changed.
+bool refresh_tick_rate() {
+    if (openrac_game_tick_rate == nullptr || tick_rate_fixed()) {
+        return false;
+    }
+    float seconds = 0.0f;
+    const int rate = openrac_game_tick_rate(&seconds);
+    if ((rate != 50 && rate != 60) || rate == g_tick_rate) {
+        return false;
+    }
+    log::info("tick rate {} a second (was {}): the game's timing constants are for {:.5f} s a tick, its {} Hz "
+              "timing (frame {})",
+              rate, g_tick_rate, seconds, rate, g_frame);
+    g_tick_rate = rate;
+    return true;
+}
+
 // [debug tools] The game's tick length, stretched by the overlay's slow motion (debug_overlay.h).
 std::chrono::microseconds tick_period() {
     auto period = std::chrono::microseconds(1000000 / tick_rate());
@@ -192,7 +271,7 @@ std::chrono::microseconds tick_period() {
 // ---- The clock and the end ----
 
 int tick_rate() {
-    return 60;
+    return g_tick_rate;
 }
 
 void finish() {
@@ -228,14 +307,68 @@ void finish() {
 // ---- The vertical blank ----
 
 int vsync() {
+    // Optional wall interval in the guest/game between host-vsync calls. This
+    // excludes host pacing/render waits, but includes I/O or waits in game code;
+    // it is not a sampled CPU profile and does not identify individual functions.
+    struct GameInterval {
+        static int period() {
+            static const int n=[] {
+                const auto* v=std::getenv("OPENRAC_GAME_TIMING");
+                return v && std::atoi(v)>0 ? std::clamp(std::atoi(v),30,3600) : 0;
+            }();
+            return n;
+        }
+        static std::chrono::steady_clock::time_point& resumed() {
+            static std::chrono::steady_clock::time_point value{};
+            return value;
+        }
+        GameInterval() {
+            if(!period()) return;
+            const auto now=std::chrono::steady_clock::now();
+            if(resumed().time_since_epoch().count()) {
+                static TimingSamples samples;
+                samples.add(std::chrono::duration<double,std::milli>(now-resumed()).count());
+                if(samples.values.size()>=std::size_t(period())) {
+                    log::info("game wall interval outside host vsync: mean {:.3f} ms p95 {:.3f} max {:.3f} over {} ticks (includes game-side waits/I/O)",
+                              samples.mean(),samples.p95(),samples.maximum(),samples.values.size());
+                    samples.clear();
+                }
+            }
+        }
+        ~GameInterval() { if(period()) resumed()=std::chrono::steady_clock::now(); }
+    } game_interval;
+#ifdef OPENRAC_FRONTEND
+    // OPENRAC_TICK_PHASES: the game thread's tick by phase (frontend/tick_phases.h); a few clock
+    // reads a tick when set, nothing otherwise.
+    const frontend::tick_phases::Vsync tick_phase_scope;
+#endif
 #ifdef __SWITCH__
-    if (!appletMainLoop()) std::exit(0);
+    // The system asked the program to end (the HOME menu's close): the same orderly shutdown as
+    // L+R+Minus below and the window's close (leave: sound, then rendering and the GPU context,
+    // then the sound readers), not a bare std::exit, which left them to static destruction in
+    // whatever order and the loader to start after them.
+    if (!appletMainLoop()) {
+#ifdef OPENRAC_FRONTEND
+        if (g_window) leave();
+#endif
+        openrac_sound_stop_readers();
+        std::exit(0);
+    }
     static PadState exit_pad;
     static bool exit_pad_ready = false;
     if (!exit_pad_ready) { padInitializeDefault(&exit_pad); exit_pad_ready = true; }
     padUpdate(&exit_pad);
     const u64 exit_buttons = HidNpadButton_L | HidNpadButton_R | HidNpadButton_Minus;
-    if ((padGetButtons(&exit_pad) & exit_buttons) == exit_buttons) std::exit(0);
+    if ((padGetButtons(&exit_pad) & exit_buttons) == exit_buttons) {
+#ifdef OPENRAC_FRONTEND
+        // Use the same orderly shutdown as closing the game window: direct
+        // std::exit bypasses audio/graphics ownership cleanup and can corrupt
+        // the heap while returning to the homebrew loader.
+        if (g_window) leave();
+#endif
+        openrac_sound_stop_readers();
+        std::exit(0);
+    }
     platform::switch_update_console();
 #endif
     // [debug tools] The game's own code stops here and goes on when this returns: its time is the
@@ -250,7 +383,12 @@ int vsync() {
         const std::span<const std::uint8_t> memory(ram, GUEST_RAM_SIZE);
 
         // Only a completed handoff may present or begin the next graphics measurement frame.
-        if (!frontend::prepare_frame(memory) || !frontend::finish_render()) {
+        bool prepared = false;
+        {
+            const frontend::tick_phases::Timer phase(frontend::tick_phases::Prepare);
+            prepared = frontend::prepare_frame(memory);
+        }
+        if (!prepared || !frontend::finish_render()) {
             leave();
         }
     }
@@ -261,7 +399,13 @@ int vsync() {
     } resume;
 
     stats::begin_frame(stats::FrameKind::Tick, static_cast<std::uint64_t>(g_frame));
+    // Whether the game sent a frame (a display list to VIF1) since the last vertical blank, and
+    // whether it ever did: a stall is counted only once there has been a picture (upstream #151).
+    static bool sent_once = false;
+    const bool sent = !g_vsync_since_kick;
+    sent_once = sent_once || sent;
     g_vsync_since_kick = true;
+    report_stall(sent || !sent_once);
     // With a window, the renderer draws the frame from the game's memory; without one, a frame is
     // only paced, at the game's frame rate.
 #ifdef OPENRAC_FRONTEND
@@ -280,7 +424,11 @@ int vsync() {
                 : g_next_frame,
             period,
             counted && now > g_next_frame ? std::chrono::duration<double>(now - g_next_frame)
-                                          : std::chrono::duration<double>(0.0)
+                                          : std::chrono::duration<double>(0.0),
+            // Without the 100 ms cut-off: pacing counts and the opt-in between-frame experiment only.
+            g_next_frame.time_since_epoch().count() != 0 && now > g_next_frame
+                ? std::chrono::duration<double>(now - g_next_frame)
+                : std::chrono::duration<double>(0.0)
         );
         const auto* ram = runtime::Memory::get().base();
         const std::uint32_t draws = g_reports_draws ? g_draws : ~0u;
@@ -292,10 +440,14 @@ int vsync() {
         const bool keep = undrawn.keep(g_reports_draws, draws, in_level);
         g_draws = 0;
 
-        if (!keep
-            && !frontend::frame(
+        bool framed = true;
+        if (!keep) {
+            const frontend::tick_phases::Span phase(frontend::tick_phases::Capture);
+            framed = frontend::frame(
                 std::span<const std::uint8_t>(ram, GUEST_RAM_SIZE), g_chain, draws
-            )) {
+            );
+        }
+        if (!framed) {
             leave();
         }
 
@@ -304,6 +456,8 @@ int vsync() {
 #endif
     g_frame++;
     audio_tick();
+    // OPENRAC_AUDIO_TRACE: the traced streams' audio against the game's ticks (sound_engine.h).
+    openrac_sound_trace_tick(static_cast<std::uint64_t>(g_frame), tick_rate());
     sample_state();
     crash_test();
     mods::frame();
@@ -436,16 +590,16 @@ int vsync() {
         return static_cast<int>(g_frame & 1);
     }
 
-    if (g_next_frame.time_since_epoch().count() == 0 || now > g_next_frame + milliseconds(100)) {
-        g_next_frame = now;
-    }
-
+    // The schedule (tick_pacing.h): a period after the last tick was due; from now after a stall of
+    // more than 100 ms or a new tick rate (the game's time base changed).
+    const bool rate_changed = refresh_tick_rate();
     const auto period = tick_period();
-    g_next_frame += period;
+    g_next_frame = tick_pacing::next_due(g_next_frame, now, period, rate_changed);
 #ifdef OPENRAC_FRONTEND
     // Until the next tick is due, frames at the display's rate (each swap waits for a refresh),
     // the scene moved on from the last tick's to this one's by when each is shown.
     if (g_window && frontend::wants_between()) {
+        const frontend::tick_phases::Span phase(frontend::tick_phases::Between);
         for (int drawn; (drawn = frontend::between(g_next_frame)) != 0;) {
             if (drawn < 0) {
                 leave();
@@ -463,6 +617,9 @@ int vsync() {
         if (!render_pending) {
             wait.emplace("wait");
         }
+#ifdef OPENRAC_FRONTEND
+        const frontend::tick_phases::Timer phase(frontend::tick_phases::Sleep);
+#endif
         std::this_thread::sleep_until(g_next_frame);
     }
 #ifdef OPENRAC_FRONTEND

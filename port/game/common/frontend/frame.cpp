@@ -21,7 +21,9 @@
 #include <cstring>
 #include <exception>
 #include <format>
+#include <functional>
 #include <limits>
+#include <map>
 #include <optional>
 #include <span>
 #include <string>
@@ -39,6 +41,7 @@
 #include "debug_menu.h"
 #include "debug_overlay.h"
 #include "frontend.h"
+#include "game/common/frontend/image_sends.h"
 #include "game/common/frontend/state.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
@@ -90,6 +93,39 @@ std::uint32_t word_at(std::span<const std::uint8_t> ram, std::uint32_t at) {
     return w;
 }
 
+// OPENRAC_IMAGE_OWNER_TRACE=N: on every Nth tick (30..3600), off when unset (note_image_owners).
+int image_owner_every() {
+    static const int n = [] {
+        const char* v = std::getenv("OPENRAC_IMAGE_OWNER_TRACE");
+        const int asked = v != nullptr ? std::atoi(v) : 0;
+        return asked > 0 ? std::clamp(asked, 30, 3600) : 0;
+    }();
+    return n;
+}
+
+// OPENRAC_IMAGE_OWNER_TRACE (note_image_owners): where each 2D-path image transfer's bytes came
+// from. While the trace is on, direct_packets notes the chain's pieces (where in game memory each
+// run of the VIF data was read, and the DMA tag that sent it) and, per destination block, where in
+// that data a transfer's first image bytes lay and the registers set before it. Game thread only;
+// cleared for each path; bounded by the chain's own size (one entry per tag that sent data).
+struct ImageSourceTrace {
+    struct Piece {
+        std::size_t vif_at = 0;
+        std::uint32_t guest = 0;  // game address of the piece (0x70000000 + offset: scratchpad)
+        std::uint32_t bytes = 0;
+        std::uint32_t tag_at = 0;  // the DMA tag that sent it
+        std::uint32_t id = 0;      // its id: 0 refe, 1 cnt, 2 next, 3 ref, 4 refs, 5 call, 6 ret, 7 end
+    };
+    struct Source {
+        std::size_t vif_at = 0;  // the transfer's first image byte in the VIF data
+        std::uint64_t tex0 = 0, alpha = 0;
+    };
+    bool on = false;
+    std::vector<Piece> pieces;
+    std::unordered_map<std::uint32_t, Source> sources;  // by destination block, the last transfer's
+};
+ImageSourceTrace g_image_trace;
+
 /*
  * The GIF data a frame's display list sends straight to the GS (VIF DIRECT): the 2D path (HUD,
  * menus, text, fades). The chain is followed as the DMA controller follows a source chain (the
@@ -111,9 +147,22 @@ std::vector<std::uint8_t> direct_packets(
     std::uint32_t tag_at = chain & 0x01FFFFF0;
     std::uint32_t stack[2] = {0, 0};
     int depth = 0;
+    // The tag being followed, for the image-source trace (OPENRAC_IMAGE_OWNER_TRACE).
+    ImageSourceTrace& trace = g_image_trace;
+    trace.on = image_owner_every() != 0 && strips != nullptr;
+    trace.pieces.clear();
+    trace.sources.clear();
+    std::uint32_t trace_tag = 0;
+    std::uint32_t trace_id = 0;
+    auto note_piece = [&](std::uint32_t guest, std::uint32_t bytes) {
+        if (trace.on && bytes != 0) {
+            trace.pieces.push_back({vif.size(), guest, bytes, trace_tag, trace_id});
+        }
+    };
     auto append = [&](std::uint32_t at, std::uint32_t bytes) {
         at &= 0x01FFFFFF;
         if (at + bytes <= ram.size()) {
+            note_piece(at, bytes);
             vif.insert(vif.end(), ram.data() + at, ram.data() + at + bytes);
         }
     };
@@ -123,6 +172,7 @@ std::vector<std::uint8_t> direct_packets(
         at &= 0x3FF0;
         const std::uint8_t* spr = static_cast<const std::uint8_t*>(G(0x70000000u));
         if (at + bytes <= 0x4000u) {
+            note_piece(0x70000000u + at, bytes);
             vif.insert(vif.end(), spr + at, spr + at + bytes);
         }
     };
@@ -133,6 +183,8 @@ std::vector<std::uint8_t> direct_packets(
         const std::uint32_t addr = raw_addr & 0x7FFFFFF0;
         const std::uint32_t qwc = lo & 0xFFFF;
         const std::uint32_t id = (lo >> 28) & 7;
+        trace_tag = tag_at;
+        trace_id = id;
         append(tag_at + 8, 8);  // the two VIF codes in the tag
         const std::uint32_t after = tag_at + 16;
         if (from_spr && id != 0 && id != 3 && id != 4) {
@@ -220,6 +272,9 @@ std::vector<std::uint8_t> direct_packets(
         std::size_t p = 0;
         if (image_left > 0) {
             const std::size_t bytes = std::min(image_left, size);
+            if (trace.on && filling != nullptr && filling->data.empty() && bytes != 0) {
+                trace.sources[filling->dbp] = {static_cast<std::size_t>(d - vif.data()), reg_tex0, reg_alpha};
+            }
             if (filling != nullptr && filling->data.size() < filling_bytes) {
                 const std::size_t take = std::min(bytes, filling_bytes - filling->data.size());
                 filling->data.insert(filling->data.end(), d, d + take);
@@ -291,6 +346,11 @@ std::vector<std::uint8_t> direct_packets(
                 // DIRECT is read from its first tag.
                 const bool open = filling != nullptr && filling->data.size() < filling_bytes;
                 image_left = open ? static_cast<std::size_t>(nloop) * 16 - bytes : 0;
+                if (open && trace.on && filling->data.empty()) {
+                    trace.sources[filling->dbp] = {
+                        static_cast<std::size_t>(d - vif.data()) + p, reg_tex0, reg_alpha
+                    };
+                }
                 if (open) {
                     const std::size_t take = std::min(bytes, filling_bytes - filling->data.size());
                     filling->data.insert(filling->data.end(), d + p, d + p + take);
@@ -520,6 +580,7 @@ void copy_world_camera(host::GameState& state) {
         state.fog_far = g->world_camera->fog_far;
         state.fog_near_f = g->world_camera->fog_near_f;
         state.fog_far_f = g->world_camera->fog_far_f;
+        state.background_colour = g->world_camera->background_colour;
     }
 }
 
@@ -861,6 +922,69 @@ void log_mobys_near_hero(std::span<const std::uint8_t> ram, const host::GameStat
 // were drawn with) and in what pose, and the hero's shadow. Mobys the game drew but did not list
 // are added to `state`. `world_ran`, `only_own_camera`: the world renderers ran this tick, and
 // only mobys with a camera of their own were drawn without them; `debug`: OPENRAC_DEBUG.
+// OPENRAC_POSE_VERIFY=N (diagnostic): on every Nth call, each pose evaluated this tick again with
+// moby_palette_reference (new temporaries, the code as it was), compared bit for bit with what
+// moby_palette_into gave. Counted, logged every 10 checked ticks, and the first 8 differences in
+// detail (moby, class, joints, the first joint and value that differ). Runs on this thread after
+// the pose evaluation; the game's memory has not moved in between.
+void verify_poses(
+    std::span<const std::uint8_t> ram, std::size_t count, const auto& address_of,
+    const std::vector<std::vector<assets::rac1::JointMatrix>>& poses
+) {
+    const int every = scene::pose_verify_every();
+    if (every == 0) {
+        return;
+    }
+    static int calls = 0;
+    static int checked_ticks = 0;
+    static std::uint64_t checked = 0;
+    static std::uint64_t differ = 0;
+    static int detailed = 0;
+    if (calls++ % every != 0) {
+        return;
+    }
+    for (std::size_t i = 0; i < count; ++i) {
+        const std::uint32_t address = address_of(i);
+        const auto want = scene::moby_palette_reference(ram, address);
+        const auto& got = poses[i];
+        ++checked;
+        const bool same = want.size() == got.size()
+                          && (want.empty()
+                              || std::memcmp(want.data(), got.data(), want.size() * sizeof(want[0])) == 0);
+        if (same) {
+            continue;
+        }
+        ++differ;
+        if (detailed < 8) {
+            ++detailed;
+            std::size_t joint = 0;
+            while (joint < want.size() && joint < got.size()
+                   && std::memcmp(&want[joint], &got[joint], sizeof(want[0])) == 0) {
+                ++joint;
+            }
+            std::uint32_t cls = 0;
+            if ((address & 0x01FFFFFFu) + 0x28 <= ram.size()) {
+                std::memcpy(&cls, ram.data() + (address & 0x01FFFFFFu) + 0x24, 4);
+            }
+            log::warn(
+                "pose verify: moby {:#x} (class at {:#x}) differs from the reference: {} joint(s) "
+                "against {}, first different joint {}",
+                address, cls, got.size(), want.size(), joint
+            );
+        }
+    }
+    if (++checked_ticks >= 10) {
+        log::info(
+            "pose verify over {} checked ticks (every {}): {} poses checked, {} differ from the "
+            "reference evaluation",
+            checked_ticks, every, checked, differ
+        );
+        checked_ticks = 0;
+        checked = 0;
+        differ = 0;
+    }
+}
+
 TickMobys pose_mobys(
     std::span<const std::uint8_t> ram,
     host::GameState& state,
@@ -1071,7 +1195,12 @@ TickMobys pose_mobys(
             }
         }
         const int joints = g->level.models[instance.model].joints;
-        if (debug && g->index % 100 == 0 && m.class_id == 0) {
+        static const bool vendor_logo_trace = [] {
+            const char* value = std::getenv("OPENRAC_VENDOR_LOGO_TRACE");
+            return value != nullptr && std::string_view(value) == "1";
+        }();
+        if (g->index % 100 == 0
+            && ((debug && m.class_id == 0) || (vendor_logo_trace && m.class_id == 1143))) {
             // The hero, for bring-up: where he is and what his animation fields and pose say.
             const auto pose = scene::moby_palette(ram, m.address);
             const std::uint8_t* b = ram.data() + m.address;
@@ -1086,8 +1215,9 @@ TickMobys pose_mobys(
                 }
             }
             log::info(
-                "  hero at {:#x}: position {:.2f} {:.2f} {:.2f}, scale {:.3f}, "
+                "  {} at {:#x}: position {:.2f} {:.2f} {:.2f}, scale {:.3f}, "
                 "keys {}:{} -> {}:{} t {:.3f}, {} joints posed ({} in the mesh), {}, mode {:#x}",
+                m.class_id == 1143 ? "vendor hologram" : "hero",
                 m.address,
                 m.matrix[12],
                 m.matrix[13],
@@ -1103,6 +1233,18 @@ TickMobys pose_mobys(
                 finite ? "finite" : "NOT finite",
                 static_cast<unsigned>(b[0x34] | b[0x35] << 8)
             );
+            if (m.class_id == 1143) {
+                for (const auto& primitive : g->level.models[instance.model].primitives) {
+                    if (primitive.material < 0
+                        || static_cast<std::size_t>(primitive.material) >= g->level.materials.size()) {
+                        continue;
+                    }
+                    const auto& material = g->level.materials[primitive.material];
+                    log::info("vendor hologram material {}: image {}, cutout {}, metal {}, indices {}",
+                              primitive.material, material.image, material.cutout, material.metal,
+                              primitive.index_count);
+                }
+            }
         }
         // Its pose, evaluated after the loop with the others' on several threads.
         if (animate && joints > 0) {
@@ -1158,10 +1300,15 @@ TickMobys pose_mobys(
     // The poses: each a pure function of the game's memory, evaluated in parallel (the costliest
     // part of reading the scene, about 1.5 ms a tick for 180 mobys on a phone's fast core), then
     // given palette slots in the loop's order, as one thread gave them.
-    std::vector<std::vector<assets::rac1::JointMatrix>> poses(pose_jobs.size());
+    // Kept from tick to tick (this thread's), so each moby's palette reuses the last one's storage;
+    // every entry is rewritten (or emptied) below before it is read. As many entries as this tick's
+    // jobs: what the last tick had beyond that is freed.
+    static thread_local std::vector<std::vector<assets::rac1::JointMatrix>> poses;
+    poses.resize(pose_jobs.size());
     parallel::for_each(pose_jobs.size(), [&](std::size_t i) {
-        poses[i] = scene::moby_palette(ram, pose_jobs[i].address);
+        scene::moby_palette_into(ram, pose_jobs[i].address, poses[i]);
     });
+    verify_poses(ram, pose_jobs.size(), [&](std::size_t i) { return pose_jobs[i].address; }, poses);
     for (std::size_t k = 0; k < pose_jobs.size(); ++k) {
         const PoseJob& job = pose_jobs[k];
         const auto& pose = poses[k];
@@ -1248,6 +1395,9 @@ void keep_tick(
         k.shadow_moby = 0;
         k.level = g->loaded;
     }
+    // World -2 (the flight between planets) keeps its pose at the tick (world_pose_alpha): the
+    // uploaded level's number cannot say so, as the flight world uploads as level 98.
+    k.world = world_to_draw(ram, openrac_game_loaded_overlay());
     k.prev_state = k.state;
     k.has_prev_state = k.has_state;
     k.prev_matrices.clear();
@@ -1282,6 +1432,163 @@ void keep_tick(
     g->last_tick_menu =
         k.before_world >= 0x40000;  // the last tick's, read before this one's is kept
     k.frame = g->index++;
+}
+
+// OPENRAC_IMAGE_OWNER_TRACE=N (diagnostic, 30..3600 ticks; off when unset): which 2D-path image
+// transfer changes most, by its full identity (block, width, format, corner, size, and its place
+// among the transfers to the same block that tick), and every N ticks what is known of it:
+//  - how often its bytes changed;
+//  - where its bytes were read from: the game address of its first image byte and the DMA tag
+//    that sent them (direct_packets, ImageSourceTrace), with TEX0 and ALPHA as set before it;
+//  - the effect strips of the same tick whose texture involves its blocks, each counted by how:
+//    its TEX0 base is the transfer's block (and in the transfer's format or another), its CLUT is
+//    there (CBP: a palette inside the transfer's blocks, not the same texture), or its texels only
+//    overlap the transfer's blocks; the first strip whose base is the block, with its registers;
+//  - a few figures of its texels (when a strip took the bytes, so they are at hand).
+// Bounded: 64 transfers tracked (cleared when the level changes); nothing is written to a file and
+// game memory is not searched. Reads only; changes nothing that is drawn or compared.
+
+// The bytes a GS texture of TEX0 `tex0` covers, from its base (its texels only).
+std::uint64_t texture_bytes(std::uint64_t tex0) {
+    const auto psm = static_cast<std::uint32_t>((tex0 >> 20) & 0x3F);
+    const std::uint64_t w = std::uint64_t{1} << ((tex0 >> 26) & 0xF);
+    const std::uint64_t h = std::uint64_t{1} << ((tex0 >> 30) & 0xF);
+    const std::uint64_t bits = psm == 0x00 ? 32 : psm == 0x01 ? 32 : (psm == 0x02 || psm == 0x0A) ? 16
+                               : psm == 0x13 ? 8 : psm == 0x14 ? 4 : 32;
+    return w * h * bits / 8;
+}
+
+void note_image_owners(
+    std::span<const std::uint8_t> ram,
+    std::span<const std::uint8_t> packets,
+    const std::vector<renderer::EffectStrip>& strips,
+    const std::vector<renderer::ImageUpload>& uploads
+) {
+    (void)ram;
+    const int every = image_owner_every();
+    if (every == 0) {
+        return;
+    }
+    using Key = std::array<std::uint32_t, 8>;
+    struct Seen {
+        std::uint64_t hash = 0;
+        std::uint32_t seen = 0, changed = 0;
+        std::size_t bytes = 0;
+    };
+    static std::map<Key, Seen> seen;
+    static int level = -1000;
+    static int ticks = 0;
+    if (g->loaded != level) {
+        level = g->loaded;
+        seen.clear();
+        ticks = 0;
+    }
+    const image_sends::Scan scan = image_sends::scan(packets);
+    std::map<std::uint32_t, std::uint32_t> per_block;
+    for (const auto& t : scan.uploads) {
+        const Key key{t.dbp, t.dbw, t.dpsm, t.dsax, t.dsay, t.rrw, t.rrh, per_block[t.dbp]++};
+        auto found = seen.find(key);
+        if (found == seen.end()) {
+            if (seen.size() < 64) {
+                seen.emplace(key, Seen{t.hash, 1, 0, t.bytes});
+            }
+            continue;
+        }
+        ++found->second.seen;
+        found->second.changed += found->second.hash != t.hash ? 1 : 0;
+        found->second.hash = t.hash;
+    }
+    if (++ticks < every || seen.empty()) {
+        return;
+    }
+    ticks = 0;
+    auto top = seen.begin();
+    for (auto it = seen.begin(); it != seen.end(); ++it) {
+        if (it->second.changed > top->second.changed
+            || (it->second.changed == top->second.changed && it->second.bytes > top->second.bytes)) {
+            top = it;
+        }
+    }
+    const Key& k = top->first;
+    // The transfer's blocks: [first, last) in 256-byte blocks.
+    const std::uint64_t first_block = k[0];
+    const std::uint64_t last_block = first_block + (top->second.bytes + 255) / 256;
+    // The strips of this tick whose texture involves those blocks, by how.
+    std::size_t base_same = 0, base_other = 0, clut = 0, overlap = 0, vertices = 0;
+    const renderer::EffectStrip* first = nullptr;
+    for (const auto& strip : strips) {
+        const auto tbp = static_cast<std::uint64_t>(strip.tex0 & 0x3FFF);
+        const auto cbp = static_cast<std::uint64_t>((strip.tex0 >> 37) & 0x3FFF);
+        const auto psm = static_cast<std::uint32_t>((strip.tex0 >> 20) & 0x3F);
+        const bool indexed = psm == 0x13 || psm == 0x14 || psm == 0x1B || psm == 0x24 || psm == 0x2C;
+        if (tbp == first_block) {
+            ++(psm == k[2] ? base_same : base_other);
+            vertices += strip.count;
+            first = first != nullptr ? first : &strip;
+        } else if (indexed && cbp >= first_block && cbp < last_block) {
+            ++clut;
+        } else if (tbp < last_block && tbp + (texture_bytes(strip.tex0) + 255) / 256 > first_block) {
+            ++overlap;
+        }
+    }
+    std::string strip_text = std::format(
+        "effect strips this tick: TEX0 base at its block {} in its format and {} in another ({} "
+        "vertices), a CLUT inside its blocks {}, texels overlapping its blocks {}",
+        base_same, base_other, vertices, clut, overlap
+    );
+    if (first != nullptr) {
+        strip_text += std::format(" (the first at its base: TEX0 {:#x} TEX1 {:#x} CLAMP {:#x} ALPHA {:#x})",
+                                  first->tex0, first->tex1, first->clamp, first->alpha);
+    }
+    // Where the bytes came from: the piece of the chain holding the transfer's first image byte.
+    std::string source_text = "its source is not known (no image bytes followed its transfer)";
+    const ImageSourceTrace& trace = g_image_trace;
+    if (const auto src = trace.sources.find(k[0]); src != trace.sources.end()) {
+        for (const auto& piece : trace.pieces) {
+            if (src->second.vif_at >= piece.vif_at && src->second.vif_at < piece.vif_at + piece.bytes) {
+                static constexpr const char* kIds[8] = {"refe", "cnt", "next", "ref", "refs", "call", "ret", "end"};
+                source_text = std::format(
+                    "its first image byte read from game address {:#x} ({} of {} bytes into a piece sent "
+                    "by the {} tag at {:#x}); TEX0 {:#x} and ALPHA {:#x} set before it",
+                    piece.guest + static_cast<std::uint32_t>(src->second.vif_at - piece.vif_at),
+                    src->second.vif_at - piece.vif_at, piece.bytes, kIds[piece.id & 7], piece.tag_at,
+                    src->second.tex0, src->second.alpha
+                );
+                break;
+            }
+        }
+    }
+    // Its texels, when a strip took them (the same bytes, at hand).
+    std::string bytes_text = "texels not at hand (no strip took them)";
+    for (const auto& u : uploads) {
+        if (u.dbp != k[0] || u.width != k[5] || u.height != k[6] || u.data.empty()) {
+            continue;
+        }
+        if (u.dpsm == 0 && u.data.size() >= 4) {
+            unsigned amin = 255, amax = 0;
+            std::uint64_t sum[3] = {};
+            const std::size_t n = u.data.size() / 4;
+            for (std::size_t i = 0; i < n; ++i) {
+                for (int c = 0; c < 3; ++c) {
+                    sum[c] += u.data[4 * i + static_cast<std::size_t>(c)];
+                }
+                amin = std::min<unsigned>(amin, u.data[4 * i + 3]);
+                amax = std::max<unsigned>(amax, u.data[4 * i + 3]);
+            }
+            bytes_text = std::format("texels: mean RGB {} {} {}, alpha {}..{}", sum[0] / n, sum[1] / n,
+                                     sum[2] / n, amin, amax);
+        } else {
+            bytes_text = std::format("{} bytes taken by a strip", u.data.size());
+        }
+        break;
+    }
+    log::info(
+        "image owner: the 2D transfer that changes most over this level: block {:#x} width {} format "
+        "{:#x} corner {},{} {}x{} (#{} to that block), {} bytes (blocks {:#x}..{:#x}): changed {} of {} "
+        "ticks seen; {}; {}; {}",
+        k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7], top->second.bytes, first_block, last_block - 1,
+        top->second.changed, top->second.seen, source_text, strip_text, bytes_text
+    );
 }
 
 // Keeps this tick's 2D path (the display list's direct GIF data, from `chain` where the game
@@ -1349,6 +1656,7 @@ const std::vector<renderer::UiQuad>* keep_2d_path(
             );
         }
     }
+    note_image_owners(ram, packets, strips, g->effect_uploads);
     k.strip_vertices = std::move(strip_vertices);
     k.strips = std::move(strips);
     k.packets = std::move(packets);
@@ -1440,6 +1748,10 @@ void keep_effects(
     g->ui_quads.clear();
     g->effects.clear();
     g->effect_uploads.clear();
+    // Texture notes belong to the quads just consumed, not the next tick's effects.
+    g->effect_texture_ids.clear();
+    g->effect_hashed.clear();
+    g->effect_sources = {};
     g->particles.clear();
     g->sky_sprites.clear();
 }
@@ -1507,6 +1819,255 @@ bool sends_image(std::span<const std::uint8_t> packets) {
     return false;
 }
 
+// OPENRAC_IMAGE_SENDS_FIXTURE=1 (diagnostic): the first late tick's 2D path that does not read
+// cleanly (image_sends.h) written once, whole, to image-sends-fixture.bin beside the logs (at most
+// 1 MiB), for a regression test made from the game's own bytes. Nothing else is written.
+void write_image_sends_fixture(std::span<const std::uint8_t> packets, const image_sends::Scan& scan) {
+    static const bool on = [] {
+        const char* v = std::getenv("OPENRAC_IMAGE_SENDS_FIXTURE");
+        return v != nullptr && std::string_view(v) == "1";
+    }();
+    static bool written = false;
+    if (!on || written || packets.size() > (1u << 20)) {
+        return;
+    }
+    written = true;
+#ifdef __SWITCH__
+    const char* path = "sdmc:/switch/openrac/image-sends-fixture.bin";
+#else
+    const char* path = "image-sends-fixture.bin";
+#endif
+    if (std::FILE* f = std::fopen(path, "wb")) {
+        const bool ok = std::fwrite(packets.data(), 1, packets.size(), f) == packets.size();
+        std::fclose(f);
+        log::info("image sends: {} bytes of tick {}'s 2D path ({}) written to {}{}", packets.size(),
+                  g->kept->frame, image_sends::problem_name(scan.first.kind), path,
+                  ok ? "" : " (incomplete write)");
+    } else {
+        log::warn("image sends: cannot write {}", path);
+    }
+}
+
+// OPENRAC_PACING_COUNTS: the host-to-GS image transfers of a late tick kept because of them
+// (sends_image), by destination, decoded tag by tag (frontend/image_sends.h). The qword reading
+// that sends_image does logged colours and texels as transfers (session 39: "block 0x2406 format
+// 0x31 578x578", "block 0x0 0x0"); a tick in which the decoding finds none is counted apart.
+void note_image_sends(const image_sends::Scan& scan) {
+    auto& sends = pacing_counts.image_sends;
+    for (const image_sends::Transfer& t : scan.uploads) {
+        const std::array<std::uint32_t, 4> key{t.dbp, t.dpsm, t.rrw, t.rrh};
+        if (sends.size() < 64 || sends.count(key) != 0) {
+            ++sends[key];
+        }
+    }
+    if (scan.uploads.empty()) {
+        ++pacing_counts.late_image_none;
+    }
+    if (scan.malformed || scan.cut != 0) {
+        ++pacing_counts.late_image_unread;
+        ++pacing_counts.unread_by[static_cast<std::size_t>(scan.first.kind)];
+        // The first few, in detail: where in the path, and the tag there (lo: NLOOP 0-14, EOP 15,
+        // PRE 46, PRIM 47-57, FLG 58-59, NREG 60-63; hi: the descriptors).
+        static log::Capped told(6);
+        if (told()) {
+            const image_sends::ProblemAt& at = scan.first;
+            log::info(
+                "image sends: tick {}'s 2D path not read cleanly: {} in DIRECT {} ({} bytes), tag at "
+                "{} with {} bytes left: lo {:#018x} hi {:#018x} (nloop {}, flg {}, nreg {}); {} DIRECTs, "
+                "cut tags packed {} reglist {} image {}, {} uploads decoded before",
+                g->kept->frame, image_sends::problem_name(at.kind), at.direct, at.direct_bytes,
+                at.tag_at, at.left, at.lo, at.hi, at.lo & 0x7FFF, (at.lo >> 58) & 3,
+                ((at.lo >> 60) & 0xF) == 0 ? 16 : (at.lo >> 60) & 0xF, scan.directs, scan.cut_packed,
+                scan.cut_reglist, scan.cut_image, scan.uploads.size()
+            );
+        }
+        write_image_sends_fixture(g->kept->packets, scan);
+    }
+}
+
+// Whether OPENRAC_PACING_COUNTS is set: the late-frame counts and the decoding they log.
+bool pacing_counts_every_on() {
+    static const bool on = [] {
+        const char* v = std::getenv("OPENRAC_PACING_COUNTS");
+        return v != nullptr && std::atoi(v) > 0;
+    }();
+    return on;
+}
+
+// OPENRAC_LATE_IMAGE_REPEAT_SKIP=1 (experiment, off by default): a tick more than a tick late whose
+// 2D path only sends again, byte for byte and in the same order, the images the last drawn tick
+// sent, or whose path sends none when decoded (frontend/image_sends.h), is no longer kept for them,
+// and may be left out as any late tick is (at most three in a row). The game re-sends its HUD's
+// textures every tick (session 39: two 64x64 32-bit pictures, 16x16 palettes and 64x64 8-bit
+// textures in nearly every late tick), so sends_image kept every late tick and the game's time
+// slowed to the frame rate. Uploading the same bytes to the same places again changes nothing the
+// renderer holds, so a frame left out loses nothing a drawn frame has not already received. Not
+// vouched for, and kept as before: a path that does not decode cleanly, an incomplete transfer, a
+// read back, a copy inside the chip's memory or a render to a texture, in this tick or the last
+// drawn one.
+bool late_image_repeat_skip() {
+    static const bool on = [] {
+        const char* v = std::getenv("OPENRAC_LATE_IMAGE_REPEAT_SKIP");
+        const bool set = v != nullptr && std::string_view(v) == "1";
+        if (set) {
+            log::info(
+                "frontend: EXPERIMENT OPENRAC_LATE_IMAGE_REPEAT_SKIP=1: a late tick that only sends "
+                "again the images the last drawn tick sent may be left out"
+            );
+        }
+        return set;
+    }();
+    return on;
+}
+
+// OPENRAC_LATE_IMAGE_REPEAT_STRICT=1 (reference): a path with any tag cut off by its DIRECT keeps
+// its frame, as before (read_as_renderer).
+bool repeat_strict() {
+    static const bool on = [] {
+        const char* v = std::getenv("OPENRAC_LATE_IMAGE_REPEAT_STRICT");
+        const bool set = v != nullptr && std::string_view(v) == "1";
+        if (set) {
+            log::info("frontend: REFERENCE OPENRAC_LATE_IMAGE_REPEAT_STRICT=1: a 2D path with a tag "
+                      "cut off by its DIRECT keeps its late frame");
+        }
+        return set;
+    }();
+    return on;
+}
+
+// Whether the scan saw what the direct renderer takes from the path (image_sends.h,
+// read_as_renderer): tags cut off by their DIRECT accepted unless OPENRAC_LATE_IMAGE_REPEAT_STRICT=1.
+bool read_as_renderer(const image_sends::Scan& scan) {
+    return image_sends::read_as_renderer(scan, repeat_strict());
+}
+
+// Whether a scan's transfers can be compared at all (late_image_repeat_skip).
+bool vouchable(const image_sends::Scan& scan) {
+    if (!read_as_renderer(scan) || scan.reads != 0 || scan.local_copies != 0
+        || scan.offscreen_frames != 0) {
+        return false;
+    }
+    return std::all_of(scan.uploads.begin(), scan.uploads.end(), [](const image_sends::Transfer& t) {
+        return t.complete();
+    });
+}
+
+// The same transfers, in the same order, with the same bytes.
+bool same_sends(
+    const std::vector<image_sends::Transfer>& a, const std::vector<image_sends::Transfer>& b
+) {
+    return a.size() == b.size()
+           && std::equal(a.begin(), a.end(), b.begin(), [](const auto& x, const auto& y) {
+                  return x.same_place(y) && x.bytes == y.bytes && x.received == y.received
+                         && x.hash == y.hash;
+              });
+}
+
+// Why a late tick's images keep its frame under OPENRAC_LATE_IMAGE_REPEAT_SKIP, or that they do not
+// (Repeat): counted by reason in PacingCounts::repeat_verdicts.
+enum RepeatVerdict : int {
+    kRepeat,          // sends none, or exactly the last drawn tick's: may be left out
+    kUnread,          // not read cleanly (image_sends::Problem)
+    kIncomplete,      // a transfer without all its bytes, or of a format not sized
+    kReadBack,        // TRXDIR 1
+    kLocalCopy,       // TRXDIR 2
+    kOffscreen,       // a FRAME write away from the draw and display buffers
+    kNoReference,     // the last drawn tick's sends are not known or were not vouchable
+    kDifferent,       // other places, sizes, bytes or order than the last drawn tick's
+    kRepeatVerdicts
+};
+
+// The transfers of the last tick whose own frame was drawn (image_sends_drawn), and this tick's,
+// decoded while late_image_repeat_skip is on. Game thread only.
+struct HeldSends {
+    bool valid = false;  // the last drawn tick's transfers were vouchable
+    std::vector<image_sends::Transfer> uploads;
+};
+HeldSends g_drawn_sends;
+std::optional<image_sends::Scan> g_tick_sends;
+std::uint64_t g_tick_sends_frame = 0;  // the Kept::frame g_tick_sends was decoded from
+
+// The same test as vouchable() and the comparison, with the first reason that keeps the frame.
+RepeatVerdict repeat_verdict(const image_sends::Scan& scan) {
+    if (!read_as_renderer(scan)) {
+        return kUnread;
+    }
+    if (!std::all_of(scan.uploads.begin(), scan.uploads.end(),
+                     [](const image_sends::Transfer& t) { return t.complete(); })) {
+        return kIncomplete;
+    }
+    if (scan.reads != 0) {
+        return kReadBack;
+    }
+    if (scan.local_copies != 0) {
+        return kLocalCopy;
+    }
+    if (scan.offscreen_frames != 0) {
+        return kOffscreen;
+    }
+    if (scan.uploads.empty()) {
+        return kRepeat;
+    }
+    if (!g_drawn_sends.valid) {
+        return kNoReference;
+    }
+    return same_sends(scan.uploads, g_drawn_sends.uploads) ? kRepeat : kDifferent;
+}
+
+// OPENRAC_PACING_COUNTS with OPENRAC_LATE_IMAGE_REPEAT_SKIP: why a late tick's transfers are not
+// the last drawn tick's (kDifferent), and which destinations change. Diagnostic only: nothing here
+// changes what is compared or kept. Bounded: 48 destinations, 8 contents each.
+void note_difference(const image_sends::Scan& scan, bool different) {
+    const auto& now = scan.uploads;
+    const auto& was = g_drawn_sends.uploads;
+    if (different) {
+        const image_sends::FirstDifference d = image_sends::first_difference(now, was);
+        switch (d.kind) {
+            case image_sends::Difference::Count: ++pacing_counts.diff_count; break;
+            case image_sends::Difference::Place:
+                ++pacing_counts.diff_place;
+                pacing_counts.diff_order_only += d.order_only ? 1 : 0;
+                break;
+            case image_sends::Difference::Bytes: ++pacing_counts.diff_bytes; break;
+            case image_sends::Difference::Same: break;
+        }
+    }
+    // Each destination's contents, tick to tick (the decoded late image ticks only).
+    struct Seen {
+        std::uint64_t last = 0;
+        std::vector<std::uint64_t> contents;  // distinct, at most 8
+    };
+    static std::map<std::array<std::uint32_t, 5>, Seen> seen;
+    std::map<std::array<std::uint32_t, 4>, std::uint32_t> occurrences;
+    for (const auto& t : now) {
+        const std::array<std::uint32_t, 4> place{t.dbp, t.dpsm, t.rrw, t.rrh};
+        const std::array<std::uint32_t, 5> dest{t.dbp, t.dpsm, t.rrw, t.rrh, occurrences[place]++};
+        auto found = seen.find(dest);
+        if (found == seen.end()) {
+            if (seen.size() >= 48) {
+                continue;
+            }
+            found = seen.emplace(dest, Seen{t.hash, {t.hash}}).first;
+            auto& w = pacing_counts.destination_changes[dest];
+            ++w.seen;
+            w.distinct = 1;
+            continue;
+        }
+        Seen& d = found->second;
+        auto& w = pacing_counts.destination_changes[dest];
+        ++w.seen;
+        if (d.last != t.hash) {
+            ++w.changed;
+            d.last = t.hash;
+            if (d.contents.size() < 8
+                && std::find(d.contents.begin(), d.contents.end(), t.hash) == d.contents.end()) {
+                d.contents.push_back(t.hash);
+            }
+        }
+        w.distinct = static_cast<std::uint32_t>(d.contents.size());
+    }
+}
+
 // Whether the tick's own frame is left out because the tick came late. Counts and warns.
 bool leave_late_frame() {
     // The tick's own frame (when frames are drawn between ticks, part way from the last tick's
@@ -1535,13 +2096,68 @@ bool leave_late_frame() {
         ticks = 0;
         left_out = 0;
     }
-    if (pacing.late > pacing.period && g->skipped < kMostSkipped && g->kept->has_camera
-        && g->index > 1 && !sends_image(g->kept->packets)) {
+    const bool late = pacing.late > pacing.period;
+    // The tick's transfers decoded, once, when the experiment or the counts want them.
+    g_tick_sends.reset();
+    const auto decoded = [&]() -> const image_sends::Scan& {
+        if (!g_tick_sends) {
+            g_tick_sends = image_sends::scan(g->kept->packets);
+            g_tick_sends_frame = g->kept->frame;
+        }
+        return *g_tick_sends;
+    };
+    const bool sends = late && sends_image(g->kept->packets);
+    bool kept_for_image = sends;
+    // A level loaded since the last drawn frame may have put away what the renderer held.
+    static int compared_level = -2;
+    if (g->loaded != compared_level) {
+        compared_level = g->loaded;
+        g_drawn_sends.valid = false;
+        g_drawn_sends.uploads.clear();
+    }
+    if (sends && late_image_repeat_skip()) {
+        const image_sends::Scan& scan = decoded();
+        const RepeatVerdict verdict = repeat_verdict(scan);
+        if (verdict == kRepeat) {
+            kept_for_image = false;
+        }
+        if (pacing_counts_every_on()) {
+            ++pacing_counts.repeat_verdicts[static_cast<std::size_t>(verdict)];
+            // Repeats whose paths had bytes the renderer drops (read_as_renderer).
+            if (verdict == kRepeat && scan.cut != 0) {
+                ++pacing_counts.repeat_with_dropped;
+            }
+            // Where the sends differ, and which destinations change (diagnostic).
+            if (verdict == kDifferent || verdict == kRepeat) {
+                note_difference(scan, verdict == kDifferent);
+            }
+        }
+    }
+    if (late && g->skipped < kMostSkipped && g->kept->has_camera && g->index > 1
+        && !kept_for_image) {
         ++g->skipped;
         ++left_out;
+        if (sends && pacing_counts_every_on()) {
+            ++pacing_counts.left_out_repeat;
+        }
         return true;
     }
+    // OPENRAC_PACING_COUNTS: why a tick more than a tick late was still drawn.
+    if (late && pacing_counts_every_on()) {
+        if (g->skipped >= kMostSkipped) {
+            ++pacing_counts.late_kept_limit;
+        } else if (sends) {
+            ++pacing_counts.late_kept_image;
+            note_image_sends(decoded());
+        } else {
+            ++pacing_counts.late_kept_other;
+        }
+    }
     g->skipped = 0;
+    // Decoded now for the experiment, held until the frame is drawn (image_sends_drawn).
+    if (late_image_repeat_skip()) {
+        decoded();
+    }
     return false;
 }
 
@@ -1575,17 +2191,33 @@ host::GameState captured_state(
     return prepared ? std::move(prepared->state) : g->profile->read_state(ram, level);
 }
 
-// Draws the tick's own frame, or leaves it to between when the frame cap holds it back.
-void draw_tick_frame() {
+// Draws the tick's own frame, or leaves it to between when the frame cap holds it back (false).
+bool draw_tick_frame() {
     // The frame cap may hold the tick's own frame back: the tick is never made to wait for it. The
     // frame is then drawn between ticks, when it is due (between), or not at all when the next
-    // tick comes first (a cap under the game's tick rate).
-    if (!frame_due(std::chrono::steady_clock::now())) {
+    // tick comes first (a cap under the game's tick rate). The tick's frame has its own tolerance
+    // (tick_frame_due, pacing.h tick_frame_tolerance): a tick that finished its work sooner than
+    // the one the cap counts from is not held back by the cap's 1 ms (session 55). It is held back
+    // only where between() runs to draw it (wants_between); otherwise it would never be drawn.
+    const auto now = std::chrono::steady_clock::now();
+    const bool reference = tick_frame_pacing_reference_on();
+    const bool due = tick_frame_due(now);
+    if (!due && (reference || wants_between())) {
         pacing.first_pending = true;
-        return;
+        if (pacing_counts_every_on()) {
+            ++pacing_counts.deferred;  // counted as drawn only if between() draws it
+        }
+        ring_tick_frame(now, false);
+        return false;
     }
+    if (due && !reference && pacing_counts_every_on() && !frame_due(now)) {
+        ++pacing_counts.tolerance_admitted;
+    }
+    ring_tick_frame(now, true);
     pacing.first_pending = false;
+    pacing.between_since_tick = false;
     draw_kept(true);
+    return true;
 }
 
 // Keeps effects and schedules the committed tick unless pacing leaves it out.
@@ -1608,14 +2240,35 @@ bool finish_tick(
 
     // A late simulation tick may deliberately leave its displayed frame out.
     if (leave_late_frame()) {
+        count_tick_frame(true);
         return true;
     }
 
-    draw_tick_frame();
+    // Counted when drawn: a frame the cap held back counts if between() draws it.
+    if (draw_tick_frame()) {
+        count_tick_frame(false);
+    }
     return !g->render_failed;
 }
 
 }  // namespace
+
+void image_sends_drawn() {
+    if (!late_image_repeat_skip()) {
+        return;
+    }
+    // The tick's own frame is drawn: what its 2D path sent is what the renderer now holds. A frame
+    // drawn without its tick's transfers decoded (no late-frame decision for it) leaves nothing
+    // known to compare with.
+    if (g_tick_sends && g && g->kept && g->kept->frame == g_tick_sends_frame) {
+        g_drawn_sends.valid = vouchable(*g_tick_sends);
+        g_drawn_sends.uploads = std::move(g_tick_sends->uploads);
+    } else {
+        g_drawn_sends.valid = false;
+        g_drawn_sends.uploads.clear();
+    }
+    g_tick_sends.reset();
+}
 
 bool prepare_frame(std::span<const std::uint8_t> ram) try {
     // A tick prepared on an earlier vsync whose frame() never ran (an undrawn tick keeps the last

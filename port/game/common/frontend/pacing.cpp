@@ -41,4 +41,27 @@ bool frame_may_start(double cap, steady_clock::time_point due, steady_clock::tim
            || now + std::chrono::milliseconds(1) >= due;
 }
 
+steady_clock::duration tick_frame_tolerance(double cap, duration<double> tick_period, bool after_between) {
+    const steady_clock::duration strict = std::chrono::milliseconds(1);
+    if (cap <= 0.0 || after_between || tick_period.count() <= 0.0) {
+        return strict;
+    }
+    const double step = 1.0 / cap;
+    if (step > tick_period.count() + 0.00025) {
+        return strict;  // a cap under the tick rate: it chooses the ticks drawn
+    }
+    return std::max(strict, duration_cast<steady_clock::duration>(duration<double>(step * 0.5)));
+}
+
+bool tick_frame_may_start(
+    double cap,
+    steady_clock::time_point due,
+    steady_clock::time_point now,
+    duration<double> tick_period,
+    bool after_between
+) {
+    return cap <= 0.0 || due.time_since_epoch().count() == 0
+           || now + tick_frame_tolerance(cap, tick_period, after_between) >= due;
+}
+
 }  // namespace openrac::frontend

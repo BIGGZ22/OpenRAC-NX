@@ -32,7 +32,7 @@
 #include <vector>
 #include <volk.h>
 
-#include <SDL3/SDL.h>
+#include "platform/sdl.h"
 
 #include "common/joining_thread.h"
 #include "common/log.h"
@@ -972,6 +972,8 @@ struct Context {
     // The frames_presented at which begin_pipeline_warmup's warm-up ends; never, until it is called.
     std::uint64_t warmup_end = UINT64_MAX;
     SDL_Window* window = nullptr;
+    void* native_window = nullptr;
+    std::string presentation_error;
     VkInstance instance = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT messenger = VK_NULL_HANDLE;
     VkPhysicalDevice physical = VK_NULL_HANDLE;
@@ -1011,6 +1013,7 @@ struct Context {
 
     std::array<Frame, kFrames> frames;
     int frame = 0;
+    bool frame_pending = false;  // `frame` selected by advance() but not yet reclaimed (prepare_frame)
     std::uint64_t frame_count = 1;  // frames begun
     std::uint64_t recording = 1;    // command buffers begun (a flush begins new ones)
     bool upload_used = false;
@@ -1083,7 +1086,16 @@ inline bool check(VkResult result, const char* what) {
 }
 
 // The frame slot being recorded.
+// Reclaims the selected slot (waits for its last submission, resets its pools and begins its
+// command buffers) before its first use. Backport of upstream 9906aa6e: the wait moves from the
+// end of present() to the next frame's first GL work, so the game's simulation overlaps the GPU.
+void prepare_frame();
+
+// The frame slot being recorded; its first use may wait for that slot's previous submission.
 inline Frame& frame() {
+    if (g->frame_pending) {
+        prepare_frame();
+    }
     return g->frames[static_cast<std::size_t>(g->frame)];
 }
 
@@ -1583,6 +1595,8 @@ bool make_dummies();
 
 // A new surface for the window, where the old one went (renew_surface).
 bool make_surface(SDL_Window* window, std::string& error);
+// SDL window pixels or the native Switch NWindow's current dimensions.
+void window_size(int& width, int& height);
 
 // Fills in the device's name, driver and API versions and the GL strings from its properties.
 void describe_device();

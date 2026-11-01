@@ -23,6 +23,11 @@ namespace openrac::stats {
 
 std::array<std::uint64_t, kCounterCount> g_counters{};
 bool g_enabled = false;
+PassHooks g_pass_hooks;
+
+void set_pass_hooks(const PassHooks& hooks) {
+    g_pass_hooks = hooks;
+}
 
 namespace {
 

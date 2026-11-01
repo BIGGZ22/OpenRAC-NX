@@ -78,9 +78,12 @@ bool render_pending();
 // between: draws one if a refresh before `next_tick` (plus the lag) still shows this tick, and
 // reads the window's events: 1 drawn, 0 none due, -1 the window was closed.
 // `late`: how long after its time the tick came (a machine that draws slower than the game ticks):
-// frame() leaves the frames of ticks that come more than a tick late undrawn.
+// frame() leaves the frames of ticks that come more than a tick late undrawn. `behind`: the same,
+// also past the 100 ms after which vsync starts its count again (where `late` reads 0); it feeds
+// OPENRAC_PACING_COUNTS and OPENRAC_NO_BETWEEN_WHEN_BEHIND only.
 void set_tick(std::chrono::steady_clock::time_point tick, std::chrono::duration<double> period,
-              std::chrono::duration<double> late = std::chrono::duration<double>(0.0));
+              std::chrono::duration<double> late = std::chrono::duration<double>(0.0),
+              std::chrono::duration<double> behind = std::chrono::duration<double>(0.0));
 bool interpolating();
 
 // The game's text lookup, asked for an id of the port's own (the rows it adds to the game's

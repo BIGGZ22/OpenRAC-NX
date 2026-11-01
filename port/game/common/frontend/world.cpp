@@ -13,6 +13,8 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <chrono>
+#include <cstdlib>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
@@ -34,6 +36,7 @@
 #include "game/common/frontend/geometry.h"
 #include "game/common/frontend/state.h"
 #include "game/common/particle_texture_cache.h"
+#include "game/common/particle_rotation.h"
 #include "openrac/game_host.h"
 #include "openrac/guest.h"
 #include "renderer/direct.h"
@@ -81,6 +84,24 @@ void use_level(int number) {
     }
     if (wanted == g->loaded) {
         return;
+    }
+    struct LoadTrace {
+        int level;
+        bool enabled;
+        std::chrono::steady_clock::time_point started;
+        ~LoadTrace() {
+            if(enabled) {
+                const auto now=std::chrono::steady_clock::now();
+                log::info("audio trace level {}: load end at {:.3f} ms; load span {:.3f} ms",
+                    level,std::chrono::duration<double,std::milli>(now.time_since_epoch()).count(),
+                    std::chrono::duration<double,std::milli>(now-started).count());
+            }
+        }
+    } trace{wanted,[] {const auto* v=std::getenv("OPENRAC_AUDIO_TRACE");return v && std::string_view(v)=="1";}(),{}};
+    if(trace.enabled) {
+        trace.started=std::chrono::steady_clock::now();
+        log::info("audio trace level {}: load begin at {:.3f} ms",wanted,
+            std::chrono::duration<double,std::milli>(trace.started.time_since_epoch()).count());
     }
     g->loaded = wanted;
     // One renderer for the whole run: a new level replaces the subsystem renderers, but its texture
@@ -216,7 +237,7 @@ void use_level(int number) {
         g->renderer->init(error);
     }
     // The sky's textures at pool keys of their own (kSkyTextureKey + number), for its sprites.
-    const auto sky = scene::load_sky_textures(dir);
+    const auto sky = scene::load_sky_textures(dir, g->level.overrides);
     for (std::size_t i = 0; i < sky.size(); ++i) {
         if (sky[i].width > 0) {
             const renderer::TextureHandle h = g->renderer->textures().add(
@@ -306,9 +327,12 @@ void effect_textures() {
     }
     const renderer::gs::Texa texa{0, false, 0x80};
     for (const State::EffectTextureId& e : g->effect_texture_ids) {
+        if (!g->renderer || e.effect >= g->effects.size()) {
+            continue;
+        }
         renderer::EffectQuad& q = g->effects[e.effect];
         const auto at = static_cast<std::size_t>(q.uploads);
-        if (!g->renderer || at + 1 >= g->effect_uploads.size()) {
+        if (q.uploads < 0 || at + 1 >= g->effect_uploads.size()) {
             continue;
         }
         const renderer::ImageUpload& palette = g->effect_uploads[at];
@@ -572,7 +596,12 @@ void particle_quads(std::span<const std::uint8_t> ram, const host::GameState& st
         renderer::EffectQuad quad;
     };
 
-    std::vector<Item> items;
+    // Reuse CPU scratch storage; contents and texture identities remain pass-local.
+    static thread_local std::vector<Item> items;
+    items.clear();
+    if (g->particles.size() > items.capacity()) {
+        items.reserve(std::max(g->particles.size(), items.capacity() + items.capacity() / 2));
+    }
     // RAM cannot change during extraction. Resolve each visible address pair once,
     // retaining the content cache in particle_texture across passes/animation.
     game::ParticleTextureCache texture_cache;
@@ -580,7 +609,8 @@ void particle_quads(std::span<const std::uint8_t> ram, const host::GameState& st
         "OPENRAC_VK_PARTICLE_TEXTURE_REUSE_OFF",
         "Reference: hash the texture of every visible particle"
     );
-    const bool reuse_textures = gl::is_vulkan() && !texture_reference;
+    // RAM is immutable for this extraction pass on OpenGL too.
+    const bool reuse_textures = !texture_reference;
     std::uint64_t texture_resolves = 0;
     const auto resolve_texture = [&](std::uint32_t pixels, std::uint32_t palette) {
         ++texture_resolves;
@@ -619,9 +649,9 @@ void particle_quads(std::span<const std::uint8_t> ram, const host::GameState& st
         }
         const float st[4][2] = {{0, 0}, {1, 0}, {0, 1}, {1, 1}};
         std::memcpy(q.st, st, sizeof(st));
-        const float theta = static_cast<float>(r[8]) * 6.2831853f / 256.0f;
-        const float c = std::cos(theta);
-        const float s = std::sin(theta);
+        const auto& rotation = game::particle_rotation(r[8]);
+        const float c = rotation[0];
+        const float s = rotation[1];
         if (kind == 0) {
             const float h = f32(r + 0xC) / 210000.0f * (z / (z + 0.5f));
             float a[3];

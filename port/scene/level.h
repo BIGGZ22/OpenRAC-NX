@@ -203,8 +203,11 @@ bool load_level(
 );
 
 // The level's sky textures (textures/sky_NNNN.png, by the sky's own texture numbers), including the
-// ones only its sprites use; an empty image where one is missing.
-std::vector<renderer::Rgba8Image> load_sky_textures(const std::filesystem::path& dir);
+// ones only its sprites use; an empty image where one is missing. A mod folder for the level
+// (LevelData::overrides) replaces them as it does the sky mesh's: a picture there of any size wins.
+std::vector<renderer::Rgba8Image> load_sky_textures(
+    const std::filesystem::path& dir, const std::filesystem::path& overrides = {}
+);
 
 // Load one glTF or GLB file as one model (every mesh node, in its node's
 // transform, except skinned meshes, which are stored in their bind pose with

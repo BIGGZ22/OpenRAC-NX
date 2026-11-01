@@ -10,6 +10,16 @@ ZL, use compact guest-memory access, and smooth facing and lateral movement.
 The dependency is fetched by `port/cmake/SwitchStrafe.cmake`; source and the
 GPL license are available at the pinned repository revision. See `COPYING`.
 
+## Switch launcher title font
+
+The Switch launcher's titles use Chakra Petch Bold
+(`port/platform/switch/fonts/ChakraPetch-Bold.ttf`), Copyright 2018 The Chakra Petch
+Project Authors (https://github.com/m4rc1e/Chakra-Petch.git), from the
+[google/fonts](https://github.com/google/fonts/tree/main/ofl/chakrapetch) repository at
+`6157dfaa640ca5738b4d1a7070fe389c3036d7fc`. It is licensed under the SIL Open Font
+License 1.1, included beside it as `port/platform/switch/fonts/OFL.txt`. The font is
+embedded unmodified; the rest of the launcher's text uses the console's system font.
+
 Third-party code and data used by OpenRAC's shared components. Each game
 directory lists its own in its `THIRD_PARTY_NOTICES.md` and source comments:
 

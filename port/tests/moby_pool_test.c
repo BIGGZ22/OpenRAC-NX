@@ -4,7 +4,8 @@
  * gameplay header it named gets at least 768 spare slots as its decompression ends (but on the
  * three levels whose heap has no room); nothing else
  * that is decompressed changes, nor the header outside a run, and the loader's argument and result
- * pass through. And the tick's run list keeps its target list to 511 mobys, the rest still run. */
+ * pass through. And the tick's run list keeps its target list to 511 mobys, the rest still run.
+ * With fix_bigger_moby_pool off, the disc's count stays and the list runs on as on a console. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -64,6 +65,14 @@ static int warnings;
 void openrac_game_warn(const char* message) {
     (void)message;
     ++warnings;
+}
+
+/* fix_bigger_moby_pool, as the player set it. */
+static unsigned char fix_on = 1;
+
+const unsigned char* openrac_game_fix(const char* key) {
+    CHECK(strcmp(key, "fix_bigger_moby_pool") == 0);
+    return &fix_on;
 }
 
 enum {
@@ -190,6 +199,19 @@ int main(void) {
     }
     CHECK(warnings == 1);
     run(900);
+    CHECK(warnings == 1);
+
+    /* Switched off: the disc's 256 stay, and 570 mobys (513 with 0x1000) fill the table past its
+     * 511 into the next one, as retail's list does; no warning. */
+    fix_on = 0;
+    shipped = 256;
+    GREF(gaddr, LOAD_STATE + 4) = HEADER;
+    func_L00_002422D8(0);
+    CHECK(seen == 256);
+    first = run(570);
+    CHECK(run_length(first) == 570);
+    CHECK(GREF(gaddr, 0x001C7C80u + 511 * 4) != 0);
+    CHECK(GREF(gaddr, NEXT_TABLE) == ARRAY + 568 * 0x100 && GREF(gaddr, NEXT_TABLE + 4) == 0);
     CHECK(warnings == 1);
     puts("moby_pool: ok");
     return 0;

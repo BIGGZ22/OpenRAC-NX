@@ -15,7 +15,10 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <memory>
 #include <optional>
+#include <string_view>
+#include <type_traits>
 
 namespace openrac::assets::rac1 {
 
@@ -30,6 +33,7 @@ constexpr u32 kNegOne = ps2::kNegOne;
 // The scratchpad address the common_trans parent words point into.
 constexpr u32 kScratchpad = 0x7000'0000;
 constexpr std::size_t kRecords = 0x70;
+static_assert(std::tuple_size_v<decltype(EvalScratch::rec)> == kRecords);
 constexpr V4 kUnitScale = {kOne, kOne, kOne, 0};
 constexpr std::array<V4, 4> kIdentity4 = {
     V4{kOne, 0, 0, 0},
@@ -49,10 +53,31 @@ std::optional<std::size_t> scratchpad_record(u32 word) {
     return i < kRecords ? std::optional<std::size_t>(i) : std::nullopt;
 }
 
-// Reads and validates the frame at `at`: its header, the quaternion, scale and translation
-// arrays and a copy of the payload. The header's sizes must agree with each other.
-MobyFrame read_frame(ByteView b, std::size_t at) {
-    MobyFrame f;
+// `count` records of T at `offset` of `v`, into `out` (its storage reused): ByteView::read_array's
+// checks, failures and bytes.
+template <typename T>
+void read_array_into(
+    ByteView v, std::size_t offset, std::size_t count, std::string_view what, std::vector<T>& out
+) {
+    static_assert(std::is_trivially_copyable_v<T>);
+
+    // Reject a count whose records cannot fit in the buffer before multiplying count by size.
+    if (count != 0 && sizeof(T) > (v.size() + 1) / count + 1) {
+        fail("{}: {} records of {:#x} bytes cannot fit", what, count, sizeof(T));
+    }
+
+    v.check(offset, count * sizeof(T), what);
+    out.resize(count);
+
+    // memcpy from a null data pointer is undefined, so an empty array copies nothing.
+    if (count != 0) {
+        std::memcpy(out.data(), v.data() + offset, count * sizeof(T));
+    }
+}
+
+// Reads and validates the frame at `at` into `f`: its header, the quaternion, scale and
+// translation arrays and a copy of the payload. The header's sizes must agree with each other.
+void read_frame_into(ByteView b, std::size_t at, MobyFrame& f) {
     f.header = b.read<MobyFrameHeader>(at, "moby frame header");
     const std::size_t qb = f.header.quat_bytes;
     const std::size_t to = f.header.trans_offset;
@@ -81,11 +106,10 @@ MobyFrame read_frame(ByteView b, std::size_t at) {
     }
 
     const ByteView payload = b.sub(at + 0x10, std::size_t{f.header.qwc} * 16, "moby frame payload");
-    f.quats = payload.read_array<std::array<s16, 4>>(0, qb / 8, "moby frame quaternions");
-    f.scales = payload.read_array<MobyScaleRecord>(qb, (to - qb) / 8, "moby frame scale records");
-    f.trans = payload.read_array<MobyTransRecord>(to, tc, "moby frame translation records");
-    f.payload = payload.to_vector();
-    return f;
+    read_array_into(payload, 0, qb / 8, "moby frame quaternions", f.quats);
+    read_array_into(payload, qb, (to - qb) / 8, "moby frame scale records", f.scales);
+    read_array_into(payload, to, tc, "moby frame translation records", f.trans);
+    f.payload.assign(payload.data(), payload.data() + payload.size());
 }
 
 // a * u + b * t on the first `n` lanes; the other lanes are taken from `keep`.
@@ -163,7 +187,14 @@ std::array<f32, 3> trans_value(const MobyTransRecord& r) {
 
 // Reads the frame at `offset` of a blob.
 MobyFrame parse_frame(ByteView base, std::size_t offset) {
-    return read_frame(base, offset);
+    MobyFrame f;
+    read_frame_into(base, offset, f);
+    return f;
+}
+
+// The same, into `out`.
+void parse_frame_into(ByteView base, std::size_t offset, MobyFrame& out) {
+    read_frame_into(base, offset, out);
 }
 
 // The quaternion of joint `j` from the payload; zero lanes where the payload is short.
@@ -202,7 +233,7 @@ MobySequence parse_sequence(ByteView base, std::size_t offset) {
             fail("moby sequence: frame pointer {:#x} has a non-zero top nibble", p);
         }
 
-        s.frames.push_back(read_frame(base, p));
+        s.frames.push_back(parse_frame(base, p));
     }
 
     return s;
@@ -523,6 +554,13 @@ bool consecutive(const AnimState& s) {
 // the first and second key's joints (a joint of the second list that the first already named is
 // skipped).
 std::vector<u8> post_scale_list(std::span<const u8> a, std::span<const u8> b) {
+    std::vector<u8> out;
+    post_scale_list_into(a, b, out);
+    return out;
+}
+
+// The same, into `out`.
+void post_scale_list_into(std::span<const u8> a, std::span<const u8> b, std::vector<u8>& out) {
     // Each node's link: none, the raw record bits (never followed), or a joint.
     enum class Kind : u8 {
         Zero,
@@ -572,7 +610,7 @@ std::vector<u8> post_scale_list(std::span<const u8> a, std::span<const u8> b) {
     }
 
     set({Kind::Zero, 0});
-    std::vector<u8> out;
+    out.clear();
     Link cur = head;
 
     // Follow the links to the end; the bound stops a cycle from running forever.
@@ -580,8 +618,6 @@ std::vector<u8> post_scale_list(std::span<const u8> a, std::span<const u8> b) {
         out.push_back(cur.joint);
         cur = link[cur.joint];
     }
-
-    return out;
 }
 
 // The rows of the rotation matrix of a quaternion, with the unit's operation order.
@@ -684,18 +720,41 @@ std::vector<JointMatrix> evaluate_keys(
     std::span<const JointModifier> mods,
     std::span<const PoseLayer> layers
 ) {
+    // New temporaries each time (the records on the heap, as they always were).
+    const auto scratch = std::make_unique<EvalScratch>();
+    std::vector<JointMatrix> out;
+    evaluate_keys_into(anim, fa, fb, t_value, plain, mods, layers, *scratch, out);
+    return out;
+}
+
+// The same, into `out`, with `scratch` for the temporaries. Every temporary starts as a new one
+// would: the records all zero (the parent chain may read a record past the joints, or one not yet
+// built), the lists empty.
+void evaluate_keys_into(
+    const MobyAnimClass& anim,
+    const MobyFrame* fa,
+    const MobyFrame* fb,
+    f32 t_value,
+    bool plain,
+    std::span<const JointModifier> mods,
+    std::span<const PoseLayer> layers,
+    EvalScratch& scratch,
+    std::vector<JointMatrix>& out
+) {
     const std::size_t jc = anim.joint_count;
 
     // A class without joints evaluates to a single identity matrix.
     if (jc == 0) {
-        return {kIdentityJoint};
+        out.assign(1, kIdentityJoint);
+        return;
     }
 
     const u32 t = ps2::bits(t_value);
 
     // Key A is required, and key B too unless the interpolation point is zero.
     if (fa == nullptr || (t != 0 && fb == nullptr)) {
-        return std::vector<JointMatrix>(jc, kIdentityJoint);
+        out.assign(jc, kIdentityJoint);
+        return;
     }
 
     // At t = 0 only key A counts, even if the caller passed a key B.
@@ -709,7 +768,8 @@ std::vector<JointMatrix> evaluate_keys(
     // The scratchpad joint records: [0] quaternion (or inherited scale A
     // before the quaternions), [1] inherited scale (B slot; w != 0 present),
     // [2] translation A (w = parent word), [3] translation B.
-    std::vector<std::array<V4, 4>> rec(kRecords);
+    auto& rec = scratch.rec;
+    rec.fill({});
     std::array<V4, 256> post_a;
     std::array<V4, 256> post_b;
     post_a.fill(kUnitScale);
@@ -724,7 +784,8 @@ std::vector<JointMatrix> evaluate_keys(
     auto valid = [&](std::size_t j) {
         return j < n;
     };
-    std::vector<u8> post_list;
+    std::vector<u8>& post_list = scratch.post_list;
+    post_list.clear();
 
     // One key only: no interpolation.
     if (fb == nullptr) {
@@ -767,8 +828,10 @@ std::vector<JointMatrix> evaluate_keys(
         // Two keys: A's channels, then B's.
         std::array<bool, 256> inherited{};
         std::array<bool, 256> translated{};
-        std::vector<u8> post_a_order;
-        std::vector<u8> post_b_order;
+        std::vector<u8>& post_a_order = scratch.post_a_order;
+        std::vector<u8>& post_b_order = scratch.post_b_order;
+        post_a_order.clear();
+        post_b_order.clear();
 
         // Key A's scale records.
         for (const MobyScaleRecord& sr : fa->scales) {
@@ -832,7 +895,7 @@ std::vector<JointMatrix> evaluate_keys(
             }
         }
 
-        post_list = post_scale_list(post_a_order, post_b_order);
+        post_scale_list_into(post_a_order, post_b_order, post_list);
 
         // Inherited scale into [1] with w = 1; translation into [2], parent kept.
         // Interpolate only what a key actually set, since the rest value is already in place.
@@ -1093,7 +1156,7 @@ std::vector<JointMatrix> evaluate_keys(
     }
 
     // The palette: F.r_i = P0 S_i.x + P1 S_i.y + P2 S_i.z; F.r3 adds P3.
-    std::vector<JointMatrix> out;
+    out.clear();
     out.reserve(n);
 
     // Combine each joint with its bind matrix to get the palette.
@@ -1121,8 +1184,6 @@ std::vector<JointMatrix> evaluate_keys(
 
         out.push_back(m);
     }
-
-    return out;
 }
 
 // Encodes the interpolated pose of two keys as a single frame in the stored format, so that it

@@ -1,0 +1,37 @@
+diff -ru stock2/mesa-imported/codegen/nv50_ir.cpp min/mesa-imported/codegen/nv50_ir.cpp
+--- stock2/mesa-imported/codegen/nv50_ir.cpp	2026-10-29 05:05:03.370850742 -0400
++++ min/mesa-imported/codegen/nv50_ir.cpp	2026-10-29 05:06:42.605648620 -0400
+@@ -590,6 +590,9 @@
+    predSrc = -1;
+    flagsDef = -1;
+    flagsSrc = -1;
++
++   // OpenRAC-NX: SwitchWakerHD uam patch 6: setDelay reads the next block's first sched before it is set
++   sched = 0x7e0;
+ }
+ 
+ Instruction::Instruction()
+diff -ru stock2/mesa-imported/codegen/nv50_ir_emit_gm107.cpp min/mesa-imported/codegen/nv50_ir_emit_gm107.cpp
+--- stock2/mesa-imported/codegen/nv50_ir_emit_gm107.cpp	2026-10-29 05:05:03.371024333 -0400
++++ min/mesa-imported/codegen/nv50_ir_emit_gm107.cpp	2026-10-29 05:06:38.593259104 -0400
+@@ -4119,7 +4119,8 @@
+    if (delay <= GM107_MIN_ISSUE_DELAY && (wr & rd) != 7) {
+       // Barriers take one additional clock cycle to become active on top of
+       // the clock consumed by the instruction producing it.
+-      if (!next) {
++      // OpenRAC-NX: SwitchWaker/SwitchWakerHD uam patch 8 (devkitPro/uam#7): stall before a new block
++      if (!next || insn->bb != next->bb) {
+          delay = 0x2;
+       } else {
+          int wt = getWtDepBar(next);
+@@ -4128,7 +4129,9 @@
+       }
+    }
+ 
+-   if (lastDualIssued || !next || delay > 1 || !targ->canDualIssue(insn, next)) {
++   // OpenRAC-NX: SwitchWakerHD uam patch 7 / sms-switch: no dual issue on the console
++   static const bool kDualIssue = false;
++   if (!kDualIssue || lastDualIssued || !next || delay > 1 || !targ->canDualIssue(insn, next)) {
+       delay = CLAMP(delay, GM107_MIN_ISSUE_DELAY, GM107_MAX_ISSUE_DELAY);
+       lastDualIssued = false;
+    } else {

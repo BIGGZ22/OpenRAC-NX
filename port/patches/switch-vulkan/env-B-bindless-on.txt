@@ -1,0 +1,5 @@
+# Run B: patch 03 is applied, so bindless is OFF by default now.
+# This run turns it back ON to confirm it is the texture culprit.
+# Textures correct in run A but broken here = bindless confirmed.
+OPENRAC_FRAME_COST=120
+OPENRAC_SWITCH_BINDLESS=1

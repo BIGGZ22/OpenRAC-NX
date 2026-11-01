@@ -1,0 +1,9 @@
+# Session50: logged system clocks, 2026-11-01
+
+Archive build/deko3d-test/clock-stock-session50/. Effective env no clockrequests,pooloff,POSE_VERIFYabsent,ownertrace600. Startandminuteclockservice reads CPU1020MHz/GPU307.2MHz/memory1331.2MHz,handheld,as-system. This confirms actual reported rates for this run; cannot retroactivelyproveearlierclocks. Raisedclockset/restore/HOME/sleepUNTESTED.
+
+Representativegameplay33-44.5ticks/sec,game13.4-17.1ms,prepare2.6-6.8ms,capture2.5-3.1ms,presents/tick1.00. Workloadunmatched,notcontrolledcomparison. PosesnotverifiedthisrunbecausecleanconfigomitsPOSE_VERIFY;session49had7116/0.
+
+NewDMAtraceprovesfirstimagebytereferencedfromgameaddress0x1dc4d0,16bytesinto16400byteREFpiece;DMAtag0x2f45b0or0x4645b0. Target0x3317CT32/dbw1/64x64/16384byteschanges2320/2321ticks. EffectstripsbaseatblockinOTHERformat(CT24fromTEX0=0x598103317);notCLUTmatchinobservedsamples.3-4strips372-496verts,ALPHA0x2000000064,TEX1ff9000000260,CLAMP0,meanRGB139-140,alpha0..30. Supportsactualconsumerbutproducer/purposeunestablished. GreyalphaCT32uploadmaybesampledCT24;donotdiscardupdatesorassumealphaunusedglobally. Traceoffset16likelyGIFheader;needproducercodeevidence.
+
+NextoptionalraisedclockstestwithsameNRO/session50-tests/02-clocks-official-max. Preferdockedasperplan,sys-clknotchangingrates. HardwarefirstconfirmrequestedsetreadbackthenHOME/backandrestorerate,thencontrolledsleep/wake;servicefailuresstopraisetest. Handheldcap460.8GPUmakesitnotdocked768comparison. Thisfeatureisopt-in;noautomaticdefaultchangeandnosleepguarantee. Preservebaselineconfigfornormalstocktest.

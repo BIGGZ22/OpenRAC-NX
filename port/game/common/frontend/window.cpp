@@ -27,7 +27,7 @@ namespace {
 // A window the player sizes: never on Android, where the game covers the screen whatever the
 // settings say (Window::set_display_mode).
 bool windowed() {
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) || defined(__SWITCH__)
     return false;
 #else
     return g->display_mode == settings::DisplayMode::Windowed;

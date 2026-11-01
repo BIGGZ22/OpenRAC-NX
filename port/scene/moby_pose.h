@@ -50,4 +50,30 @@ std::vector<assets::rac1::JointMatrix> moby_pose_matrices(
     std::span<const std::uint8_t> ram, std::uint32_t moby
 );
 
+/**
+ * moby_palette into `out` (cleared first, its storage reused): the same matrices, bit for bit,
+ * with the evaluation's temporaries kept per thread (the class's skeleton, rest and parent words,
+ * the keys, the joint modifiers and pose layers, the scratchpad records) instead of allocated
+ * anew. Nothing is cached between mobys or ticks: everything is read again from `ram` on every
+ * call, so a changed key, a moved class or a reused moby slot is seen at once. A call made while
+ * this thread's temporaries are in use (from within an evaluation) uses temporaries of its own.
+ * Under OPENRAC_POSE_REFERENCE=1 it is moby_palette as before (new temporaries every call).
+ * Returns whether `out` holds a palette.
+ */
+bool moby_palette_into(
+    std::span<const std::uint8_t> ram, std::uint32_t moby, std::vector<assets::rac1::JointMatrix>& out
+);
+
+/** moby_palette as it was before the reused temporaries, whatever OPENRAC_POSE_REFERENCE says. */
+std::vector<assets::rac1::JointMatrix> moby_palette_reference(
+    std::span<const std::uint8_t> ram, std::uint32_t moby
+);
+
+/** OPENRAC_POSE_REFERENCE=1: moby_palette_into evaluates as moby_palette_reference. */
+bool pose_reference();
+
+/** OPENRAC_POSE_VERIFY=N (1..3600, off when unset): check the palettes of every Nth tick against
+ * moby_palette_reference (the frontend counts and logs; diagnostic only). */
+int pose_verify_every();
+
 }  // namespace openrac::scene

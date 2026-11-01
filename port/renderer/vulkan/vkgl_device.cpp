@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <format>
@@ -19,8 +20,12 @@
 #include <vector>
 #include <volk.h>
 
-#include <SDL3/SDL.h>
+#include "platform/sdl.h"
+#if defined(__SWITCH__)
+#include <switch.h>
+#else
 #include <SDL3/SDL_vulkan.h>
+#endif
 
 #include "common/env.h"
 #include "common/log.h"
@@ -72,7 +77,9 @@ std::filesystem::path pipeline_cache_file() {
         }
     }
     std::filesystem::path base;
-#if defined(__APPLE__)
+#if defined(__SWITCH__)
+    base = "sdmc:/switch/openrac/cache/vulkan";
+#elif defined(__APPLE__)
     const std::string home = env::system_variable("HOME").value_or(".");
     base = std::filesystem::path(home) / "Library/Caches/OpenRAC";
 #elif defined(__ANDROID__)
@@ -248,7 +255,11 @@ bool make_instance(const Config& config, bool validation, std::string& error) {
     g->allow_present_wait = config.present_wait;
     g->allow_latest_ready = config.fifo_latest_ready;
     std::vector<const char*> extensions;
-#if defined(__ANDROID__)
+#if defined(__SWITCH__)
+    if (config.native_window != nullptr) {
+        extensions = {VK_KHR_SURFACE_EXTENSION_NAME, VK_NN_VI_SURFACE_EXTENSION_NAME};
+    }
+#elif defined(__ANDROID__)
     // Asked of the driver itself (a player's own driver is not the one SDL would load).
     if (config.window != nullptr) {
         extensions = {VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_ANDROID_SURFACE_EXTENSION_NAME};
@@ -289,6 +300,15 @@ bool make_instance(const Config& config, bool validation, std::string& error) {
                 flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
             }
         }
+        for (const char* required : extensions) {
+            const bool found = std::any_of(offered.begin(),offered.end(),[required](const VkExtensionProperties& e) {
+                return std::strcmp(e.extensionName,required) == 0;
+            });
+            if (!found) {
+                error = std::format("Vulkan driver is missing required instance extension {}",required);
+                return false;
+            }
+        }
     }
     VkApplicationInfo app{VK_STRUCTURE_TYPE_APPLICATION_INFO};
     app.pApplicationName = "OpenRAC";
@@ -324,14 +344,30 @@ bool make_instance(const Config& config, bool validation, std::string& error) {
 
 bool pick_device(std::string& error) {
     std::uint32_t n = 0;
-    vkEnumeratePhysicalDevices(g->instance, &n, nullptr);
+    VkResult enumerated = vkEnumeratePhysicalDevices(g->instance, &n, nullptr);
+    if (enumerated != VK_SUCCESS || n == 0) {
+        error = enumerated != VK_SUCCESS
+            ? std::format("Vulkan GPU enumeration failed ({})",static_cast<int>(enumerated))
+            : "Vulkan driver found no GPU; check the NVK driver and its Maxwell opt-in";
+        return false;
+    }
     std::vector<VkPhysicalDevice> devices(n);
-    vkEnumeratePhysicalDevices(g->instance, &n, devices.data());
+    enumerated = vkEnumeratePhysicalDevices(g->instance, &n, devices.data());
+    if (enumerated != VK_SUCCESS && enumerated != VK_INCOMPLETE) {
+        error = std::format("Vulkan GPU enumeration failed ({})",static_cast<int>(enumerated));
+        return false;
+    }
+    devices.resize(std::min<std::size_t>(n,devices.size()));
+    std::string rejected = "No Vulkan graphics queue can present to this display";
     int best = -1;
     for (VkPhysicalDevice d : devices) {
         VkPhysicalDeviceProperties p{};
         vkGetPhysicalDeviceProperties(d, &p);
+#if defined(__SWITCH__)
+        log::info("Switch Vulkan candidate: {}, API {}", p.deviceName, version_text(p.apiVersion));
+#endif
         if (p.apiVersion < VK_API_VERSION_1_3) {
+            rejected = std::format("{} provides Vulkan {}; OpenRAC requires Vulkan 1.3",p.deviceName,version_text(p.apiVersion));
             continue;
         }
         VkPhysicalDeviceVulkan13Features f13{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES};
@@ -339,6 +375,7 @@ bool pick_device(std::string& error) {
         f2.pNext = &f13;
         vkGetPhysicalDeviceFeatures2(d, &f2);
         if (!f13.dynamicRendering) {
+            rejected = std::format("{} does not support dynamic rendering",p.deviceName);
             continue;
         }
         std::uint32_t qn = 0;
@@ -369,7 +406,7 @@ bool pick_device(std::string& error) {
         }
     }
     if (g->physical == VK_NULL_HANDLE) {
-        error = "no Vulkan 1.3 device with dynamic rendering that can show the window";
+        error = rejected;
         return false;
     }
     vkGetPhysicalDeviceProperties(g->physical, &g->properties);
@@ -539,6 +576,15 @@ bool make_device(std::string& error) {
     );
     g->material_texture_capacity = limit > 32 ? std::min(1024u, limit - 32u) : 0;
     g->bindless_supported = g->bindless_supported && g->material_texture_capacity >= 16;
+#if defined(__SWITCH__)
+    // NVK on the Tegra X1 (Maxwell) is still an opt-in driver. Non-uniformly indexed texture
+    // arrays (the bindless material path) produced missing and wrong textures there, while the
+    // per-draw descriptor path is the one the probes verified. OPENRAC_SWITCH_BINDLESS=1 in
+    // /switch/openrac/env.txt turns it back on for testing.
+    if (const char* v = std::getenv("OPENRAC_SWITCH_BINDLESS"); v == nullptr || std::strcmp(v, "1") != 0) {
+        g->bindless_supported = false;
+    }
+#endif
     f11 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES};
     f12 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
     f12.shaderOutputViewportIndex = g->viewport_index_supported ? VK_TRUE : VK_FALSE;
@@ -712,8 +758,37 @@ bool make_dummies() {
     return true;
 }
 
+void window_size(int& width, int& height) {
+    if (g->window != nullptr) {
+        SDL_GetWindowSizeInPixels(g->window, &width, &height);
+        return;
+    }
+#if defined(__SWITCH__)
+    if (g->native_window != nullptr) {
+        u32 w = 0, h = 0;
+        if (R_SUCCEEDED(nwindowGetDimensions(static_cast<NWindow*>(g->native_window), &w, &h))) {
+            width = static_cast<int>(w); height = static_cast<int>(h);
+        }
+    }
+#endif
+}
+
 bool make_surface(SDL_Window* window, std::string& error) {
-#if defined(__ANDROID__)
+#if defined(__SWITCH__)
+    (void)window;
+    VkViSurfaceCreateInfoNN info{VK_STRUCTURE_TYPE_VI_SURFACE_CREATE_INFO_NN};
+    info.window = g->native_window;
+    if (vkCreateViSurfaceNN == nullptr) {
+        error = "Switch NVK driver has no VK_NN_vi_surface entry point";
+        return false;
+    }
+    const VkResult result = vkCreateViSurfaceNN(g->instance, &info, nullptr, &g->surface);
+    if (result != VK_SUCCESS) {
+        error = std::format("Switch VI surface creation failed ({})", static_cast<int>(result));
+        return false;
+    }
+    return true;
+#elif defined(__ANDROID__)
     // Made with the instance's own functions, from the window SDL holds.
     auto* native = static_cast<ANativeWindow*>(SDL_GetPointerProperty(
         SDL_GetWindowProperties(window), SDL_PROP_WINDOW_ANDROID_WINDOW_POINTER, nullptr
@@ -756,6 +831,8 @@ void destroy_all() {
         // The pre-warm worker stops first: it uses the programs' modules and the cache.
         stop_pipeline_prewarm();
         vkDeviceWaitIdle(g->device);
+        // Teardown drains every slot itself; releasing resources must not begin a new recording.
+        g->frame_pending = false;
         gpu_release();
         material_release();
         save_pipeline_manifest();

@@ -157,6 +157,59 @@ CameraPose blend_pose(const CameraPose& from, const CameraPose& to, float t) {
     return c;
 }
 
+bool usable_camera(const CameraPose& pose) {
+    const auto finite = [](const renderer::Vec3& v) {
+        return std::isfinite(v[0]) && std::isfinite(v[1]) && std::isfinite(v[2]);
+    };
+
+    // A NaN or an infinity anywhere makes every vertex drawn from it one too.
+    if (!finite(pose.position) || !finite(pose.forward) || !finite(pose.up)) {
+        return false;
+    }
+
+    // An eye out past every level: what a float of garbage reads as.
+    for (const float c : pose.position) {
+        if (std::fabs(c) > kFarthestEye) {
+            return false;
+        }
+    }
+
+    const float forward = std::sqrt(renderer::dot(pose.forward, pose.forward));
+    const float up = std::sqrt(renderer::dot(pose.up, pose.up));
+
+    // The game's rows are unit vectors; one far from it is not a camera's.
+    if (!(forward >= 0.5f && forward <= 2.0f && up >= 0.5f && up <= 2.0f)) {
+        return false;
+    }
+
+    // Forward and up along one line leave no side axis: the view squashes the world flat.
+    return std::fabs(renderer::dot(pose.forward, pose.up)) <= 0.999f * forward * up;
+}
+
+bool usable_view(const renderer::Mat4& view, const renderer::Mat4& projection) {
+    const auto finite = [](const renderer::Mat4& m) {
+        return std::all_of(m.begin(), m.end(), [](float x) { return std::isfinite(x); });
+    };
+
+    // A NaN or an infinity in either matrix reaches every vertex.
+    if (!finite(view) || !finite(projection)) {
+        return false;
+    }
+
+    // The view's rotation, column-major: entry (row r, column c) is view[4 * c + r].
+    const auto at = [&view](int r, int c) { return static_cast<double>(view[4 * c + r]); };
+    const double det = at(0, 0) * (at(1, 1) * at(2, 2) - at(1, 2) * at(2, 1))
+                       - at(0, 1) * (at(1, 0) * at(2, 2) - at(1, 2) * at(2, 0))
+                       + at(0, 2) * (at(1, 0) * at(2, 1) - at(1, 1) * at(2, 0));
+
+    // A rotation keeps volumes: a determinant far from 1 squashes or mirrors the world.
+    if (!(det > 0.5 && det < 2.0)) {
+        return false;
+    }
+
+    return projection[0] > 0.0f && projection[5] > 0.0f;
+}
+
 std::array<float, 4> moby_sphere_envelope(
     const std::array<float, 4>& from_sphere,
     const renderer::Mat4& from,

@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -44,6 +45,9 @@
 #include <string_view>
 #include <system_error>
 #include <vector>
+#ifdef __SWITCH__
+#include <unistd.h>  // environ
+#endif
 
 #include "common/build_info.h"
 #include "common/crash.h"
@@ -51,6 +55,7 @@
 #include "common/log.h"
 #include "common/stats.h"
 #include "common/system_info.h"
+#include "test_logs.h"
 #include "mods.h"
 #include "openrac/ee.h"
 #include "openrac/elf.h"
@@ -61,6 +66,9 @@
 #include "program/program.h"
 #ifdef __SWITCH__
 #include "platform/switch/launcher.h"
+#ifdef OPENRAC_FRONTEND
+#include "platform/switch/overlay_stats.h"
+#endif
 #endif
 
 #ifdef OPENRAC_FRONTEND
@@ -94,6 +102,7 @@ int (*openrac_game_bolts)(void) = nullptr;
 int (*openrac_game_skip_buttons)(void) = nullptr;
 void (*openrac_game_skip)(void) = nullptr;
 int (*openrac_game_mode)(uint32_t* mode) = nullptr;
+int (*openrac_game_tick_rate)(float* seconds_per_tick) = nullptr;
 int (*openrac_game_hero_position)(float xyz[3]) = nullptr;
 int (*openrac_game_camera_position)(float xyz[3]) = nullptr;
 int (*openrac_game_updating_moby)(openrac_game_moby* out) = nullptr;
@@ -151,8 +160,26 @@ void open_session(int argc, char** argv) {
     const long offset = crash::local_offset();
     char started[40];
     crash::format_time(static_cast<long long>(std::time(nullptr)), offset, started, sizeof(started));
-    if (!log::open_session(g_options.data, program_name(), 5)) {
-        log::warn("the log cannot be written in {}", g_options.data.string());
+    fs::path log_dir = g_options.data;
+#ifdef __SWITCH__
+    // Keep the live game log beside env-applied, startup and overlay logs on the SD card.
+    log_dir = test_logs::root().parent_path();
+    const fs::path game_log = log_dir / (std::string(program_name()) + ".log");
+    // Preserve recovery of the last run when upgrading from the old data/ location.
+    std::error_code log_ec;
+    fs::create_directories(log_dir, log_ec);
+    if (!log_ec && !fs::exists(game_log, log_ec)) {
+        fs::copy_file(g_options.data / game_log.filename(), game_log,
+                      fs::copy_options::none, log_ec);
+    }
+    // Each run's logs into one folder on the SD card for copying after a test (test_logs.h): the
+    // last run's, if it did not end cleanly, before this run's log replaces it.
+    test_logs::begin(
+        game_log, static_cast<const char*>(started)
+    );
+#endif
+    if (!log::open_session(log_dir, program_name(), 5)) {
+        log::warn("the log cannot be written in {}", log_dir.string());
     }
     crash::configure(g_options.data / "crashes", program_name(), started);
     crash::set_moby_source(updating_moby);
@@ -160,7 +187,9 @@ void open_session(int argc, char** argv) {
                         : log::level() <= log::Level::Verbose ? "verbose"
                                                               : "info (OPENRAC_LOG=verbose, or verbose_log = 1 in the settings, for more)";
     log::header("==== OpenRAC session ====");
-    log::header(std::format("session   {}", started));
+    log::header(std::format("log file  {}", (log_dir / (std::string(program_name()) + ".log")).string()));
+    // As a C string: libc++ formats a whole char array, past its NUL.
+    log::header(std::format("session   {}", static_cast<const char*>(started)));
     log::header(std::format("openrac   {}, commit {}", build_info::version(), build_info::commit()));
     log::header(std::format("game      {}: {}, disc {}", openrac_game.id, openrac_game.title, openrac_game.serial));
     log::header(std::format("system    {}, {} of memory", system_info::os(), system_info::memory()));
@@ -168,6 +197,21 @@ void open_session(int argc, char** argv) {
     log::header(std::format("command   {}", command_line(argc, argv)));
     log::header(std::format("log       {}", level));
     log::header("=========================");
+#ifdef __SWITCH__
+    // The OPENRAC_ variables in effect for this run, in the run's own log: env-applied.log is a
+    // separate file, and attached logs of it have shown an older env.txt than the one the game log
+    // proved active (sessions 36-40), so this line is the one to trust.
+    {
+        std::string set;
+        for (char** variable = environ; variable != nullptr && *variable != nullptr; ++variable) {
+            if (std::strncmp(*variable, "OPENRAC_", 8) == 0) {
+                set += set.empty() ? "" : " ";
+                set += *variable;
+            }
+        }
+        log::info("environment in effect: {}", set.empty() ? std::string("no OPENRAC_ variables") : set);
+    }
+#endif
 }
 
 // The keyboard and mouse as a mod reads them (openrac_mod.h's openrac_input), from the frontend's
@@ -271,12 +315,24 @@ int run_game_as_the_ee() {
 
 }  // namespace
 
+
 int main(int argc, char** argv) {
+#ifdef __SWITCH__
+    openrac::env::load_switch_file();  // env.txt, if a static constructor has not loaded it yet
+    openrac::test_logs::prepare(); // keep this run's overlay/launcher startup messages
+#endif
+#ifdef __SWITCH__
+    bool from_switch_launcher = false;
+#endif
+#if defined(__SWITCH__) && defined(OPENRAC_FRONTEND)
+    openrac::platform::overlay_stats::initialize();
+#endif
 #ifdef __SWITCH__
     // Homebrew Menu starts the setup dashboard. Explicit arguments retain CLI use.
     if (argc <= 1) {
         const int launch = openrac::platform::switch_launcher();
         if (launch == 0) return 0;
+        from_switch_launcher = true;
         static char app[] = "openrac-rac1-pal";
         static char data_flag[] = "--data";
         static char data[] = "sdmc:/switch/openrac/data";
@@ -363,7 +419,11 @@ int main(int argc, char** argv) {
 #ifdef OPENRAC_FRONTEND
     if (g_options.window) {
         std::string why;
+#ifdef __SWITCH__
+        settings::start_game(g_options.settings, from_switch_launcher);
+#else
         settings::load(g_options.settings);
+#endif
         log::header("settings  " + settings::summary(), false);
         // The console's languages game_host.h names (openrac_game_language): 1 English to 5 Italian.
         constexpr int kFirstLanguage = 1;

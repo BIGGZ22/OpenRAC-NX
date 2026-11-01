@@ -1,0 +1,5 @@
+# Copy to sdmc:/switch/openrac/env.txt. Run A: measure, change nothing else.
+# Frame cost every 120 frames into /switch/openrac/data/openrac-rac1-pal.log.
+# (It waits for the GPU after each frame, so FPS drops a little while it is on.)
+OPENRAC_FRAME_COST=120
+OPENRAC_TRACE_INPUT=1

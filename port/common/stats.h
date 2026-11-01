@@ -90,6 +90,18 @@ struct Section {
     std::uint64_t triangles = 0;
 };
 
+// ---- Pass marks: a backend's own GPU timing of the kGpu sections, whether or not enabled() ----
+
+// Installed by a graphics backend that times passes without the overlay (dkgl, with
+// OPENRAC_DK_PASS_TIMING): every Scope with kGpu calls begin with its name when it opens and end
+// when it closes, on the thread that issues its GL commands. Not installed: one test of a pointer.
+struct PassHooks {
+    void (*begin)(std::string_view name) = nullptr;
+    void (*end)() = nullptr;
+};
+extern PassHooks g_pass_hooks;
+void set_pass_hooks(const PassHooks& hooks);
+
 // Times from its construction to its destruction, in the frame that is open. Sections nest.
 class Scope {
 public:
@@ -97,9 +109,16 @@ public:
         if (g_enabled) {
             begin(name, flags);
         }
+        if ((flags & kGpu) != 0 && g_pass_hooks.begin != nullptr) {
+            g_pass_hooks.begin(name);
+            m_pass = true;
+        }
     }
 
     ~Scope() {
+        if (m_pass && g_pass_hooks.end != nullptr) {
+            g_pass_hooks.end();
+        }
         if (m_index >= 0) {
             end();
         }
@@ -114,6 +133,7 @@ private:
 
     int m_index = -1;
     bool m_gpu = false;
+    bool m_pass = false;
     std::uint64_t m_serial = 0;
 };
 

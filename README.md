@@ -16,7 +16,7 @@ Other games and disc revisions are currently unsupported. No game files are incl
 
 ## Installation
 
-1. Download `openrac-rac1-pal.nro` from the releases page.
+1. Download `openrac-rac1-pal-deko3d-v0.2.0-alpha.nro` from the releases page. You may rename it to `openrac-rac1-pal.nro`.
 2. Put the NRO and your supported ISO in `SD:/switch/openrac/`. Keep only one ISO in that folder.
 3. Launch in **full application mode**, then let first-launch setup prepare the game.
 4. Select **Play** and press **A**.
@@ -38,11 +38,16 @@ SD:/switch/openrac/
 - Third-person lock-strafe: hold **ZL** to strafe while aiming with the right stick.
 - Memory-card saves stored on the SD card.
 
-### Upcoming: v0.2.0 alpha
+### v0.2.0-alpha pre-release
 
-The next version adds resolution presets and handheld/docked profiles, optional Status Monitor FPS/RES reporting, a lock-strafe toggle, experimental FOV controls and particle-rendering improvements. It also updates the menu and settings handoff.
+- Native deko3d rendering, redesigned launcher, custom artwork and menu colours.
+- Resolution presets from 480p, handheld/docked profiles, optional Status Monitor FPS/RES reporting, lock-strafe toggle and experimental FOV controls.
+- Correct PAL 50/60 Hz game speed, reused animation memory and fixes for vendor lettering, weapon previews and fade edges.
+- Revised frame-cap handling to avoid holding back or skipping a tick's picture after slow updates. This pacing change still needs hardware verification.
+- Optional raised clock profile, off by default, with restore requests on HOME, sleep and exit. External clock managers may override requests.
+- Diagnostic counters correctly turn off at `0`; the game log now sits beside the other logs.
 
-These changes are being prepared for GitHub tag `v0.2.0-alpha`.
+Performance still varies by scene. Cutscene timing and a full playthrough need further testing.
 
 ## Controls
 
@@ -74,7 +79,7 @@ Save through the game's menu and wait for it to finish before exiting.
 - **Missing files or interrupted setup:** open the Setup page and select prepare/resume.
 - **Low performance:** check that your overclock is active and you launched in full application mode.
 - **Reporting a bug:** include the build version, planet/scene and steps to reproduce it.
-- **Game log:** `SD:/switch/openrac/data/openrac-rac1-pal.log`
+- **Game log:** `SD:/switch/openrac/openrac-rac1-pal.log`
 - **Setup log:** `SD:/switch/openrac/data/setup.log`
 
 ## Building from source

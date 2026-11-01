@@ -9,9 +9,11 @@
 #include <cmath>
 #include <cstdlib>
 #include <functional>
+#include <optional>
 #include <span>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -24,6 +26,11 @@
 #include "renderer/direct.h"
 #include "renderer/gl.h"
 #include "scene/moby_pose.h"
+#ifdef __SWITCH__
+#include "platform/switch/render_resolution.h"
+#include "platform/switch/overlay_stats.h"
+#include "platform/switch/camera_options.h"
+#endif
 
 namespace openrac::frontend {
 namespace {
@@ -112,6 +119,11 @@ float prepare_target(SceneFrame& frame) {
     frame_size(
         output.box.width, output.box.height, graphics.render_scale, output.width, output.height
     );
+#ifdef __SWITCH__
+    const int preset = platform::switch_video::profile_resolution(graphics.switch_resolution,
+        graphics.switch_handheld_resolution, graphics.switch_docked_resolution, platform::overlay_stats::docked());
+    platform::switch_video::target_size(preset, output.width, output.height);
+#endif
     // Temporal reconstruction supplies antialiasing; native rendering keeps the saved MSAA preference.
     const int samples =
         frame.temporal ? 1 : std::clamp(graphics.msaa, 1, renderer::FrameBuffer::max_samples());
@@ -171,7 +183,7 @@ void set_lighting(SceneFrame& frame) {
 void set_buckets(SceneFrame& frame) {
     State& owner = frame.owner;
     const Kept& scene = frame.scene;
-    const bool has_camera = scene.has_camera;
+    const bool has_camera = frame.has_camera;
 
     // Native HUD remains available even when the game submits no world.
     for (auto& bucket : owner.renderer
@@ -188,38 +200,102 @@ void set_buckets(SceneFrame& frame) {
     }
 }
 
+// Returns the camera to draw the world from: `camera`, or when usable_camera or usable_view
+// refuses it (non-finite, degenerate, out past every level: a frame of it is a black screen
+// crossed by a few smeared triangles), the last one they accepted, and none before any was. The
+// first frame of each run of refused ones is logged (a few runs a session), with the camera's
+// numbers, so that a report carries them.
+std::optional<renderer::Camera> guard_camera(
+    State& owner, const host::GameState& state, const renderer::Camera& camera, std::uint64_t tick
+) {
+    const CameraPose pose{state.camera_position, state.forward, state.left, state.up};
+
+    // A usable camera is drawn, and kept for frames that have none.
+    if (usable_camera(pose) && usable_view(camera.view, camera.projection)) {
+        if (owner.refused_camera_frames != 0) {
+            log::info("camera usable again after {} refused frame(s)", owner.refused_camera_frames);
+            owner.refused_camera_frames = 0;
+        }
+        owner.good_camera = camera;
+        return camera;
+    }
+
+    // The first frame of a run is logged; a session logs at most a few runs.
+    constexpr int kMostLogged = 4;
+    if (owner.refused_camera_frames++ == 0 && owner.refused_camera_logs < kMostLogged) {
+        ++owner.refused_camera_logs;
+        log::warn(
+            "camera: tick {} has an unusable camera (eye {} {} {}, forward {} {} {}, up {} {} {}, "
+            "tangents {} {}); {}",
+            tick,
+            state.camera_position[0],
+            state.camera_position[1],
+            state.camera_position[2],
+            state.forward[0],
+            state.forward[1],
+            state.forward[2],
+            state.up[0],
+            state.up[1],
+            state.up[2],
+            state.tan_half_fov_x,
+            state.tan_half_fov_y,
+            owner.good_camera ? "drawing the last good one" : "drawing no world"
+        );
+    }
+
+    return owner.good_camera;
+}
+
 // Configures visible buckets, the interpolated camera and probe selection.
 void set_camera(SceneFrame& frame) {
     State& owner = frame.owner;
     const Kept& scene = frame.scene;
     auto& input = frame.input;
     const float picture_scale = frame.picture_scale;
-    const auto state = scene.has_prev_state && frame.output.alpha < 1.0f
-                           ? blend_camera(scene.prev_state, scene.state, frame.output.alpha)
+    auto state = scene.has_prev_state && frame.pose_alpha < 1.0f
+                           ? blend_camera(scene.prev_state, scene.state, frame.pose_alpha)
                            : scene.state;
-    // No camera yet (loading, fades between programs): a black frame, not the level's background.
-    const bool has_camera = scene.has_camera;
-    input.clear_colour =
-        has_camera
-            ? std::array<
-                  float,
-                  4>{owner.level.background[0], owner.level.background[1], owner.level.background[2], 1}
-            : std::array<float, 4>{0, 0, 0, 1};
-    set_buckets(frame);
-    input.camera.view = state.view();
+#ifdef __SWITCH__
+    const float fov = platform::switch_camera::fov_scale(frame.graphics.switch_fov,
+        platform::switch_camera::gameplay.load(std::memory_order_relaxed));
+    state.tan_half_fov_x *= fov;
+    state.tan_half_fov_y *= fov;
+#endif
+    renderer::Camera camera;
+    camera.view = state.view();
     // The game's frustum: its horizontal and vertical tangents as the game set them (the frame is
     // the TV's 4:3, which they were made for), not the window's shape. A wider picture keeps the
     // vertical one and opens the horizontal one by as much as the picture is wider: the game's
     // view is its middle.
-    input.camera.projection = state.projection(
+    camera.projection = state.projection(
         (state.tan_half_fov_y > 0.0f ? state.tan_half_fov_x / state.tan_half_fov_y : 4.0f / 3.0f)
             / picture_scale,
         0.05f,
         2000.0f
     );
-    input.camera.position = state.camera_position;
+    camera.position = state.camera_position;
+    // No camera yet (loading, fades between programs): a black frame, not the level's background.
+    // Nor one the guard refuses with no good one to draw instead. With one, the colour the game
+    // clears to (the level settings' background, which a mod can change), else the extracted
+    // level's.
+    const std::optional<renderer::Camera> drawn =
+        scene.has_camera ? guard_camera(owner, state, camera, scene.frame) : std::nullopt;
+    const bool has_camera = drawn.has_value();
+    frame.has_camera = has_camera;
+    const auto background = scene.state.background_or(owner.level.background);
+    // A leftover valid camera alone does not mean the game submitted a world.
+    // Retained menu backgrounds are preserved separately by keep_colour.
+    const bool draws_world=(scene.draws & 0x1Fu)!=0;
+    input.clear_colour = world_clear_colour(has_camera,draws_world,background);
+    if(has_camera && !draws_world && (background[0]!=0 || background[1]!=0 || background[2]!=0)) {
+        static unsigned reported=0;
+        if(reported++<8) log::info("transition tick {}: no world submitted; clear black instead of level colour {} {} {}",
+            scene.frame,background[0],background[1],background[2]);
+    }
+    set_buckets(frame);
+    input.camera = drawn.value_or(camera);
     owner.scene.choose_scenery(
-        frame.graphics.original_lod, state.camera_position, input.camera.projection
+        frame.graphics.original_lod, input.camera.position, input.camera.projection
     );
     owner.scene.update_probe_regions(input.camera);
     input.after_world_depth =
@@ -285,6 +361,43 @@ void render_scene(
     FramePresentation& output
 ) {
     SceneFrame frame{owner, snapshot, graphics, output, {}, {}, false, 1};
+    // At the first frame and on each change: the settings that decide the scene's GPU work, so a
+    // performance log says what it measured (session 33's did not show the scenery detail).
+    {
+        static bool told = false;
+        static std::array<int, 9> last{};
+        const std::array<int, 9> now{
+            graphics.original_lod ? 1 : 0, static_cast<int>(graphics.texture_filter),
+            graphics.anisotropy, graphics.msaa, graphics.render_scale, graphics.switch_resolution,
+            static_cast<int>(graphics.vsync), static_cast<int>(graphics.frame_rate), graphics.frame_cap
+        };
+        if (!told || now != last) {
+            told = true;
+            last = now;
+            log::info(
+                "graphics settings in use: scenery detail {}, texture filter {}, anisotropy {} (0 auto), "
+                "samples {}, render scale {}, Switch resolution preset {}, vsync {}, frame rate mode {}, cap {}",
+                graphics.original_lod ? "original draw distances" : "full detail (every tie and shrub)",
+                now[1], now[2], now[3], now[4], now[5], now[6], now[7], now[8]
+            );
+        }
+    }
+    // OPENRAC_FLIGHT_POSE_AT_TICK=0 blends the flight between planets like other worlds again
+    // (an A/B switch for the canopy candidate, docs/port/DKGL_SHIP_CANOPY_SOURCE_FIX_2026-10-29.md).
+    static const bool flight_at_tick = [] {
+        const char* v = std::getenv("OPENRAC_FLIGHT_POSE_AT_TICK");
+        return v == nullptr || std::string_view(v) != "0";
+    }();
+    frame.pose_alpha =
+        flight_at_tick ? world_pose_alpha(snapshot.world, output.alpha) : output.alpha;
+    // Once a run, the log says the flight is held at the tick, so a hardware test shows it ran.
+    static bool told = false;
+    if (snapshot.world == -2 && !told) {
+        told = true;
+        log::info("frontend: flight between planets drawn {}", flight_at_tick
+            ? "at the game tick (canopy candidate; OPENRAC_FLIGHT_POSE_AT_TICK=0 blends it)"
+            : "blended between ticks (OPENRAC_FLIGHT_POSE_AT_TICK=0)");
+    }
     frame.temporal = prepare_temporal(frame);
     upload_instances(frame);
     const auto scene_done = std::chrono::steady_clock::now();

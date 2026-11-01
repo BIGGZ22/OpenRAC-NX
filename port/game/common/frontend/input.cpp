@@ -35,7 +35,7 @@ void draw_touch_pad(int window_width, int window_height) {
     SDL_Rect safe{};
     int w = 0;
     int h = 0;
-    if (SDL_GetWindowSafeArea(g->window->sdl(), &safe)
+    if (g->window->sdl() != nullptr && SDL_GetWindowSafeArea(g->window->sdl(), &safe)
         && SDL_GetWindowSize(g->window->sdl(), &w, &h) && h > 0) {
         const float height = static_cast<float>(h);
         touch.set_safe_area(

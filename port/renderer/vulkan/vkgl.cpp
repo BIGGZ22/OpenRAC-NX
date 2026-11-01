@@ -17,13 +17,15 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
+#include <cstdio>
 #include <span>
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 #include <volk.h>
 
-#include <SDL3/SDL.h>
+#include "platform/sdl.h"
 
 #include "common/env.h"
 #include "common/log.h"
@@ -46,12 +48,14 @@ using namespace detail;
 // ---- The device, the screen and the frames ----
 
 // Back in the foreground: the window SDL holds is a new one (Android).
+#if defined(__ANDROID__)
 bool SDLCALL on_event(void*, SDL_Event* event) {
     if (g != nullptr && event->type == SDL_EVENT_DID_ENTER_FOREGROUND) {
         g->surface_lost = true;
     }
     return true;
 }
+#endif
 
 bool open(const Config& config, std::string& error) {
     if (g != nullptr) {
@@ -71,28 +75,33 @@ bool open(const Config& config, std::string& error) {
     }
     g = new Context();
     g->window = config.window;
+    g->native_window = config.native_window;
     g->interval = config.vsync ? 1 : 0;
     const bool validation = (config.validation || env::flag(env::Var::VulkanValidation))
                             && layer_available("VK_LAYER_KHRONOS_validation");
     bool ok = make_instance(config, validation, error);
-    if (ok && config.window != nullptr) {
+    if (ok && (config.window != nullptr || config.native_window != nullptr)) {
         ok = make_surface(config.window, error);
     }
     ok = ok && pick_device(error) && make_device(error) && make_frames();
     if (ok) {
         int w = config.width, h = config.height;
-        if (config.window != nullptr) {
-            SDL_GetWindowSizeInPixels(config.window, &w, &h);
-        }
+        if (config.window != nullptr || config.native_window != nullptr) window_size(w, h);
         begin_buffers();
         ok = make_dummies() && make_default_framebuffer(std::max(w, 1), std::max(h, 1));
         if (!ok) {
             error = "could not make the default framebuffer";
         }
     }
-    if (ok && config.window != nullptr && !make_swapchain()) {
+    if (ok && (config.window != nullptr || config.native_window != nullptr) && !make_swapchain()) {
         // Minimised at the start: the swapchain comes with the first frame shown.
         g->swapchain_stale = true;
+        if (config.native_window != nullptr) {
+            // Native Switch windows cannot be minimized. Fail rather than
+            // reporting a working renderer without a display swapchain.
+            error = g->presentation_error.empty() ? "Switch Vulkan display swapchain creation failed" : g->presentation_error;
+            ok = false;
+        }
     }
     if (!ok) {
         destroy_all();
@@ -282,29 +291,32 @@ SubmissionCounters submission_counters() {
 }
 
 void present() {
-    if (!active()) {
+    if (!active() || !g->presentation_error.empty()) {
         return;
     }
     const Clock::time_point start = Clock::now();
     bool shown = false;
-    if (g->window != nullptr) {
-        int w = 0, h = 0;
-        SDL_GetWindowSizeInPixels(g->window, &w, &h);
+    if (g->window != nullptr || g->native_window != nullptr) {
+        int w = g->default_width, h = g->default_height;
+        window_size(w, h);
         if (w > 0 && h > 0) {
             shown = present_to_screen();
         }
     }
+    // A lost device must not be advanced into an unsignaled frame-fence wait.
+    if (!g->presentation_error.empty()) return;
     if (!shown) {
         submit(VK_NULL_HANDLE, VK_NULL_HANDLE, false);
     }
+    if (!g->presentation_error.empty()) return;
     g->measures.present_s += seconds_since(start);
     report_measures();
     publish_counters();
     advance();
     // A window of another size: the default framebuffer follows, as a GL window's does.
-    if (g->window != nullptr) {
-        int w = 0, h = 0;
-        SDL_GetWindowSizeInPixels(g->window, &w, &h);
+    if (g->window != nullptr || g->native_window != nullptr) {
+        int w = g->default_width, h = g->default_height;
+        window_size(w, h);
         if (w > 0 && h > 0 && (w != g->default_width || h != g->default_height)) {
             retire(std::move(g->default_colour));
             retire(std::move(g->default_depth));
@@ -313,6 +325,12 @@ void present() {
         }
     }
 }
+
+const std::string& presentation_error() {
+    static const std::string empty;
+    return g ? g->presentation_error : empty;
+}
+std::uint64_t accepted_presents() { return g ? g->submission.presents_accepted : 0; }
 
 int set_swap_interval(int interval) {
     if (!active()) {
@@ -344,6 +362,53 @@ const std::string& api_version() {
 
 bool software() {
     return g != nullptr && g->software;
+}
+
+std::string device_report() {
+    using namespace detail;
+    if (g == nullptr || g->physical == VK_NULL_HANDLE) {
+        return {};
+    }
+    std::string out;
+    char line[256];
+    VkPhysicalDeviceMemoryProperties memory{};
+    vkGetPhysicalDeviceMemoryProperties(g->physical, &memory);
+    for (std::uint32_t i = 0; i < memory.memoryHeapCount; ++i) {
+        std::snprintf(line, sizeof line, "heap %u: %llu MiB%s\n", i,
+            static_cast<unsigned long long>(memory.memoryHeaps[i].size >> 20),
+            (memory.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) ? " device-local" : "");
+        out += line;
+    }
+    for (std::uint32_t i = 0; i < memory.memoryTypeCount; ++i) {
+        const VkMemoryPropertyFlags f = memory.memoryTypes[i].propertyFlags;
+        std::snprintf(line, sizeof line, "type %u: heap %u%s%s%s%s\n", i,
+            memory.memoryTypes[i].heapIndex,
+            (f & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) ? " DEVICE_LOCAL" : "",
+            (f & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) ? " HOST_VISIBLE" : "",
+            (f & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) ? " HOST_COHERENT" : "",
+            (f & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) ? " HOST_CACHED" : "");
+        out += line;
+    }
+    std::snprintf(line, sizeof line, "device-only memory: %s\n", device_only_memory() ? "yes" : "no");
+    out += line;
+    std::snprintf(line, sizeof line, "bindless materials: %s (capacity %u)\n",
+        g->bindless_supported ? "on" : "off", g->material_texture_capacity);
+    out += line;
+    std::snprintf(line, sizeof line, "gpu timestamps: %u bits, period %.3f ns\n",
+        g->timestamp_bits, static_cast<double>(g->properties.limits.timestampPeriod));
+    out += line;
+    if (g->surface != VK_NULL_HANDLE) {
+        std::uint32_t n = 0;
+        vkGetPhysicalDeviceSurfacePresentModesKHR(g->physical, g->surface, &n, nullptr);
+        std::vector<VkPresentModeKHR> modes(n);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(g->physical, g->surface, &n, modes.data());
+        out += "present modes:";
+        for (const VkPresentModeKHR m : modes) {
+            out += " " + std::to_string(static_cast<int>(m));
+        }
+        out += " (0 immediate, 1 mailbox, 2 fifo, 3 fifo-relaxed)\n";
+    }
+    return out;
 }
 
 }  // namespace openrac::vkgl

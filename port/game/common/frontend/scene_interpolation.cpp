@@ -160,13 +160,13 @@ void upload_instances(SceneFrame& frame) {
         return;
     }
 
-    const auto live = blend_instances(frame.scene, frame.output.alpha);
+    const auto live = blend_instances(frame.scene, frame.pose_alpha);
     std::vector<scene::LevelScene::JointColumns> blended;
-    const bool blend = frame.output.alpha < 1.0f && !frame.scene.prev_poses.empty();
+    const bool blend = frame.pose_alpha < 1.0f && !frame.scene.prev_poses.empty();
 
     // Exact tick frames borrow the captured palette without allocating a redundant copy.
     if (blend) {
-        blended = blend_palette(frame.scene, live, frame.output.alpha);
+        blended = blend_palette(frame.scene, live, frame.pose_alpha);
     }
 
     const auto& palette = blend ? blended : frame.scene.palette;
@@ -184,7 +184,7 @@ void blend_shadows(SceneFrame& frame) {
     const Kept& scene = frame.scene;
     frame.shadows = scene.shadows;
     frame.input.shadow_capsules = frame.shadows;
-    const float alpha = frame.output.alpha;
+    const float alpha = frame.pose_alpha;
 
     // Replaced actors or capsule layouts must not interpolate through unrelated geometry.
     if (alpha >= 1.0f || scene.shadow_moby == 0 || scene.shadow_moby != scene.prev_shadow_moby

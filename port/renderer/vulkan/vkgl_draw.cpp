@@ -439,6 +439,7 @@ void draw(
     if (p == nullptr || !p->linked || count <= 0 || instances <= 0) {
         return;
     }
+    prepare_frame();
     const Target t = target_of(g->state.draw_framebuffer);
     if ((t.colour == nullptr && t.depth == nullptr) || t.width <= 0 || t.height <= 0) {
         return;
@@ -503,7 +504,7 @@ void draw(
             // per-vertex and index buffers can still use persistent storage.
             const BufferRef r = gpu_page && attr.divisor
                                     ? BufferRef{gpu_page->output.buffer, 0, gpu_page->output.size}
-                                    : resolve(*b, attr.divisor == 0);
+                                    : resolve(*b, attr.divisor == 0 || b->storage);
             const GLsizei stride =
                 attr.stride != 0 ? attr.stride : attr.size * type_bytes(attr.type);
             inputs[n] =

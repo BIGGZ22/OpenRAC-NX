@@ -49,6 +49,7 @@ endfunction()
 # ---- platform ----
 if(SWITCH)
   add_library(openrac_platform STATIC platform/switch/graphics.cpp platform/switch/audio.cpp
+    platform/switch/overlay_stats.cpp platform/switch/clocks.cpp
     platform/clock.cpp platform/gpu_driver.cpp platform/pad.cpp
     platform/performance_hint.cpp platform/touch_pad.cpp)
 else()
@@ -66,6 +67,23 @@ add_library(openrac_platform STATIC
 endif()
 target_link_libraries(openrac_platform PUBLIC openrac_common openrac_sdl3)
 openrac_warnings(openrac_platform)
+if(SWITCH)
+  pkg_check_modules(SWITCH_CURL REQUIRED IMPORTED_TARGET libcurl)
+  file(READ "${PROJECT_SOURCE_DIR}/game/rac1-pal/icon.png" launcher_art_hex HEX)
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/game/rac1-pal/icon.png")
+  string(REGEX REPLACE "(..)" "0x\\1," launcher_art_bytes "${launcher_art_hex}")
+  file(CONFIGURE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/generated/launcher_art_builtin.h"
+    CONTENT "// Generated from the existing game's icon.png.\nstatic const unsigned char kLauncherArt[] = {${launcher_art_bytes}};\n" @ONLY)
+  # The launcher's display face for titles: Chakra Petch Bold (SIL OFL 1.1, platform/switch/fonts/OFL.txt).
+  file(READ "${PROJECT_SOURCE_DIR}/platform/switch/fonts/ChakraPetch-Bold.ttf" launcher_font_hex HEX)
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/platform/switch/fonts/ChakraPetch-Bold.ttf")
+  string(REGEX REPLACE "(..)" "0x\\1," launcher_font_bytes "${launcher_font_hex}")
+  file(CONFIGURE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/generated/launcher_heading_font.h"
+    CONTENT "// Generated from platform/switch/fonts/ChakraPetch-Bold.ttf (SIL Open Font License 1.1).\nstatic const unsigned char kLauncherHeadingFont[] = {${launcher_font_bytes}};\n" @ONLY)
+  add_library(openrac_launcher_artwork STATIC platform/switch/launcher_artwork.cpp platform/switch/launcher_appearance.cpp)
+  target_include_directories(openrac_launcher_artwork PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+  target_link_libraries(openrac_launcher_artwork PUBLIC openrac_common openrac_stb PkgConfig::SWITCH_CURL z)
+endif()
 # Android: the player's own GPU driver package (platform/gpu_driver.h, cmake/Android.cmake).
 if(ANDROID)
   target_sources(openrac_platform PRIVATE android/gpu_driver.cpp)
@@ -112,16 +130,12 @@ if(OPENRAC_VULKAN)
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/shader_compiler_internal.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/gpu_draw.inc"
     "${CMAKE_CURRENT_SOURCE_DIR}/renderer/vulkan/gpu_materials.inc")
-  set(openrac_renderer_vulkan_pipeline_text "")
-  foreach(source IN LISTS openrac_renderer_vulkan_pipeline_sources)
-    file(SHA256 "${source}" source_hash)
-    string(APPEND openrac_renderer_vulkan_pipeline_text "${source_hash}")
-  endforeach()
-  string(SHA256 openrac_renderer_vulkan_pipeline_key "${openrac_renderer_vulkan_pipeline_text}")
-  string(SUBSTRING "${openrac_renderer_vulkan_pipeline_key}" 0 12
-    openrac_renderer_vulkan_pipeline_key)
+  include(VulkanPipelineKey)
+  openrac_vulkan_pipeline_key("${CMAKE_CURRENT_SOURCE_DIR}"
+    openrac_renderer_vulkan_pipeline_key openrac_renderer_vulkan_pipeline_dependencies
+    ${openrac_renderer_vulkan_pipeline_sources})
   set_property(DIRECTORY APPEND PROPERTY
-    CMAKE_CONFIGURE_DEPENDS ${openrac_renderer_vulkan_pipeline_sources})
+    CMAKE_CONFIGURE_DEPENDS ${openrac_renderer_vulkan_pipeline_dependencies})
   target_compile_definitions(openrac_renderer_vulkan
     PRIVATE OPENRAC_VK_PIPELINE_KEY="${openrac_renderer_vulkan_pipeline_key}")
   if(OPENRAC_GPU_MARKERS)
@@ -136,6 +150,33 @@ if(OPENRAC_VULKAN)
   set_source_files_properties(renderer/vulkan/vma.cpp PROPERTIES COMPILE_OPTIONS "$<IF:$<CXX_COMPILER_ID:MSVC>,/w,-w>")
   target_link_libraries(openrac_platform PRIVATE openrac_renderer_vulkan)
   target_compile_definitions(openrac_platform PRIVATE OPENRAC_VULKAN=1)
+  if(SWITCH)
+    option(OPENRAC_SWITCH_VULKAN_FALLBACK "Allow OpenGL fallback in the experimental Vulkan build" OFF)
+    target_compile_definitions(openrac_platform PRIVATE
+      OPENRAC_SWITCH_VULKAN_FALLBACK=$<BOOL:${OPENRAC_SWITCH_VULKAN_FALLBACK}>)
+  endif()
+endif()
+# Switch deko3d test builds: the GL calls on deko3d (renderer/dkgl/dkgl.h), with no fallback.
+if(SWITCH AND OPENRAC_SWITCH_DEKO3D)
+  # Bring-up: deko3d's debug library checks every command and reports through dkgl's callback
+  # (dkgl-driver.log). Turn off for performance measurements.
+  option(OPENRAC_DKGL_DEBUG "Link deko3d's checking debug library (deko3dd)" ON)
+  find_library(OPENRAC_DKGL_DEKO3D_RELEASE_LIBRARY NAMES deko3d REQUIRED)
+  find_library(OPENRAC_DKGL_DEKO3D_DEBUG_LIBRARY NAMES deko3dd REQUIRED)
+  if(OPENRAC_DKGL_DEBUG)
+    set(OPENRAC_DKGL_DEKO3D_LIBRARY "${OPENRAC_DKGL_DEKO3D_DEBUG_LIBRARY}")
+  else()
+    set(OPENRAC_DKGL_DEKO3D_LIBRARY "${OPENRAC_DKGL_DEKO3D_RELEASE_LIBRARY}")
+  endif()
+  find_path(OPENRAC_DKGL_DEKO3D_INCLUDE deko3d.h REQUIRED)
+  add_library(openrac_renderer_dkgl STATIC renderer/dkgl/dkgl_core.cpp renderer/dkgl/dkgl_gl.cpp)
+  target_include_directories(openrac_renderer_dkgl PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}"
+    PRIVATE "${OPENRAC_DKGL_DEKO3D_INCLUDE}")
+  target_link_libraries(openrac_renderer_dkgl PUBLIC openrac_common "${OPENRAC_DKGL_DEKO3D_LIBRARY}")
+  openrac_warnings(openrac_renderer_dkgl)
+  target_compile_options(openrac_renderer_dkgl PRIVATE -Wno-missing-field-initializers)
+  target_link_libraries(openrac_platform PRIVATE openrac_renderer_dkgl)
+  target_compile_definitions(openrac_platform PRIVATE OPENRAC_DKGL=1)
 endif()
 # macOS: the menu bar's name and menus (platform/macos_app.mm).
 if(APPLE)
@@ -271,6 +312,10 @@ add_library(openrac_scene_renderer STATIC
   scene/level_renderer.cpp
   scene/motion.cpp
 )
+if(SWITCH AND OPENRAC_SWITCH_DEKO3D)
+  target_sources(openrac_scene_renderer PRIVATE scene/dkgl_selftest.cpp)
+  target_compile_definitions(openrac_scene_renderer PRIVATE OPENRAC_DKGL_SELFTEST=1)
+endif()
 openrac_embed_shaders(openrac_scene_renderer scene openrac::scene
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.vert"
   "${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/mesh.frag"
@@ -573,3 +618,12 @@ endif()
 openrac_add_test(bake_liquids SOURCES enhanced/tests/bake_liquids_test.cpp LIBS openrac_probe_scene)
 
 include(Fsr3)
+
+if(SWITCH AND OPENRAC_SWITCH_VULKAN)
+  add_executable(openrac-switch-vulkan-probe platform/switch/vulkan_probe.cpp)
+  target_link_libraries(openrac-switch-vulkan-probe PRIVATE openrac_platform openrac_renderer)
+  set(probe_nacp "${CMAKE_CURRENT_BINARY_DIR}/openrac-switch-vulkan-probe.nacp")
+  nx_generate_nacp(OUTPUT "${probe_nacp}" NAME "OpenRAC Vulkan hardware test"
+    AUTHOR "OpenRAC contributors" VERSION "${OPENRAC_NX_VERSION}")
+  nx_create_nro(openrac-switch-vulkan-probe NACP "${probe_nacp}")
+endif()

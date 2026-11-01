@@ -533,8 +533,9 @@ Slice ring_copy(const void* data, VkDeviceSize size) {
 // ---- Command buffers and the order of things ----
 
 VkCommandBuffer upload_cmd() {
+    Frame& f = frame();  // first: reclaiming the slot begins a new recording
     g->upload_used = true;
-    return frame().upload;
+    return f.upload;
 }
 
 void count_where(std::string_view event) {
@@ -576,6 +577,7 @@ void end_rendering(PassEnd why) {
 }
 
 VkCommandBuffer cmd_for(Image* image, bool force_main) {
+    Frame& f = frame();  // first: `touched` is compared with the recording the slot begins
     if (!force_main && image != nullptr && image->touched != g->recording) {
         return upload_cmd();
     }
@@ -583,7 +585,7 @@ VkCommandBuffer cmd_for(Image* image, bool force_main) {
     if (image != nullptr) {
         image->touched = g->recording;
     }
-    return frame().main;
+    return f.main;
 }
 
 void barrier(VkCommandBuffer cmd, Image& image, VkImageLayout to) {
@@ -841,12 +843,28 @@ void submit(VkSemaphore wait_semaphore, VkSemaphore signal, bool wait, VkCommand
     }
 
     const std::uint32_t count = present != VK_NULL_HANDLE ? 2 : 1;
-    vkResetFences(g->device, 1, &f.fence);
-    check(vkQueueSubmit(g->queue, count, batches.data(), f.fence), "a submit");
+    const VkResult reset = vkResetFences(g->device, 1, &f.fence);
+    if (!check(reset,"a frame fence reset")) {
+        g->presentation_error = "Vulkan frame fence reset failed (" + std::to_string(int(reset)) + ")";
+        f.submitted = false;
+        return;
+    }
+    const VkResult submitted = vkQueueSubmit(g->queue, count, batches.data(), f.fence);
+    if (!check(submitted,"a submit")) {
+        // A rejected submission never signals this fence or its present semaphore.
+        // Do not wait for either, and do not retire into another frame slot.
+        g->presentation_error = "Vulkan queue submission failed (" + std::to_string(int(submitted)) + ")";
+        f.submitted = false;
+        return;
+    }
     ++g->submission.submits;
     f.submitted = true;
     if (wait) {
-        vkWaitForFences(g->device, 1, &f.fence, VK_TRUE, UINT64_MAX);
+        const VkResult completed = vkWaitForFences(g->device, 1, &f.fence, VK_TRUE, UINT64_MAX);
+        if (!check(completed,"a frame fence wait")) {
+            g->presentation_error = "Vulkan frame completion failed (" + std::to_string(int(completed)) + ")";
+            return;
+        }
         timing_results(f);
         vkResetCommandPool(g->device, f.pool, 0);
         begin_buffers();

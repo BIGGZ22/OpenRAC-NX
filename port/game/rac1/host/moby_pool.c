@@ -2,8 +2,9 @@
 /* Copyright (c) 2026 the OpenRAC contributors */
 
 /*
- * Ratchet & Clank: more room for spawned mobys than on a PS2. A documented difference
- * (differences.json, "bigger-moby-pool"), not a fix the player switches back.
+ * Ratchet & Clank: more room for spawned mobys than on a PS2. A fix the player can switch back
+ * (differences.json, "bigger-moby-pool", fix_bigger_moby_pool): off, every level keeps the disc's
+ * spare count and the target list below runs unbounded, as on a console.
  *
  * The level loader LoadLevelGameplay (func_L00_002422D8; the US disc's FUN_L00_00241940) sizes the
  * level's moby array from its gameplay file: the header's moby section (header +0x44) gives the
@@ -64,6 +65,15 @@ static int heap_full(int level) {
 /* Where the running loader decompresses its header; 0 while no loader runs. */
 static gaddr g_header;
 
+/* fix_bigger_moby_pool: the bigger pool and the bounded target list, or the console's (off). */
+static int bigger_pool(void) {
+    static const unsigned char* fix;
+    if (!fix) {
+        fix = openrac_game_fix("fix_bigger_moby_pool");
+    }
+    return *fix != 0;
+}
+
 /* The gameplay header decompressed to `to`, while a loader that named it runs: its spare count raised
  * to SPARE (once a run; a level that ships more keeps its own, and so does one without room). */
 void rac1_wad_decompressed(gaddr to) {
@@ -72,6 +82,10 @@ void rac1_wad_decompressed(gaddr to) {
         return;
     }
     g_header = 0;
+    /* Switched off: the disc's count, as on a console. */
+    if (!bigger_pool()) {
+        return;
+    }
     /* Rilgar, Blarg Station and Quartu: 192 KiB more would run past the heap's top. */
     if (heap_full(GREF(int, OPENRAC_DATA(CURRENT_LEVEL)))) {
         return;
@@ -104,8 +118,9 @@ gaddr func_L00_002422D8(int skip_read) {
  * the same run reads. Placed mobys alone come close on some levels (803 of classes with the bit on
  * Rilgar, kept down by the distance test), and a bigger pool lets spawned enemies add to them.
  *
- * Here the list holds at most 511, the rest left out of it (and so out of what targeting looks
- * through that tick) but still run; one warning in the log says it happened. Under 512 it is the
+ * Here (fix_bigger_moby_pool on) the list holds at most 511, the rest left out of it (and so out
+ * of what targeting looks through that tick) but still run; one warning in the log says it
+ * happened. Under 512 it is the
  * decompilation's C as it is (rac1-decomp nonmatching/functional/func_0020E6B8.c, fcheck SAME;
  * the group pass advances the list for mode & 0x1000, as retail does); its own copy stays as
  * func_0020E6B8__game, unused (libraries.tsv, wrap).
@@ -157,8 +172,9 @@ static gaddr target_add(gaddr tgt, int idx, unsigned mode) {
     if (!(mode & 0x1000)) {
         return tgt;
     }
-    /* Two bytes an index: room while fewer than TARGETS_MAX are kept. */
-    if (tgt < TARGET_LIST + TARGETS_MAX * 2u) {
+    /* Two bytes an index: room while fewer than TARGETS_MAX are kept. Switched off, nothing bounds
+     * it, as on a console (past 511 it runs into the group flags and the next table). */
+    if (!bigger_pool() || tgt < TARGET_LIST + TARGETS_MAX * 2u) {
         return tgt + 2;
     }
     /* One warning a session is enough for a report. */

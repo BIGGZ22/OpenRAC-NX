@@ -193,6 +193,25 @@ class Translate(unittest.TestCase):
         """})
         self.assertEqual(out, ["30", "2.500", "6", "15"])
 
+    def test_a_local_left_unset_starts_at_zero(self):
+        # Reading a local before any store is undefined in the host's C, and Clang -O2 removes the
+        # code that does (replenish_hero_drones passed one to a call, and the loop that made the
+        # drones was dropped). The console read whatever its register held; zero is defined.
+        # Records and arrays live in the game's stack frame, where an unset read is a plain load.
+        out = self.run_program({"a.c": """
+            static int pick(int q, int hit, int miss) { if (q) return hit; return miss; }
+            int test_main(void) {
+                int q;
+                float f;
+                test_print(pick(q, 1, 2));
+                test_print((int)f);
+                return 0;
+            }
+        """})
+        self.assertEqual(out, ["2", "0"])
+        self.assertIn("int q = 0;", self.last_generated)
+        self.assertIn("float f = 0;", self.last_generated)
+
     def test_a_local_vector_or_matrix_starts_on_a_quadword(self):
         out = self.run_program({"a.c": """
             typedef float Vec[4] __attribute__((aligned(16)));

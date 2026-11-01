@@ -430,6 +430,7 @@ bool gpu_resident_ready() {
 renderer::GpuInstanceBatch gpu_resident_batch(
     unsigned name, const Buffer& source, unsigned count, const renderer::GpuCullView& view
 ) {
+    prepare_frame();  // g->recording must be the slot's current one
     const auto& groups = g->gpu.resident.groups;
     const auto found = groups.find(name);
 
@@ -461,6 +462,7 @@ renderer::GpuInstanceBatch gpu_make_batch(
     std::span<const renderer::GpuCullBounds> bounds,
     const renderer::GpuCullView& view
 ) {
+    prepare_frame();  // g->recording must be the slot's current one
     if (!gpu_driven_active() || bounds.empty()) {
         return {};
     }
@@ -583,6 +585,7 @@ void gpu_release_resident() {
 }
 
 bool gpu_submit_draw(renderer::GpuInstanceBatch batch, unsigned first, unsigned count) {
+    prepare_frame();  // g->recording must be the slot's current one
     if (!batch || batch.recording != g->recording || batch.page >= frame().gpu.used) {
         return false;
     }

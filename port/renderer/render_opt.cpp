@@ -21,6 +21,14 @@ namespace {
 // The word of OPENRAC_RENDER_OPT_OFF that switches every entry off.
 constexpr std::string_view kAll = "all";
 
+// Off on Switch: its clear-then-blit into the screen's image showed as a black strip flickering
+// at the right edge with NVK (hardware test 2026-10-28); the two-step copy does not.
+#if defined(__SWITCH__)
+constexpr bool kPresentSingleCopyDefault = false;
+#else
+constexpr bool kPresentSingleCopyDefault = true;
+#endif
+
 // Every optimisation, in the order of Opt. The descriptions are the short form of
 // docs/port/RENDER_PERF.md's sections, which say more.
 // clang-format off: one entry per row: its names, then its default and tolerance.
@@ -57,7 +65,7 @@ constexpr std::array<Entry, kOptCount> kEntries = {{
      false, Tolerance{}},
     {Opt::PresentSingleCopy, "present-single-copy",
      "the picture's copy into the window and the window's into the screen become one blit",
-     true, Tolerance{}},
+     kPresentSingleCopyDefault, Tolerance{}},
     {Opt::VkTightSync, "vk-tight-sync",
      "Vulkan barriers name the stages they order, and only the copy to the screen waits for it",
      true, Tolerance{}},

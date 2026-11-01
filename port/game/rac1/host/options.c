@@ -92,6 +92,8 @@ void rac1_options_frame(void) {
     /* A language the console has no code for is not remembered. */
     if (language_set && language > 0) {
         openrac_game_set_option("game_language", language);
+        /* Upstream #126: InitOnce after Quit Game must see the player's choice. */
+        openrac_game_language = language;
     }
     /* Before the sound's start the page holds the game's defaults, not the player's. */
     if (sound_put) {

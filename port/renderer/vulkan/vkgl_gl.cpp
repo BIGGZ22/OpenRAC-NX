@@ -473,6 +473,7 @@ void VKGL tex_image_2d(
         fail(kGlInvalidEnum);
         return;
     }
+    prepare_frame();  // `touched` below is compared with the current recording
     if (level == 0) {
         Image* old = t->image.get();
         const bool same =

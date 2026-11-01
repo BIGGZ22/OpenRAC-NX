@@ -1,0 +1,7 @@
+# Live Switch game log location fix, 2026-11-01
+
+main.cpp now writes live <program>.log to sdmc:/switch/openrac beside env/startup/overlay files,independentofOPENRAC_TEST_LOGS. Archivebeginreceivessamepath. Existingloggerflusheseachline,rotatesprevioussessionsto.1-.5. Headerprintsactualpath. Upgrade:ifrootlogabsentcopyolddata/logfirst,allowingpreviousuncleanrunrecoverybeforeopeningnewlog;oldfilespreserved. Otherplatformpathsanddata/save/crashdirectoriesunchanged. Launcherwithoutgameinitdoesnotstartanewgame_session,soheadertimestampremainstheauthority.
+
+Windowsarchivefixtureupdatedtorootlivepath,PASScleanrunarchive,appendboundaries,crashrecovery,latest,pruning. FullSwitchbuildscompilemain/newpath;testonlypathmigrationnotexecutedonrealSDyet. NoextraSDcopyeachframe;oneprimaryfilewritten. Olddata/logmaystillbefoundandisstaleafterupgrade,tellusernewrootpath.
+
+PreviousNRO/ELF/manifestsbackedupdiagnostics/2026-11-01-before-log-location-build/. Verifylog-location checksartifactcopies,ELFIDs,strings,unchangedsource/stagedshaderpacks,hardware_testedfalse. No shaderregeneration/commit/push. Existingtimingcandidate53retained. Rootenvunchangedspeedcheck,externalclockmanagerownership.

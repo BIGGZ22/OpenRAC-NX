@@ -16,6 +16,7 @@
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <map>
 #include <memory>
 #include <optional>
 #include <span>
@@ -54,6 +55,9 @@ namespace openrac::frontend {
 // (between), and the last tick's camera and moby matrices to move them from.
 struct Kept {
     int level = -3;  // the level the mobys belong to: another one starts over
+    // The world the tick drew, as world_to_draw gives it: -2 the flight between planets, whose
+    // geometry `level` holds as the extracted flight world's number (98), never as -2.
+    int world = -3;
     host::GameState state, prev_state;
     bool has_state = false, has_prev_state = false;
     std::vector<scene::Instance> live;
@@ -177,6 +181,14 @@ struct State {
     std::vector<renderer::ImageUpload> images;
     // The camera the game's world renderers drew with this frame (world_drawn), if they ran.
     std::optional<host::GameState> world_camera;
+    // The last camera a frame drew its world from that usable_camera and usable_view accepted
+    // (scene_frame.cpp's set_camera), drawn again in place of one they refuse; how many frames in
+    // a row were refused, and how many runs of them were logged.
+    std::optional<renderer::Camera> good_camera;
+    std::uint64_t refused_camera_frames = 0;
+    int refused_camera_logs = 0;
+    // That world was drawn under a menu with its own mobys (world_under_menu): world_camera's
+    // mobys are the frame's.
     // Mobys drawn this frame with a camera of their own (mobys_drawn): address, that camera.
     std::vector<std::pair<std::uint32_t, host::GameState>> moby_cameras;
     // The world effect quads the game drew since the last frame (effect_quad).
@@ -281,16 +293,76 @@ struct Pacing {
     bool interval_stale = true;
     double cost = 0.004;                      // seconds
     std::chrono::duration<double> late{0.0};  // how long after its time the tick came (set_tick)
+    std::chrono::duration<double> behind{0.0};  // the same, without vsync's 100 ms cut-off (set_tick)
+    // How long the display has been taking per frame: the swaps' returns, one from the next (each
+    // at most 250 ms, so a load does not count), smoothed. Unlike `cost` it holds the GPU's time
+    // when the GPU is the slower (dkgl's swap waits on the frame before). For
+    // OPENRAC_BETWEEN_PRESENT_COST; 0 until two swaps were seen.
+    double present_period = 0.0;  // seconds
+    std::chrono::steady_clock::time_point last_present{};
     float last_alpha = -1.0f;                 // how far between ticks the last frame was drawn
     std::chrono::steady_clock::time_point due{};  // when the frame cap lets the next frame start
     // The kept tick has not been drawn yet (the cap held its own frame back): the next frame drawn
     // is its first.
     bool first_pending = false;
+    // A frame between ticks was drawn since the last tick's own frame (tick_frame_tolerance).
+    bool between_since_tick = false;
 };
 
 // When frames reach the display, for the window's whole life. Only the thread that opened the
 // window touches it.
 extern Pacing pacing;
+
+// OPENRAC_PACING_COUNTS=N (30..3600 ticks a line): what the presents of each N ticks were. Window
+// thread only (set_tick, frame, between).
+struct PacingCounts {
+    std::uint64_t ticks = 0, tick_frames = 0, left_out = 0, between = 0, behind = 0, far_behind = 0;
+    // Tick frames the frame cap held back (draw_tick_frame), and of those, the ones between() drew.
+    std::uint64_t deferred = 0, deferred_drawn = 0;
+    // Of the held-back ones never drawn, by why (between): the next tick due before the cap let it
+    // start, the render thread busy past the next tick, too late to finish before the next tick,
+    // and (OPENRAC_TICK_FRAME_PACING_REFERENCE=1 only) declined by OPENRAC_NO_BETWEEN_WHEN_BEHIND.
+    std::uint64_t deferred_lost_next_tick = 0, deferred_lost_worker = 0, deferred_lost_late = 0,
+                  deferred_lost_behind = 0;
+    // Tick frames drawn at once that the frame cap's 1 ms would have held back (tick_frame_due).
+    std::uint64_t tolerance_admitted = 0;
+    // Frames between ticks the opt-in experiments declined (OPENRAC_BETWEEN_PRESENT_COST,
+    // OPENRAC_NO_BETWEEN_WHEN_BEHIND).
+    std::uint64_t declined_present_cost = 0, declined_behind = 0;
+    // Ticks over a tick late whose frame was still drawn, by why (leave_late_frame): three left
+    // out in a row already, the tick's 2D list uploads an image, or no camera / first frames.
+    std::uint64_t late_kept_limit = 0, late_kept_image = 0, late_kept_other = 0;
+    // Of the ticks kept for an image: those whose 2D path, decoded tag by tag (image_sends.h), sends
+    // none (the qword reading's false match), and those it could not decode cleanly. Late ticks
+    // left out although the qword reading saw an image (OPENRAC_LATE_IMAGE_REPEAT_SKIP).
+    std::uint64_t late_image_none = 0, late_image_unread = 0, left_out_repeat = 0;
+    // The unclean ones by their first problem (image_sends::Problem), and under
+    // OPENRAC_LATE_IMAGE_REPEAT_SKIP each late image tick's verdict (frame.cpp, RepeatVerdict:
+    // repeat, unread, incomplete, read-back, local copy, offscreen, no reference, different).
+    std::array<std::uint64_t, 8> unread_by{};
+    std::array<std::uint64_t, 8> repeat_verdicts{};
+    std::uint64_t repeat_with_dropped = 0;  // repeats whose paths had tags the renderer drops too
+    // For "different sends" (OPENRAC_LATE_IMAGE_REPEAT_SKIP): where the tick's transfers first part
+    // from the last drawn tick's (frame.cpp, note_difference): their number, the place (block,
+    // width, format, rectangle) of one, only the bytes of one at the same place, and of those, the
+    // ones whose transfers are the same set in another order.
+    std::uint64_t diff_count = 0, diff_place = 0, diff_bytes = 0, diff_order_only = 0;
+    // Each destination's transfers in the late image ticks decoded: {block, format, width, height,
+    // its occurrence in the tick} -> {seen, bytes changed since the last decoded tick, distinct
+    // contents seen this run (at most 8 tracked)}. At most 48 destinations.
+    struct DestinationChanges {
+        std::uint32_t seen = 0, changed = 0, distinct = 0;
+    };
+    std::map<std::array<std::uint32_t, 5>, DestinationChanges> destination_changes;
+    // What those image sends were: {GS destination block (BITBLTBUF DBP), its pixel format (DPSM),
+    // width, height (TRXREG)} -> transfers, for the late ticks kept because of them (at most 64).
+    std::map<std::array<std::uint32_t, 4>, std::uint32_t> image_sends;
+};
+extern PacingCounts pacing_counts;
+void count_tick_frame(bool left_out);
+// The kept tick's own frame is being drawn: its 2D path's image transfers are what the renderer now
+// holds (OPENRAC_LATE_IMAGE_REPEAT_SKIP compares later late ticks with them). frame.cpp.
+void image_sends_drawn();
 
 // Where a scripted run is (port/tools/regress): the game mode as frame() last read it, and the
 // window frame at which the player got control (-1 before). Control is a level's game mode 0 (play)
@@ -396,6 +468,15 @@ void effect_textures();
 
 // Whether the frame cap lets a frame start now (frontend/interpolation.cpp).
 bool frame_due(std::chrono::steady_clock::time_point now);
+// Whether the frame cap lets the tick's own frame start now (pacing.h, tick_frame_may_start; the
+// 1 ms of frame_due under OPENRAC_TICK_FRAME_PACING_REFERENCE=1).
+bool tick_frame_due(std::chrono::steady_clock::time_point now);
+// OPENRAC_TICK_FRAME_PACING_REFERENCE=1: tick frames paced as before session 55 (interpolation.cpp).
+bool tick_frame_pacing_reference_on();
+// OPENRAC_PACING_RING=N: notes a tick frame's cap decision in the per-frame ring (interpolation.cpp),
+// written to the log once, at close (dump_pacing_ring). Nothing when off.
+void ring_tick_frame(std::chrono::steady_clock::time_point now, bool drawn);
+void dump_pacing_ring();
 
 // Records an owned scene on the exclusive graphics owner thread; no game RAM is accessed.
 // The caller pins `owner` and its static level until this function and its callbacks return.

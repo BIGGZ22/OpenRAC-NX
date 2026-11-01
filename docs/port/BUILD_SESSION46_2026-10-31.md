@@ -1,0 +1,11 @@
+# Session46 diagnostics build review — 2026-10-31
+
+Read full CLAUDE_REVIEW_SESSION46_POOL_UPLOADS_2026-10-30.md; reviewed pool stats publication before completion, m_call protection of aggregates, helper timestamps, bounded destination tracking and first_difference diagnostics. No runtime optimization/default changed by this pass. Vendor/cap fixes and conservative skip equality preserved. Pool remains off unless explicitly selected.
+
+Interpretation cautions: slower microseconds/piece would support contention but does not prove malloc-lock causality; caller elapsed includes scheduling overhead while helper busy is measured per body. New per-piece timing/atomic statistics and per-tick diagnostic map/vector allocations add measurement overhead. Destination summaries omit corner/dbw from aggregation key and persist across levels; use detailed full-transfer comparison as authority, not aggregated key as texture identity. order_only is a diagnostic approximation and not permission to reorder transfers. Do not treat author estimates of atomic overhead as measured NX values.
+
+Windows direct focused tests passed: moby_passes,image_sends,env,tick_phases(default and30),parallel(default plus forced0/1/2/3, each stats off/30). New concurrent/nested/many-call tests included. Test-only logging/crash seams used, so log output text itself and sanitizer claims not independently verified. No sound rerun required: source unchanged. Full host suite remains blocked by earlier unrelated system_info.cpp issue.
+
+Prior artifacts preserved under build/deko3d-test/diagnostics/2026-10-31-before-session46-build/. Full Switch builds compile actual changed translation units. Known image_sends memcpy compiler warning remains; an additional interpolation diagnostic local shadows n. No shader regeneration or commit/push. Build verification and IDs are in manifests after verify-session46.ps1 succeeds. Hardware_testedfalse for new candidate.
+
+Two required hardware runs, same new performance NRO: session46-tests/01-serial-stats then02-one-helper-stats. Keep same route/camera, stock clocks640x480original distancescap60. Report clocks actually selected and pause/suspend. Archive latestlogs after each run. The helper may run worse; this is intentional measurement, not recommended play default. Root release env.txt is a copy of01-serial-stats.

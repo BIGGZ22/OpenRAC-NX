@@ -97,6 +97,14 @@ extern int (*openrac_game_skip_buttons)(void);
  * boot.c): the game's mode word, where the hero is and where the camera is. Each returns 0 when it
  * has no answer now (no level loaded). */
 extern int (*openrac_game_mode)(uint32_t* mode);
+
+/* The game's own update rate, when a game installs it and can tell: its ticks a second (50 or 60) and
+ * the seconds one of its ticks stands for, or 0 when it cannot tell now. rac1/pal: the time base its
+ * timing constants are in (D_0015EE6C, 1/60 s in its 60 Hz mode, 1/50 s in its 50 Hz mode, set with
+ * the others by func_002157C0 / func_L00_002623D0 when a level starts). The port ticks at that rate
+ * (program/vsync.cpp, tick_rate): a game whose constants are for 50 updates a second ticked 60 times
+ * a second runs 1.2 times too fast. */
+extern int (*openrac_game_tick_rate)(float* seconds_per_tick);
 extern int (*openrac_game_hero_position)(float xyz[3]);
 extern int (*openrac_game_camera_position)(float xyz[3]);
 

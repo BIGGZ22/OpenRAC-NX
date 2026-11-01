@@ -433,13 +433,18 @@ std::uint32_t add_box_model(LevelData& level) {
     return static_cast<std::uint32_t>(level.models.size() - 1);
 }
 
-std::vector<renderer::Rgba8Image> load_sky_textures(const fs::path& dir) {
+std::vector<renderer::Rgba8Image> load_sky_textures(const fs::path& dir, const fs::path& overrides) {
     std::vector<renderer::Rgba8Image> out;
+    LevelData level;
+    level.dir = dir;
+    level.overrides = overrides;
     for (int i = 0; i < 64; ++i) {
-        const fs::path path = dir / "textures" / std::format("sky_{:04d}.png", i);
-        if (!fs::exists(path)) {
+        const fs::path original = dir / "textures" / std::format("sky_{:04d}.png", i);
+        if (!fs::exists(original)) {
             break;
         }
+        // The sprites' corners take the whole picture (0..1), so a replacement may be any size.
+        const fs::path path = override_of(original, level, nullptr);
         int w = 0;
         int h = 0;
         int channels = 0;

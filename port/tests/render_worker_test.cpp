@@ -111,6 +111,23 @@ void test_inherits_rounding_mode() {
 }
 
 // Runs every worker contract check; unexpected startup exceptions fail the test program.
+// A worker asked to move off the creating thread's core still runs and finishes its jobs; only the
+// Switch acts on the placement (elsewhere it is the default worker).
+void test_placement_runs_jobs() {
+    RenderWorker::Placement placement;
+    placement.move = true;
+    placement.core = -1;
+    RenderWorker worker(placement);
+    int runs = 0;
+    std::string error;
+    for (int i = 0; i < 3; ++i) {
+        CHECK(worker.submit([&runs] { ++runs; }, error));
+        CHECK(worker.finish(error));
+    }
+    CHECK(runs == 3);
+    CHECK(error.empty());
+}
+
 bool run_tests() {
     // Startup and allocation errors must produce a failing test result.
     try {
@@ -120,6 +137,7 @@ bool run_tests() {
         test_worker_failure_stops_submission();
         test_shutdown_finishes_the_last_job();
         test_inherits_rounding_mode();
+        test_placement_runs_jobs();
         return true;
     } catch (const std::exception& failure) {
         std::fprintf(stderr, "render_worker: %s\n", failure.what());

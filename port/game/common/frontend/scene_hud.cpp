@@ -2,7 +2,9 @@
 // Copyright (c) 2026 the OpenRAC contributors
 //
 // Binds captured HUD data and offscreen menu objects without accessing live game memory.
+#include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -12,6 +14,7 @@
 #include "game/common/frontend/scene_frame_internal.h"
 #include "renderer/direct.h"
 #include "renderer/gl.h"
+#include "common/log.h"
 
 namespace openrac::frontend {
 namespace {
@@ -31,6 +34,18 @@ void draw_target_mobys(State& owner, const Kept& scene, const MobyTarget& target
     const std::uint32_t first = static_cast<std::uint32_t>(target.marker);
     // The HUD marker packs the first game address below an eight-bit instance count.
     const std::uint32_t count = static_cast<std::uint32_t>(target.marker >> 32) & 0xFFu;
+    // OPENRAC_DK_PANEL_TRACE=1: the first 8 panel requests; N > 1: the first N/4 (at least 8, at most
+    // 128), matching the larger draw budget dkgl takes from the same number.
+    static const unsigned request_budget=[] {
+        const auto* v=std::getenv("OPENRAC_DK_PANEL_TRACE");
+        const int n=v ? std::atoi(v) : 0;
+        return n<=0 ? 0u : n==1 ? 8u : unsigned(std::clamp(n/4,8,128));
+    }();
+    static unsigned traced=0;
+    const bool trace=traced<request_budget;
+    if(trace) ++traced;
+    if(trace) log::info("panel request: tick {} first {:#x} count {} framebuffer {} extent {} centre {} {} clear-depth {}",
+        scene.frame,first,count,target.framebuffer,target.size,target.centre_x,target.centre_y,target.clear_depth);
     std::vector<scene::Instance> instances;
     const host::GameState* camera = nullptr;
 
@@ -38,6 +53,9 @@ void draw_target_mobys(State& owner, const Kept& scene, const MobyTarget& target
     for (const Kept::TargetMoby& moby : scene.target_mobys) {
         // Other markers draw different ranges of the captured menu objects.
         if (moby.address >= first && moby.address < first + count * 0x100u) {
+            if(trace) log::info("panel actor: address {:#x} model {} palette {} lights {} blend {} camera focal {} {}",
+                moby.address,moby.instance.model,moby.instance.palette,moby.instance.lights,moby.instance.blend,
+                moby.camera.focal_x,moby.camera.focal_y);
             instances.push_back(moby.instance);
             camera = &moby.camera;
         }
@@ -87,7 +105,7 @@ void set_packets(SceneFrame& frame) {
     auto& input = frame.input;
     const auto& graphics = frame.graphics;
     const bool enhanced = enhanced_graphics_available() && graphics.enhanced_graphics;
-    const bool has_camera = scene.has_camera;
+    const bool has_camera = frame.has_camera;
     const auto started = frame.output.started;
     input.gtao_settings = graphics.gtao_settings;
     // Honor the user's GTAO setting alongside probe GI and modern shadows.
@@ -131,7 +149,7 @@ void retain_background(SceneFrame& frame) {
     const Kept& scene = frame.scene;
     auto& input = frame.input;
     const bool first = frame.output.first;
-    const bool has_camera = scene.has_camera;
+    const bool has_camera = frame.has_camera;
     const int width = frame.output.width;
     const int height = frame.output.height;
     // A tick that draws no world and has no picture of its own to put under its 2D (the page

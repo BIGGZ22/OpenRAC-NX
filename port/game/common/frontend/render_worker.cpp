@@ -9,6 +9,10 @@
 #include <utility>
 
 #include "common/crash.h"
+#include "common/log.h"
+#ifdef __SWITCH__
+#include <switch.h>
+#endif
 
 namespace openrac::frontend {
 
@@ -26,9 +30,69 @@ std::fenv_t capture_environment() {
     return environment;
 }
 
+// The core a worker with `placement` goes to, chosen on the creating thread: -1 to stay.
+int choose_core(const RenderWorker::Placement& placement) {
+    if (!placement.move) {
+        return -1;
+    }
+#ifdef __SWITCH__
+    // The cores this process may run on, and the creating thread's own.
+    u64 allowed = 0;
+    if (R_FAILED(svcGetInfo(&allowed, InfoType_CoreMask, CUR_PROCESS_HANDLE, 0))) {
+        log::warn("render worker: the process's cores are unknown; the worker stays where it starts");
+        return -1;
+    }
+    const int creator = static_cast<int>(svcGetCurrentProcessorNumber());
+    int core = placement.core;
+    if (core < 0) {
+        for (int c = 0; c < 32; ++c) {
+            if (((allowed >> c) & 1) != 0 && c != creator) {
+                core = c;
+                break;
+            }
+        }
+    }
+    if (core < 0 || core >= 32 || ((allowed >> core) & 1) == 0) {
+        log::warn(
+            "render worker: no core to move to (asked {}, allowed mask {:#x}, game thread on {}); "
+            "it stays where it starts",
+            placement.core, allowed, creator
+        );
+        return -1;
+    }
+    log::info(
+        "render worker: moving to core {} (allowed mask {:#x}, game thread on core {})",
+        core, allowed, creator
+    );
+    return core;
+#else
+    return -1;
+#endif
+}
+
+// Moves the calling (worker) thread to `core`; a failure leaves it where it is.
+void move_to_core(int core) {
+    if (core < 0) {
+        return;
+    }
+#ifdef __SWITCH__
+    const Result result = svcSetThreadCoreMask(CUR_THREAD_HANDLE, core, static_cast<u32>(1u << core));
+    if (R_FAILED(result)) {
+        log::warn("render worker: cannot move to core {} (result {:#x})", core, result);
+    } else {
+        log::info("render worker: running on core {}", svcGetCurrentProcessorNumber());
+    }
+#endif
+}
+
 }  // namespace
 
-RenderWorker::RenderWorker() : m_environment(capture_environment()), m_thread([this] { run(); }) {}
+RenderWorker::RenderWorker() : RenderWorker(Placement{}) {}
+
+RenderWorker::RenderWorker(Placement placement)
+    : m_environment(capture_environment()),
+      m_core(choose_core(placement)),
+      m_thread([this] { run(); }) {}
 
 RenderWorker::~RenderWorker() {
     {
@@ -78,6 +142,8 @@ bool RenderWorker::ready_until(std::chrono::steady_clock::time_point deadline) {
 void RenderWorker::run() {
     // A render fault needs its own alternate signal stack on POSIX hosts.
     crash::prepare_thread();
+    // Off the game thread's core first, when asked (Placement).
+    move_to_core(m_core);
 
     // Destruction ends the loop after the final accepted snapshot has completed.
     for (;;) {

@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <functional>
 #include <optional>
 #include <string>
@@ -18,7 +19,7 @@
 #include <vector>
 #include <volk.h>
 
-#include <SDL3/SDL.h>
+#include "platform/sdl.h"
 
 #include "common/log.h"
 #include "common/stats.h"
@@ -225,7 +226,17 @@ bool make_swapchain() {
     }
     vkDeviceWaitIdle(g->device);
     VkSurfaceCapabilitiesKHR caps{};
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g->physical, g->surface, &caps);
+    const VkResult capabilities = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g->physical, g->surface, &caps);
+    if (capabilities != VK_SUCCESS) {
+        if (capabilities == VK_ERROR_SURFACE_LOST_KHR) g->surface_lost = true;
+        if (capabilities == VK_ERROR_DEVICE_LOST)
+            g->presentation_error = "Vulkan device lost while querying the display";
+        return false;
+    }
+    if (!(caps.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)) {
+        g->presentation_error = "Vulkan display images do not support the transfer-destination usage OpenRAC needs";
+        return false;
+    }
     std::uint32_t n = 0;
     vkGetPhysicalDeviceSurfaceFormatsKHR(g->physical, g->surface, &n, nullptr);
     std::vector<VkSurfaceFormatKHR> formats(n);
@@ -242,8 +253,8 @@ bool make_swapchain() {
             break;
         }
     }
-    int w = 0, h = 0;
-    SDL_GetWindowSizeInPixels(g->window, &w, &h);
+    int w = g->default_width, h = g->default_height;
+    window_size(w, h);
     VkExtent2D extent{
         static_cast<std::uint32_t>(std::max(w, 1)), static_cast<std::uint32_t>(std::max(h, 1))
     };
@@ -320,9 +331,61 @@ bool make_swapchain() {
     return true;
 }
 
+// OPENRAC_VK_COUNTERS=N (Switch test builds read it from env.txt): every N frames (120 for 1 or
+// less), the Vulkan commands and work a frame recorded on average, in the log. Independent of
+// the desktop debug tools, which the Switch build leaves out.
+static void log_counter_averages(const SubmissionCounters& now) {
+    static const int every = [] {
+        const char* v = std::getenv("OPENRAC_VK_COUNTERS");
+        if (v == nullptr) return 0;
+        const int n = std::atoi(v);
+        return n > 1 ? n : 120;
+    }();
+    if (every == 0) {
+        return;
+    }
+    static SubmissionCounters last{};
+    static bool started = false;
+    if (!started) {
+        last = now;
+        started = true;
+        return;
+    }
+    const std::uint64_t frames = now.frames_presented - last.frames_presented;
+    if (frames < static_cast<std::uint64_t>(every)) {
+        return;
+    }
+    const double n = static_cast<double>(frames);
+    const auto per = [&](std::uint64_t SubmissionCounters::* field) {
+        return static_cast<double>(now.*field - last.*field) / n;
+    };
+    const auto cmd = [&](Command kind) {
+        const auto k = static_cast<std::size_t>(kind);
+        return static_cast<double>(now.commands[k] - last.commands[k]) / n;
+    };
+    log::info(
+        "vk frame avg over {}: draws {:.0f}, pipeline binds {:.0f}, descriptor binds {:.0f}, "
+        "buffer binds {:.0f}, dynamic state {:.0f}, passes {:.1f}, barriers {:.1f} "
+        "(all-commands {:.1f}), copies {:.1f} (fullscreen {:.1f}), dispatches {:.1f}, "
+        "sets allocated {:.0f}, descriptor writes {:.0f}, ring {:.0f} KiB, texture uploads {:.0f} KiB, "
+        "attachment load {:.2f} MiB store {:.2f} MiB, submits {:.2f}; total pipelines {}, shader compiles {}",
+        frames, cmd(Command::Draw), cmd(Command::BindPipeline), cmd(Command::BindDescriptors),
+        cmd(Command::BindBuffers), cmd(Command::DynamicState), per(&SubmissionCounters::render_passes),
+        per(&SubmissionCounters::barriers), per(&SubmissionCounters::barriers_all_commands),
+        cmd(Command::Copy), per(&SubmissionCounters::fullscreen_copies), cmd(Command::Dispatch),
+        per(&SubmissionCounters::descriptor_sets_allocated), per(&SubmissionCounters::descriptor_writes),
+        per(&SubmissionCounters::ring_bytes) / 1024.0, per(&SubmissionCounters::texture_upload_bytes) / 1024.0,
+        per(&SubmissionCounters::attachment_load_bytes) / 1048576.0,
+        per(&SubmissionCounters::attachment_store_bytes) / 1048576.0, per(&SubmissionCounters::submits),
+        now.pipelines_created, now.shader_compiles
+    );
+    last = now;
+}
+
 void publish_counters() {
     ++g->submission.frames_presented;
     const SubmissionCounters& now = g->submission;
+    log_counter_averages(now);
 
     // Nobody is measuring: the next frame that is measured shows only its own part.
     if (!stats::enabled()) {
@@ -365,17 +428,33 @@ void publish_counters() {
     g->published = now;
 }
 
+// Selects the next slot without waiting: the game simulates its next tick while the GPU works.
 void advance() {
     g->frame = (g->frame + 1) % kFrames;
-    Frame& f = frame();
+    ++g->frame_count;
+    g->frame_pending = true;
+}
+
+// The selected slot's pools and memory stay untouched until its previous submission completed.
+void prepare_frame() {
+    if (g == nullptr || !g->frame_pending) {
+        return;
+    }
+    Frame& f = g->frames[static_cast<std::size_t>(g->frame)];
     if (f.submitted) {
         const stats::Scope wait("vulkan frame wait");
         const Clock::time_point start = Clock::now();
-        vkWaitForFences(g->device, 1, &f.fence, VK_TRUE, UINT64_MAX);
+        const VkResult waited = vkWaitForFences(g->device, 1, &f.fence, VK_TRUE, UINT64_MAX);
+        if (!check(waited, "a frame-slot fence wait")) {
+            g->presentation_error =
+                "Vulkan frame-slot wait failed (" + std::to_string(int(waited)) + ")";
+        }
         g->measures.wait_s += seconds_since(start);
         timing_results(f);
         f.submitted = false;
     }
+    // Cleared before the helpers below, which reach the slot through frame() themselves.
+    g->frame_pending = false;
     run_deferred(f);
     f.timings.clear();
     f.timestamp_used = 0;
@@ -387,7 +466,6 @@ void advance() {
     f.pool_at = 0;
     f.chunk_at = 0;
     f.chunk_used = 0;
-    ++g->frame_count;
     begin_buffers();
 
     // A copy that waited for a screen there was not (no window, or none shown): made now, so the
@@ -523,7 +601,7 @@ bool present_to_screen() {
     const Clock::time_point acquiring = Clock::now();
     std::optional<stats::Scope> step(std::in_place, "vulkan acquire");
     VkResult r = vkAcquireNextImageKHR(
-        g->device, g->swapchain, UINT64_MAX, f.acquired, VK_NULL_HANDLE, &index
+        g->device, g->swapchain, g->native_window ? 250'000'000ull : UINT64_MAX, f.acquired, VK_NULL_HANDLE, &index
     );
     g->acquire_wait_s = seconds_since(acquiring);
     step.reset();
@@ -532,13 +610,15 @@ bool present_to_screen() {
             return false;
         }
         r = vkAcquireNextImageKHR(
-            g->device, g->swapchain, UINT64_MAX, f.acquired, VK_NULL_HANDLE, &index
+            g->device, g->swapchain, g->native_window ? 250'000'000ull : UINT64_MAX, f.acquired, VK_NULL_HANDLE, &index
         );
     }
     if (r == VK_ERROR_SURFACE_LOST_KHR) {
         g->surface_lost = true;
     }
     if (r != VK_SUCCESS && r != VK_SUBOPTIMAL_KHR) {
+        if (r == VK_ERROR_DEVICE_LOST || r == VK_ERROR_OUT_OF_DEVICE_MEMORY || r == VK_ERROR_OUT_OF_HOST_MEMORY)
+            g->presentation_error = "Vulkan display image acquisition failed (" + std::to_string(int(r)) + ")";
         return false;
     }
     end_rendering(PassEnd::Present);
@@ -571,6 +651,7 @@ bool present_to_screen() {
     // which a driver may hold until the display or the GPU has room for another picture.
     step.emplace("vulkan submit");
     submit(f.acquired, g->rendered[index], false, own);
+    if (!g->presentation_error.empty()) return true;  // no wait on an unsignaled present semaphore
     step.emplace("vulkan queue present");
     VkPresentInfoKHR info{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     info.waitSemaphoreCount = 1;
@@ -590,6 +671,17 @@ bool present_to_screen() {
     }
 
     r = vkQueuePresentKHR(g->queue, &info);
+    if (r == VK_SUCCESS || r == VK_SUBOPTIMAL_KHR) {
+        ++g->submission.presents_accepted;
+    } else {
+        ++g->submission.presents_failed;
+        if (g->submission.presents_failed <= 4) {
+            log::warn("vulkan: queue presentation failed ({})", static_cast<int>(r));
+        }
+        if (r == VK_ERROR_DEVICE_LOST || r == VK_ERROR_OUT_OF_DEVICE_MEMORY || r == VK_ERROR_OUT_OF_HOST_MEMORY)
+            g->presentation_error = "Vulkan queue presentation failed (" + std::to_string(int(r)) + ")";
+    }
+    if (r == VK_ERROR_SURFACE_LOST_KHR) g->surface_lost = true;
 #if defined(__ANDROID__)
     // Android says "suboptimal" for every frame of a turned screen that the system turns for us.
     const bool stale = r == VK_ERROR_OUT_OF_DATE_KHR;

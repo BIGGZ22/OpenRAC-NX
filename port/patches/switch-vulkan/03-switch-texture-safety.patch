@@ -1,0 +1,41 @@
+diff --git a/port/renderer/vulkan/vkgl_device.cpp b/port/renderer/vulkan/vkgl_device.cpp
+index 9aac0b8..dcdd177 100644
+--- a/port/renderer/vulkan/vkgl_device.cpp
++++ b/port/renderer/vulkan/vkgl_device.cpp
+@@ -8,6 +8,7 @@
+ #include <algorithm>
+ #include <cstddef>
+ #include <cstdint>
++#include <cstdlib>
+ #include <cstring>
+ #include <filesystem>
+ #include <format>
+@@ -575,6 +576,15 @@ bool make_device(std::string& error) {
+     );
+     g->material_texture_capacity = limit > 32 ? std::min(1024u, limit - 32u) : 0;
+     g->bindless_supported = g->bindless_supported && g->material_texture_capacity >= 16;
++#if defined(__SWITCH__)
++    // NVK on the Tegra X1 (Maxwell) is still an opt-in driver. Non-uniformly indexed texture
++    // arrays (the bindless material path) produced missing and wrong textures there, while the
++    // per-draw descriptor path is the one the probes verified. OPENRAC_SWITCH_BINDLESS=1 in
++    // /switch/openrac/env.txt turns it back on for testing.
++    if (const char* v = std::getenv("OPENRAC_SWITCH_BINDLESS"); v == nullptr || std::strcmp(v, "1") != 0) {
++        g->bindless_supported = false;
++    }
++#endif
+     f11 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES};
+     f12 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES};
+     f12.shaderOutputViewportIndex = g->viewport_index_supported ? VK_TRUE : VK_FALSE;
+diff --git a/port/renderer/vulkan/vkgl_draw.cpp b/port/renderer/vulkan/vkgl_draw.cpp
+index 0f79ef0..6f1e8e9 100644
+--- a/port/renderer/vulkan/vkgl_draw.cpp
++++ b/port/renderer/vulkan/vkgl_draw.cpp
+@@ -504,7 +504,7 @@ void draw(
+             // per-vertex and index buffers can still use persistent storage.
+             const BufferRef r = gpu_page && attr.divisor
+                                     ? BufferRef{gpu_page->output.buffer, 0, gpu_page->output.size}
+-                                    : resolve(*b, attr.divisor == 0);
++                                    : resolve(*b, attr.divisor == 0 || b->storage);
+             const GLsizei stride =
+                 attr.stride != 0 ? attr.stride : attr.size * type_bytes(attr.type);
+             inputs[n] =

@@ -11,6 +11,11 @@
 #define RAC1_ADDR(a) a
 #define RAC1_LADDR(n, a) a
 
+/* The time base of the game's timing constants (D_0015EE6C: seconds a tick, 1/60 in the 60 Hz mode,
+ * 1/50 in the 50 Hz mode; func_002157C0), for the port's tick rate (boot.c, openrac_game_tick_rate).
+ * A version without it (NTSC: always 60 Hz) ticks at 60. */
+#define RAC1_TIME_BASE 0x0015EE6Cu
+
 /* gHeroPos (D_0013F4D0), for crash reports (boot.c); a version without it reports no position. */
 #define RAC1_HERO_POS 0x0013F4D0u
 

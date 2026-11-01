@@ -1158,8 +1158,17 @@ class Unit:
             if init is not None and (self._sign_extends(init) or self._wide_name(init) is not None):
                 return [pad + f"{self.declare(t, name)} = {self._wide_value(init, t)};"]
         text = self.declare(t, name)
+        kind = self.cls(t)
         if init is not None:
             text += f" = {self.initializer(init, t)}"
+        elif kind != "valist":  # va_start sets a va_list
+            # A local the source leaves unset starts at zero. Reading it unset is undefined in the
+            # host's C, and Clang drops the code that does: a branch on it (both arms one store,
+            # retail's FUN_L00_00269d20) went the other way and every spark took the collision
+            # arm; a loop passing it to a call (replenish_hero_drones' first spawn) was removed,
+            # the ammo spent and no drone made. The console read whatever a register held there;
+            # zero at least runs the code the source wrote.
+            text += " = {0}" if kind in ("rec", "arr") else " = 0"
         return [pad + text + ";"]
 
     def initializer(self, init: dict, t: ctype.Type) -> str:
@@ -2113,6 +2122,9 @@ class Unit:
             else:
                 fp = self.function_value(target)
         else:
+            direct = self._cast_exe_call(c, wide_ret)
+            if direct is not None:
+                return self.direct_call(direct, args, result_t)
             fp = self.rv(callee)
         # A call through a code address: the call site's own type.
         pt = self.resolve(self.ty(callee))
@@ -2132,6 +2144,34 @@ class Unit:
                 return defined
         values = [self.rv(a) for a in args]
         return f"GFN({ctype.fn_pointer(hostft)}, {fp})({', '.join(values)})"
+
+    def _cast_exe_call(self, callee: dict, wide_ret) -> str | None:
+        """The function a call through a cast of a plain executable function names (PAL's
+        `((s32 (*)(s32))func_001F98C0)(12)`), called directly as a call by name is; else None.
+        Through OPENRAC_CODE such a call found no level copy for an executable function the
+        catalogue places nowhere else, kept the executable's address, and ran the level's own
+        function there: the PAL flight to Quartu faded to black for 1.4M frames."""
+        if callee.get("kind") != "CStyleCastExpr" or wide_ret is not None or self.fn is None:
+            return None
+        inner = _strip_parens(_inner(callee)[0])
+        if inner.get("kind") == "ImplicitCastExpr" and inner.get("castKind") == "FunctionToPointerDecay":
+            inner = _strip_parens(_inner(inner)[0])
+        if inner.get("kind") != "DeclRefExpr" or inner["referencedDecl"].get("kind") != "FunctionDecl":
+            return None
+        sym = self._callee_symbol(inner)
+        if "__" in sym or sym in getattr(self.program, "splits", {}) or self._folded_places(sym):
+            return None
+        places = self.program.code_places(sym)
+        if not places or any(o >= 0 for o, _ in places):
+            return None
+        if not getattr(self.program, "relocate", None) or LEVEL_NAME.match(self.fn.code):
+            return None  # code_address forms no OPENRAC_CODE here
+        if self._level_hook(sym) is not None:
+            return None
+        f = self.program.lookup(self.unit, sym)
+        if f is None or not f.sig.prototyped or f.sig.variadic:
+            return None
+        return sym
 
     def _function_at(self, overlay: int, address: int) -> str | None:
         """The function a call through that place finds (Program.function_at), or None."""

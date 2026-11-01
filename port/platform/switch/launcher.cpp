@@ -21,6 +21,8 @@
 #include "fixes.h"
 #include "platform/switch/input.h"
 #include "platform/switch/launcher_ui.h"
+#include "platform/switch/render_resolution.h"
+#include "platform/switch/overlay_stats.h"
 #include "scene/disc_cache.h"
 #include "scene/disc_import.h"
 #include "settings.h"
@@ -33,6 +35,125 @@ bool launcher_active = false;
 std::string notice;
 #ifdef OPENRAC_FRONTEND
 std::unique_ptr<launcher_ui::Graphics> ui;
+std::unique_ptr<artwork::Library> art_library;
+appearance::Settings launcher_appearance;
+std::shared_ptr<const artwork::Image> local_background, included_logo;
+constexpr const char* kAppearanceFile = "sdmc:/switch/openrac/artwork/appearance.ini";
+
+bool artwork_keyboard(const char* title, const std::string& initial, bool secret, std::string& out) {
+    SwkbdConfig keyboard{};
+    if (R_FAILED(swkbdCreate(&keyboard, 0))) { notice = "Could not open the keyboard."; return false; }
+    swkbdConfigMakePresetDefault(&keyboard);
+    swkbdConfigSetHeaderText(&keyboard, title);
+    swkbdConfigSetGuideText(&keyboard, secret ? "Your personal SteamGridDB API key" : "Enter your text, or a color as #RRGGBB");
+    swkbdConfigSetStringLenMax(&keyboard, secret ? 128 : 100);
+    swkbdConfigSetPasswordFlag(&keyboard, secret ? 1 : 0);
+    swkbdConfigSetInitialText(&keyboard, initial.c_str());
+    char text[512]{};
+    const Result result = swkbdShow(&keyboard, text, sizeof(text));
+    swkbdClose(&keyboard);
+    if (R_FAILED(result)) return false;
+    out = text; return true;
+}
+
+bool load_banner_background() {
+    std::string error;
+    for (const char* name : {"background.png", "background.jpg"}) {
+        auto image = artwork::load_image(std::filesystem::path("sdmc:/switch/openrac/artwork") / name, error);
+        if (image) { local_background = std::move(image); return true; }
+    }
+    return false;
+}
+
+const char* kAppearanceRows[] = {"Theme preset", "Menu background", "Bar color", "Panel color",
+    "Text color", "Secondary text color", "Accent / button color", "Border color", "Banner background",
+    "Banner color", "Banner image tint", "Banner text color", "Small artwork window", "Banner heading",
+    "Game title", "Banner subtitle", "Reload local background", "Restore appearance defaults"};
+
+std::string appearance_value(int row) {
+    const auto& s = launcher_appearance;
+    const auto p = s.palette();
+    const appearance::Color colors[] = {p.background,p.sidebar,p.panel,p.text,p.muted,p.accent,p.border};
+    if (row >= 1 && row <= 7) return appearance::hex(colors[row-1]);
+    switch (row) {
+        case 0: return s.preset == appearance::Preset::Dark ? "Dark" : s.preset == appearance::Preset::Light ? "Light" : "Custom";
+        case 8: return s.background == appearance::Background::Solid ? "Solid color"
+            : s.background == appearance::Background::SelectedArtwork ? "Selected artwork" : "Local background image";
+        case 9: return appearance::hex(s.banner_color);
+        case 10: return std::to_string(s.tint) + "%";
+        case 11: return appearance::hex(s.banner_text);
+        case 12: return s.window_art == appearance::WindowArt::GameLogo ? "Included game logo"
+            : s.window_art == appearance::WindowArt::SelectedArtwork ? "Selected artwork" : "Off";
+        case 13: return s.heading.empty() ? "Hidden" : s.heading;
+        case 14: return s.title.empty() ? "Hidden" : s.title;
+        case 15: return s.subtitle.empty() ? "Hidden" : s.subtitle;
+        case 16: return "A: background.png / .jpg";
+        default: return "A: Restore dark theme";
+    }
+}
+
+void appearance_action(int row, int by, bool confirm) {
+    auto& s = launcher_appearance;
+    const auto palette = s.palette();
+    const appearance::Color fields[] = {palette.background,palette.sidebar,palette.panel,palette.text,palette.muted,palette.accent,palette.border};
+    std::string text;
+    if ((row >= 1 && row <= 7) || row == 9 || row == 11) {
+        auto color = row <= 7 ? fields[row-1] : row == 9 ? s.banner_color : s.banner_text;
+        if (confirm) {
+            if (!artwork_keyboard("Choose color (#RRGGBB)", appearance::hex(color), false, text)) return;
+            if (!appearance::parse_color(text,color)) { notice = "Use six hex digits, for example #44E8C1."; return; }
+        } else {
+            constexpr appearance::Color choices[] = {appearance::rgb(9,17,30),appearance::rgb(255,255,255),
+                appearance::rgb(236,244,249),appearance::rgb(19,32,49),appearance::rgb(144,166,184),
+                appearance::rgb(68,232,193),appearance::rgb(0,111,98),appearance::rgb(64,132,242),
+                appearance::rgb(157,97,231),appearance::rgb(237,96,140),appearance::rgb(234,82,65),appearance::rgb(255,177,87)};
+            int index = 0;
+            for (int i = 0; i < 12; ++i) if (color == choices[i]) index = i;
+            color = choices[(index + by + 12) % 12];
+        }
+        if (row <= 7) s.color(row-1,color); else if (row == 9) s.banner_color = color; else s.banner_text = color;
+    } else if (row == 0) s.select(appearance::Preset((int(s.preset)+by+3)%3));
+    else if (row == 8) {
+        s.background = appearance::Background((int(s.background)+by+3)%3);
+        if (s.background == appearance::Background::LocalImage && !load_banner_background()) {
+            appearance::save(kAppearanceFile,s);
+            notice = "Add background.png or background.jpg to /switch/openrac/artwork/, then reload it."; return;
+        }
+    } else if (row == 10) s.tint = std::clamp(s.tint+by*5,0,90);
+    else if (row == 12) s.window_art = appearance::WindowArt((int(s.window_art)+by+3)%3);
+    else if (row >= 13 && row <= 15) {
+        if (!confirm) return;
+        std::string& field = row == 13 ? s.heading : row == 14 ? s.title : s.subtitle;
+        if (!artwork_keyboard(kAppearanceRows[row],field,false,text)) return;
+        field = text;
+    } else if (row == 16 && confirm) {
+        if (!load_banner_background()) { notice = "No valid background.png or background.jpg found in /switch/openrac/artwork/."; return; }
+        s.background = appearance::Background::LocalImage;
+    } else if (row == 17 && confirm) s = appearance::Settings{};
+    else return;
+    notice = appearance::save(kAppearanceFile,s) ? "Appearance saved. Press Y to preview your Play banner."
+        : "Appearance applied, but could not be saved. Check the SD card.";
+}
+
+void artwork_action(int row, int by) {
+    if (!art_library || art_library->state().busy) return;
+    const auto state = art_library->state();
+    std::string text;
+    switch (row) {
+        case 0:
+            if (artwork_keyboard("SteamGridDB API key", "", true, text)) art_library->set_key(text);
+            break;
+        case 1:
+            if (artwork_keyboard("Find game artwork", state.query, false, text)) art_library->search(text);
+            break;
+        case 2: art_library->select_game(by); break;
+        case 3: art_library->browse(); break;
+        case 4: art_library->select_image(by); break;
+        case 5: art_library->download(); break;
+        case 6: art_library->reload_local(); break;
+        case 7: art_library->reset(); break;
+    }
+}
 
 void show_error(const std::string& error) {
     ErrorApplicationConfig dialog;
@@ -224,7 +345,7 @@ void prepare(PadState& pad) {
 constexpr const char* kDisplay[] =
     {"Picture shape",
      "HUD position",
-     "Render scale",
+     "Render resolution",
      "Anti-aliasing",
      "Texture filter",
      "Anisotropy",
@@ -232,20 +353,24 @@ constexpr const char* kDisplay[] =
      "VSync",
      "Frame rate",
      "Frame cap",
-     "Frame counter"};
+     "Frame counter",
+     "Handheld resolution",
+     "Docked resolution"};
 constexpr const char* kAudio[] =
     {"Master volume", "Music volume", "Sound effects", "Playback mode"};
-constexpr const char* kGameplay[] = {"Language", "Start skips cutscenes", "Detailed logging"};
+constexpr const char* kGameplay[] = {"Language", "Start skips cutscenes", "Detailed logging", "Lock-strafe camera", "Field of view"};
 
 int rows(int tab) {
+    if (tab == launcher_ui::kAppearanceTab) return 18;
+    if (tab == launcher_ui::kArtworkTab) return 8;
     if (tab == 1) {
-        return 11;
+        return 13;
     }
     if (tab == 2) {
         return 4;
     }
     if (tab == 3) {
-        return 3;
+        return 5;
     }
     if (tab == 4) {
         return fixes::count();
@@ -266,11 +391,16 @@ std::string value(int tab, int row) {
     if (tab == 1) {
         switch (row) {
             case 0:
+                if (const int preset = platform::switch_video::profile_resolution(s.switch_resolution,
+                        s.switch_handheld_resolution, s.switch_docked_resolution, overlay_stats::docked()); preset != 0) {
+                    const auto& r = platform::switch_video::resolution(preset);
+                    return r.width == 640 || r.width == 1024 ? "4:3 (resolution)" : "16:9 (resolution)";
+                }
                 return name(s.aspect);
             case 1:
                 return name(s.hud);
             case 2:
-                return std::to_string(s.render_scale) + "%";
+                return platform::switch_video::resolution(s.switch_resolution).label;
             case 3:
                 return s.msaa == 1 ? "Off" : std::to_string(s.msaa) + "x";
             case 4:
@@ -287,6 +417,12 @@ std::string value(int tab, int row) {
                 return std::to_string(s.frame_cap);
             case 10:
                 return name(s.show_fps);
+            case 11:
+                return s.switch_handheld_resolution < 0 ? "Use render resolution"
+                    : platform::switch_video::resolution(s.switch_handheld_resolution).label;
+            case 12:
+                return s.switch_docked_resolution < 0 ? "Use render resolution"
+                    : platform::switch_video::resolution(s.switch_docked_resolution).label;
         }
     }
     if (tab == 2) {
@@ -304,11 +440,12 @@ std::string value(int tab, int row) {
                + "%";
     }
     if (tab == 3) {
+        if (row == 4) return s.switch_fov == 100 ? "Original (100%)" : std::to_string(s.switch_fov) + "%";
         constexpr const char* langs[] = {"English", "French", "Spanish", "German", "Italian"};
         if (row == 0) {
             return langs[std::clamp(game_option("game_language", 1), 1, 5) - 1];
         }
-        return (row == 1 ? s.skip_cutscenes : s.verbose_log) ? "On" : "Off";
+        return (row == 1 ? s.skip_cutscenes : row == 3 ? s.switch_lock_strafe : s.verbose_log) ? "On" : "Off";
     }
     if (tab == 4) {
         return fixes::on(row) ? "On" : "Off";
@@ -371,8 +508,12 @@ void capture_binding(PadState& pad, int action) {
             return;
         }
         HidTouchScreenState touch{};
-        if (hidGetTouchScreenStates(&touch, 1) > 0 && touch.count && touch.touches[0].x >= 328
-            && touch.touches[0].x < 650 && touch.touches[0].y >= 465 && touch.touches[0].y < 525) {
+        const bool touched = hidGetTouchScreenStates(&touch, 1) > 0 && touch.count;
+        int touch_x = touched ? int(touch.touches[0].x) : 0;
+        int touch_y = touched ? int(touch.touches[0].y) : 0;
+        if (touched && launcher_ui::menu_touch(touch_x, touch_y) && touch_x >= launcher_ui::kCancelX
+            && touch_x < launcher_ui::kCancelX + launcher_ui::kCancelW && touch_y >= launcher_ui::kCancelY - 6
+            && touch_y < launcher_ui::kCancelY + launcher_ui::kCancelH + 6) {
             notice = "Rebind cancelled. Existing binding kept.";
             return;
         }
@@ -423,13 +564,18 @@ void change(int tab, int row, int by) {
     if (tab == 1) {
         switch (row) {
             case 0:
+                s.switch_resolution = 0;
+                s.switch_handheld_resolution = s.switch_docked_resolution = -1;
                 cycle(s.aspect, by, static_cast<int>(Aspect::Custom));
                 break;
             case 1:
                 cycle(s.hud, by, 2);
                 break;
             case 2:
-                s.render_scale = step_listed(kRenderScales, s.render_scale, by);
+                s.switch_resolution = (s.switch_resolution + by + int(platform::switch_video::kResolutions.size()))
+                                      % int(platform::switch_video::kResolutions.size());
+                s.switch_handheld_resolution = s.switch_docked_resolution = -1;
+                s.render_scale = 100;
                 break;
             case 3:
                 s.msaa = step_listed(kSampleCounts, s.msaa, by);
@@ -453,10 +599,19 @@ void change(int tab, int row, int by) {
                 break;
             case 9:
                 s.frame_cap = std::clamp(s.frame_cap + by * 5, 20, 120);
+                s.frame_rate = FrameRate::Capped;
                 break;
             case 10:
                 step_frame_counter(by);
                 break;
+            case 11:
+            case 12: {
+                int& preset = row == 11 ? s.switch_handheld_resolution : s.switch_docked_resolution;
+                constexpr int count = int(platform::switch_video::kResolutions.size()) + 1;
+                preset = (preset + 1 + by + count) % count - 1;
+                s.render_scale = 100;
+                break;
+            }
         }
     }
     if (tab == 2) {
@@ -475,6 +630,10 @@ void change(int tab, int row, int by) {
                 (game_option("game_language", 1) - 1 + by + 5) % 5 + 1;
         } else if (row == 1) {
             s.skip_cutscenes = !s.skip_cutscenes;
+        } else if (row == 3) {
+            s.switch_lock_strafe = !s.switch_lock_strafe;
+        } else if (row == 4) {
+            s.switch_fov = std::clamp(s.switch_fov + by * 5, 85, 120);
         } else {
             s.verbose_log = !s.verbose_log;
         }
@@ -522,23 +681,98 @@ void change(int tab, int row, int by) {
 }
 #endif
 #ifdef OPENRAC_FRONTEND
-bool draw(int tab, int selected, const Data& data) {
+// What a row does, for the launcher's side panel (empty: the panel shows a general hint).
+std::string row_help(int tab, int row) {
+    if (tab == 1) {
+        switch (row) {
+            case 0: return "The shape of the picture. Choosing a shape returns Render resolution to Auto.";
+            case 2: return "The size the game draws at before it is scaled to the screen. Lower is smoother, "
+                           "higher is sharper. Auto keeps the picture shape with a 480p minimum.";
+            case 3: return "Smooths jagged edges. Costs GPU time.";
+            case 4: return "How textures are smoothed when they are scaled.";
+            case 5: return "Keeps textures sharp at steep angles, such as floors in the distance.";
+            case 6: return "Full detail draws more of a level in the distance. Original keeps the PS2's draw distances.";
+            case 7: return "Waits for the display's refresh, so the picture does not tear.";
+            case 9: return "The highest frame rate allowed when the frame rate is capped.";
+            case 10: return "Shows the frame rate while you play.";
+            case 11: return "Overrides Render resolution while the console is handheld.";
+            case 12: return "Overrides Render resolution while the console is docked.";
+        }
+        return {};
+    }
+    if (tab == 2) {
+        constexpr const char* help[] = {"The overall volume.", "The volume of the music.",
+            "The volume of sound effects and voices.", "Stereo, or mono for one speaker."};
+        return row < 4 ? help[row] : "";
+    }
+    if (tab == 3) {
+        constexpr const char* help[] = {"The game's language.", "Start skips cutscenes.",
+            "Writes more detail to the log on the SD card, for bug reports.",
+            "Hold ZL to strafe: the left stick moves without turning Ratchet, the right stick aims. "
+            "Off restores the original L2.",
+            "Experimental. Widens the on-foot camera from 85% to 120%; 100% is the original view."};
+        return row < 5 ? help[row] : "";
+    }
+    if (tab == 4) {
+        return "On is the port's fix. Off restores the console's original behaviour.";
+    }
+    if (tab == 7) {
+        if (row < 2) return "How far the stick moves before it counts.";
+        if (row < 4) return "How fast the camera turns.";
+        if (row < 7) return {};
+        if (row < 23) return "A: press a new button for this action. X clears it. Left / Right cycles through buttons.";
+        return "A restores every controller setting to its default.";
+    }
+    if (tab == launcher_ui::kAppearanceTab) {
+        return "A edits a colour or text. Left / Right changes it. Y previews the Play banner.";
+    }
+    return {};
+}
+
+bool draw(int tab, int selected, bool pages_focus, const Data& data) {
     launcher_ui::View view;
     view.tab = tab;
     view.selected = selected;
+    view.pages_focus = pages_focus;
     view.disc = data.disc;
     view.executable = data.executable;
     view.levels = data.levels;
     view.writable = data.writable;
     view.notice = notice;
-    if ((tab >= 1 && tab <= 4) || tab == 7) {
+    view.appearance = launcher_appearance;
+    if (art_library) {
+        const auto art = art_library->state();
+        view.art = art.art;
+        view.custom_art = art.custom;
+        if (launcher_appearance.background == appearance::Background::SelectedArtwork && art.custom)
+            view.banner_background = art.art;
+        if (launcher_appearance.background == appearance::Background::LocalImage)
+            view.banner_background = local_background;
+        if (launcher_appearance.window_art == appearance::WindowArt::GameLogo) view.window_art = included_logo;
+        if (launcher_appearance.window_art == appearance::WindowArt::SelectedArtwork) view.window_art = art.art;
+        if (tab == launcher_ui::kArtworkTab) {
+            view.notice = art.message;
+            const auto game = art.games.empty() ? "Search first" : art.games[art.game].name;
+            const auto image = art.images.empty() ? "Find banners first"
+                : std::to_string(art.image + 1) + " / " + std::to_string(art.images.size())
+                    + "  " + art.images[art.image].author;
+            view.rows = {{"SteamGridDB API key", art.key_set ? "Saved (A to replace)" : "A to add", ""},
+                {"Search game", "A: " + art.query, ""}, {"Game", game, ""},
+                {"Find banners", art.busy ? "Working..." : "A to search", ""},
+                {"Banner choice", image, ""}, {"Download and apply", art.busy ? "B to cancel" : "A to download", ""},
+                {"Load local artwork", "custom.png / custom.jpg", ""}, {"Included game art", "A to restore", ""}};
+        }
+    }
+    if (launcher_ui::settings_tab(tab)) {
         for (int i = 0; i < rows(tab); ++i) {
             const char* label = tab == 1   ? kDisplay[i]
                                 : tab == 2 ? kAudio[i]
                                 : tab == 3 ? kGameplay[i]
                                 : tab == 7 ? controller_label(i)
+                                : tab == launcher_ui::kAppearanceTab ? kAppearanceRows[i]
                                            : fixes::fix(i).name;
-            view.rows.push_back({label, value(tab, i)});
+            view.rows.push_back({label, tab == launcher_ui::kAppearanceTab ? appearance_value(i) : value(tab, i),
+                                 row_help(tab, i)});
         }
     }
     if (tab == 5) {
@@ -568,6 +802,11 @@ int switch_launcher() {
     launcher_active = true;
 #ifdef OPENRAC_FRONTEND
     settings::load("sdmc:/switch/openrac/settings/rac1-pal.ini");
+    art_library = std::make_unique<artwork::Library>("sdmc:/switch/openrac/artwork");
+    launcher_appearance = appearance::load(kAppearanceFile);
+    included_logo = artwork::bundled();
+    if (launcher_appearance.background == appearance::Background::LocalImage) load_banner_background();
+    struct ArtworkLifetime { ~ArtworkLifetime() { art_library.reset(); local_background.reset(); included_logo.reset(); } } artwork_lifetime;
     if (!open_graphics()) {
         return 0;
     }
@@ -581,6 +820,14 @@ int switch_launcher() {
     int touch_x = 0, touch_y = 0, swipe_y = 0, touch_tab = 0, touch_row = 0;
     u64 touch_action = 0;
     int tab = 0, selected = 0;
+    // Settings and Customize open on their page list (Up / Down picks a page, A or Right opens it).
+    bool pages_focus = false;
+    const auto multi_page = [](int t) { return launcher_ui::section_pages(launcher_ui::section_of(t)).size() > 1; };
+    const auto open_section = [&](int section) {
+        tab = launcher_ui::section_pages(section)[0];
+        selected = 0;
+        pages_focus = multi_page(tab);
+    };
     Data data = inspect();
 #ifdef OPENRAC_FRONTEND
     std::error_code pending;
@@ -598,10 +845,18 @@ int switch_launcher() {
     }
 #endif
     bool dirty = true;
+    std::uint64_t artwork_revision = 0;
     auto focus = appletGetFocusState();
     u64 previous_direction = 0;
     auto next_repeat = std::chrono::steady_clock::now();
+    // A notice shows in the bottom bar (or the side panel) for a few seconds, then the hints return.
+    std::string shown_notice;
+    auto notice_since = std::chrono::steady_clock::now();
     while (appletMainLoop()) {
+        if (art_library->state().revision != artwork_revision) {
+            artwork_revision = art_library->state().revision;
+            dirty = true;
+        }
         if (appletGetFocusState() != focus) {
             focus = appletGetFocusState();
             dirty = true;
@@ -618,6 +873,14 @@ int switch_launcher() {
             direction |= stick.x > 0 ? HidNpadButton_Right : HidNpadButton_Left;
         }
         const auto now = std::chrono::steady_clock::now();
+        if (notice != shown_notice) {
+            shown_notice = notice;
+            notice_since = now;
+        } else if (!notice.empty() && now - notice_since > std::chrono::seconds(6)) {
+            notice.clear();
+            shown_notice.clear();
+            dirty = true;
+        }
         if (direction != previous_direction) {
             b |= direction;
             next_repeat = now + std::chrono::milliseconds(350);
@@ -627,37 +890,61 @@ int switch_launcher() {
         }
         previous_direction = direction;
         HidTouchScreenState touch{};
-        if (hidGetTouchScreenStates(&touch, 1) > 0 && touch.count > 0) {
-            const int x = touch.touches[0].x, y = touch.touches[0].y;
+        const bool has_touch = hidGetTouchScreenStates(&touch, 1) > 0 && touch.count > 0;
+        int x = has_touch ? int(touch.touches[0].x) : 0;
+        int y = has_touch ? int(touch.touches[0].y) : 0;
+        if (has_touch && launcher_ui::menu_touch(x, y)) {
             if (!touching) {
                 touch_x = x;
                 touch_y = swipe_y = y;
                 touch_moved = false;
                 touch_action = 0;
-                if (x < 250 && y >= 144 && y < 628) {
-                    tab = std::clamp((y - 144) / 60, 0, 7);
-                    selected = 0;
-                    dirty = true;
-                } else if (
-                    ((tab >= 1 && tab <= 4) || tab == 7) && x >= 296 && x < 1218 && y >= 143
-                    && y < 530
-                ) {
-                    const int row = std::max(0, selected - 8) + (y - 143) / 43;
+                namespace ui_layout = launcher_ui;
+                const int rows_first = ui_layout::first_visible_row(selected);
+                if (y >= ui_layout::kSectionY - 6 && y < ui_layout::kSectionY + ui_layout::kSectionH + 6
+                    && x >= ui_layout::kSectionX
+                    && x < ui_layout::kSectionX + ui_layout::kSectionCount * ui_layout::kSectionStep) {
+                    const int section = std::clamp((x - ui_layout::kSectionX) / ui_layout::kSectionStep, 0,
+                                                   ui_layout::kSectionCount - 1);
+                    if (section != ui_layout::section_of(tab)) {
+                        open_section(section);
+                        dirty = true;
+                    }
+                } else if (multi_page(tab) && x >= ui_layout::kPageX && x < ui_layout::kPageX + ui_layout::kPageW
+                           && y >= ui_layout::kPageY) {
+                    const auto pages = ui_layout::section_pages(ui_layout::section_of(tab));
+                    const int index = (y - ui_layout::kPageY) / ui_layout::kPageStep;
+                    if (index < int(pages.size())) {
+                        if (pages[index] != tab) selected = 0;
+                        tab = pages[index];
+                        pages_focus = false;
+                        dirty = true;
+                    }
+                } else if (multi_page(tab) && x >= ui_layout::kRowX && x < ui_layout::kRowX + ui_layout::kRowW
+                           && y >= ui_layout::kRowY && y < ui_layout::kRowY + ui_layout::kVisibleRows * ui_layout::kRowStep) {
+                    const int row = rows_first + (y - ui_layout::kRowY) / ui_layout::kRowStep;
                     if (row < rows(tab)) {
                         selected = row;
+                        pages_focus = false;
                         dirty = true;
-                        if (x >= 850) {
+                        if (x >= ui_layout::kRowValueX) {
                             touch_action = HidNpadButton_A;
                         }
                     }
-                } else if (
-                    (tab == 0 && x >= 328 && x < 600 && y >= 322 && y < 372)
-                    || (tab == 6 && x >= 328 && x < 645 && y >= 470 && y < 520)
-                ) {
+                } else if (tab == 0 && y >= ui_layout::kLaunchY && y < ui_layout::kLaunchY + ui_layout::kLaunchH
+                           && x >= ui_layout::kLaunchX && x < ui_layout::kLaunchX + ui_layout::kLaunchW) {
                     touch_action = HidNpadButton_A;
-                } else if (tab == 0 && y >= 558 && y < 626 && x >= 296 && x < 1000) {
-                    touch_action = x < 700 ? HidNpadButton_X : HidNpadButton_Y;
-                } else if (x > 1090 && y >= 650) {
+                } else if (tab == 0 && y >= ui_layout::kLaunchY && y < ui_layout::kLaunchY + ui_layout::kLaunchH
+                           && x >= ui_layout::kBootX && x < ui_layout::kBootX + ui_layout::kBootW) {
+                    touch_action = HidNpadButton_Y;
+                } else if (tab == 0 && y >= ui_layout::kStatusY && y < ui_layout::kStatusY + ui_layout::kStatusH
+                           && x >= ui_layout::kHeroX && x < ui_layout::kHeroX + ui_layout::kHeroW) {
+                    touch_action = HidNpadButton_X;
+                } else if (tab == 6 && x >= ui_layout::kSetupButtonX
+                           && x < ui_layout::kSetupButtonX + ui_layout::kSetupButtonW && y >= ui_layout::kSetupButtonY
+                           && y < ui_layout::kSetupButtonY + ui_layout::kSetupButtonH) {
+                    touch_action = HidNpadButton_A;
+                } else if (x > 1090 && y >= ui_layout::kFooterY) {
                     touch_action = HidNpadButton_Plus;
                 }
                 touch_tab = tab;
@@ -667,8 +954,8 @@ int switch_launcher() {
                     touch_moved = true;
                     touch_action = 0;
                 }
-                if (((tab >= 1 && tab <= 4) || tab == 7) && x >= 296 && std::abs(y - swipe_y) >= 32
-                    && rows(tab) > 0) {
+                if (multi_page(tab) && !pages_focus && x >= launcher_ui::kRowsX
+                    && x < launcher_ui::kRowsX + launcher_ui::kRowsW && std::abs(y - swipe_y) >= 32 && rows(tab) > 0) {
                     selected = std::clamp(selected + (y < swipe_y ? 1 : -1), 0, rows(tab) - 1);
                     swipe_y = y;
                     dirty = true;
@@ -686,14 +973,40 @@ int switch_launcher() {
             break;
         }
         if (b & (HidNpadButton_L | HidNpadButton_R)) {
-            tab = (tab + ((b & HidNpadButton_R) ? 1 : 7)) % 8;
-            selected = 0;
+            const int count = launcher_ui::kSectionCount;
+            open_section((launcher_ui::section_of(tab) + ((b & HidNpadButton_R) ? 1 : count - 1)) % count);
             dirty = true;
         }
         if (b & HidNpadButton_B) {
-            tab = 0;
-            selected = 0;
+            if (art_library->state().busy) { art_library->cancel(); dirty = true; continue; }
+            if (multi_page(tab) && !pages_focus) {
+                pages_focus = true;  // back to the page list
+            } else {
+                tab = 0;
+                selected = 0;
+                pages_focus = false;
+            }
             dirty = true;
+            b &= ~(HidNpadButton_A | HidNpadButton_Left | HidNpadButton_Right | HidNpadButton_Up | HidNpadButton_Down);
+        }
+        // The page list: Up / Down picks a page, A or Right opens it.
+        if (pages_focus && multi_page(tab)) {
+            const auto pages = launcher_ui::section_pages(launcher_ui::section_of(tab));
+            const int index = int(std::find(pages.begin(), pages.end(), tab) - pages.begin());
+            const int count = int(pages.size());
+            if (b & (HidNpadButton_Up | HidNpadButton_Down)) {
+                tab = pages[(index + ((b & HidNpadButton_Down) ? 1 : count - 1)) % count];
+                selected = 0;
+                dirty = true;
+            }
+            if (b & (HidNpadButton_A | HidNpadButton_Right)) {
+                pages_focus = false;
+                dirty = true;
+            }
+            b &= ~(HidNpadButton_A | HidNpadButton_Left | HidNpadButton_Right | HidNpadButton_Up | HidNpadButton_Down);
+        }
+        if (tab == launcher_ui::kAppearanceTab && (b & HidNpadButton_Y)) {
+            tab = 0; selected = 0; pages_focus = false; b &= ~HidNpadButton_Y; notice.clear(); dirty = true;
         }
         if (tab == 7 && selected >= 7 && selected < 23 && (b & HidNpadButton_X)) {
             controller::bind(settings::get().controller, static_cast<unsigned>(selected - 7), -1);
@@ -724,7 +1037,12 @@ int switch_launcher() {
                 selected = (selected + 1) % n;
             }
             if (b & (HidNpadButton_Left | HidNpadButton_Right | HidNpadButton_A)) {
-                if (tab == 7 && (b & HidNpadButton_A) && selected >= 7 && selected < 23) {
+                if (tab == launcher_ui::kArtworkTab) {
+                    if ((b & HidNpadButton_A) || selected == 2 || selected == 4)
+                        artwork_action(selected, (b & HidNpadButton_Left) ? -1 : 1);
+                } else if (tab == launcher_ui::kAppearanceTab) {
+                    appearance_action(selected,(b & HidNpadButton_Left) ? -1 : 1,(b & HidNpadButton_A) != 0);
+                } else if (tab == 7 && (b & HidNpadButton_A) && selected >= 7 && selected < 23) {
                     capture_binding(pad, selected - 7);
                 } else if (tab == 7 && selected == 23 && (b & HidNpadButton_A)) {
                     settings::get().controller = controller::Profile{};
@@ -740,6 +1058,11 @@ int switch_launcher() {
             }
         }
         if ((b & HidNpadButton_ZL) || (tab == 0 && (b & HidNpadButton_A))) {
+            if (art_library->state().busy) {
+                notice = "Wait for the artwork download, or press B to cancel it.";
+                dirty = true;
+                continue;
+            }
             data = inspect();
             if (data.ready()) {
                 ui.reset();
@@ -749,6 +1072,7 @@ int switch_launcher() {
             if (!data.disc || !data.executable || !data.levels) {
                 tab = 6;
                 selected = 0;
+                pages_focus = false;
             }
             notice = "Cannot start: installation or save-storage check failed.";
             dirty = true;
@@ -760,7 +1084,7 @@ int switch_launcher() {
             return 1;
         }
         if (dirty) {
-            if (!draw(tab, selected, data)) {
+            if (!draw(tab, selected, pages_focus, data)) {
                 break;
             }
             dirty = false;

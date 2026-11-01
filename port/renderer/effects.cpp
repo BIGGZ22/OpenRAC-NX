@@ -4,6 +4,7 @@
 #include "renderer/effects.h"
 
 #include <cstddef>
+#include <algorithm>
 #include <optional>
 #include <set>
 #include <span>
@@ -97,7 +98,9 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
     static const bool& upload_reference = stats::probe(
         "OPENRAC_VK_EFFECT_UPLOAD_REUSE_OFF", "Reference: copy and hash every effect texture upload"
     );
-    const bool reuse_uploads = gl::is_vulkan() && !upload_reference;
+    // Check before the by-value upload() call: repeated particles often share the same palette
+    // and image, and copying those bytes first defeats the cache on OpenGL too.
+    const bool reuse_uploads = !upload_reference;
     std::uint64_t reused_uploads = 0, reused_bytes = 0;
     const auto upload = [&](const ImageUpload& image) {
         if (reuse_uploads) {
@@ -115,6 +118,16 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
     // a draw each, with its own buffer and state, cost more than the rest of the frame on a phone.
     // The triangles keep their order, so what is blended over what does not change.
     m_vertices.clear();
+    std::size_t vertex_count = quads ? input.effects.size() * 6 : 0;
+    for (const EffectStrip& strip : input.strips) {
+        if (strip.count >= 3 && static_cast<std::size_t>(strip.first) + strip.count <= input.strip_vertices.size()
+            && draws(strip)) {
+            vertex_count += 3 * static_cast<std::size_t>(strip.count - 2);
+        }
+    }
+    if (vertex_count > m_vertices.capacity()) {
+        m_vertices.reserve(std::max(vertex_count, m_vertices.capacity() + m_vertices.capacity() / 2));
+    }
     const auto vertex = [](const EffectVertex& e) {
         return Vertex{e.x, e.y, e.z, e.s, e.t, static_cast<std::uint8_t>(e.rgba & 0xFF),
                       static_cast<std::uint8_t>((e.rgba >> 8) & 0xFF), static_cast<std::uint8_t>((e.rgba >> 16) & 0xFF),
@@ -142,8 +155,18 @@ void EffectRenderer::render(const FrameInput& input, RenderState& state) {
                                   static_cast<std::uint8_t>(q.rgba[k] >> 24)});
         }
     }
-    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_vertices.size() * sizeof(Vertex)), m_vertices.data(),
-                 GL_STREAM_DRAW);
+    const std::size_t bytes = m_vertices.size() * sizeof(Vertex);
+    if (bytes > 0) {
+        // Orphan the previous store so the CPU need not wait for its last draw. Retain a
+        // high-water capacity to avoid changing the allocation size on every particle burst.
+        if (bytes > m_vertex_capacity) {
+            m_vertex_capacity = std::max(bytes, m_vertex_capacity + m_vertex_capacity / 2);
+        }
+        glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(m_vertex_capacity), nullptr, GL_STREAM_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizeiptr>(bytes), m_vertices.data());
+    }
+    stats::gauge("effects vertices", double(m_vertices.size()));
+    stats::gauge("effects vertex upload bytes", double(bytes));
 
     // The draw being gathered: its first vertex and count, and the GS state it was set up with.
     struct Batch {
@@ -309,6 +332,7 @@ void EffectRenderer::release() {
     if (m_vbo != 0) {
         glDeleteBuffers(1, &m_vbo);
         m_vbo = 0;
+        m_vertex_capacity = 0;
     }
     if (m_vao != 0) {
         glDeleteVertexArrays(1, &m_vao);

@@ -2,6 +2,10 @@
 // Copyright (c) 2026 the OpenRAC contributors
 
 #include "frontend.h"
+#ifdef __SWITCH__
+#include "platform/switch/render_resolution.h"
+#include "platform/switch/overlay_stats.h"
+#endif
 
 #include <algorithm>
 #include <array>
@@ -140,6 +144,15 @@ bool skippable() {
 
 // The picture's shape now: the player's setting, for the window as it is.
 float picture_aspect(int window_width, int window_height) {
+#ifdef __SWITCH__
+    const auto& s = settings::get();
+    const int preset = platform::switch_video::profile_resolution(s.switch_resolution,
+        s.switch_handheld_resolution, s.switch_docked_resolution, platform::overlay_stats::docked());
+    const auto& resolution = platform::switch_video::resolution(preset);
+    if (resolution.height != 0) {
+        return float(resolution.width) / float(resolution.height);
+    }
+#endif
     return settings::aspect_ratio(settings::get(), window_width, window_height);
 }
 
@@ -475,6 +488,10 @@ bool show_picture(const std::uint8_t* rgba, int width, int height, float black) 
         debug_overlay::draw(shown);
     }
     g->window->swap();
+#ifdef __SWITCH__
+    if (g->window->last_swap_presented())
+        platform::overlay_stats::presented(width,height,window_width,window_height);
+#endif
     return true;
 }
 
@@ -491,6 +508,7 @@ void close() {
         // Stop the worker before releasing the scene, temporal history or graphics context.
         // Cleanup still releases resources after a previously reported render error.
         [[maybe_unused]] const bool finished = finish_render();
+        dump_pacing_ring();  // OPENRAC_PACING_RING: written once, here, never while the game runs
         g->render_worker.reset();
         debug_overlay::release();
         settings::save();  // the window's size, if it was changed

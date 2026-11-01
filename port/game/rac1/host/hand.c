@@ -206,16 +206,18 @@ float func_001F9FA8(float a) {
 }
 
 /*
- * The game's movie player (the boot logos, the story movies between levels): `a0` the movie's first
- * sector on the disc, `a1` its size in bytes, then the two buffers the console decodes into, which the
- * port does not need. Played in the window by the port's MPEG player (game/common, media/), in the
- * language channel 0; Start skips it, as readMpeg lets it outside normal play.
+ * The game's movie player (the boot logos, the story movies between levels, the infobots'): `a0` the
+ * movie's first sector on the disc, `a1` its size in bytes, then the two buffers the console decodes
+ * into, which the port does not need, and `a4` the audio channel initAll picks. Callers pass the
+ * game's language (D_0015EE88: 0 English, 2 French, 3 German, 4 Spanish, 5 Italian, the movies'
+ * channel numbers) or 0, and a movie without that channel plays channel 0 (media::Movie::open).
+ * Played in the window by the port's MPEG player (game/common, media/); Start skips it, as readMpeg
+ * lets it outside normal play.
  */
 int func_0023B670(int a0, int a1, int a2, gaddr a3, int a4) {
     (void)a2;
     (void)a3;
-    (void)a4;
-    openrac_game_play_movie((uint32_t)a0, (uint32_t)a1, 0, 1);
+    openrac_game_play_movie((uint32_t)a0, (uint32_t)a1, a4, 1);
     return 0;
 }
 

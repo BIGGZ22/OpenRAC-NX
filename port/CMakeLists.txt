@@ -11,6 +11,10 @@
 cmake_minimum_required(VERSION 3.24)
 project(openrac_port LANGUAGES C CXX)
 if(SWITCH)
+  set(nx_version_header "${PROJECT_SOURCE_DIR}/platform/switch/version.h")
+  file(STRINGS "${nx_version_header}" nx_version_line REGEX "^#define OPENRAC_NX_VERSION ")
+  string(REGEX REPLACE "^#define OPENRAC_NX_VERSION \"([^\"]+)\".*" "\\1" OPENRAC_NX_VERSION "${nx_version_line}")
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${nx_version_header}")
   # Native mod loading is stubbed on libnx; there is no libdl to link.
   set(CMAKE_DL_LIBS "")
   # Keep newlib's POSIX declarations (setenv/unsetenv, etc.) visible in strict C++.
@@ -66,7 +70,13 @@ if(SWITCH)
 endif()
 option(OPENRAC_PORT_WINDOW "Build the programs that open a window (needs SDL3)" ${openrac_window_default})
 if(SWITCH AND OPENRAC_PORT_WINDOW)
-  set(OPENRAC_VULKAN OFF CACHE BOOL "Vulkan is not available in the Switch portlibs" FORCE)
+  option(OPENRAC_SWITCH_VULKAN "Experimental Switch NVK backend (requires a static NVK driver)" OFF)
+  set(OPENRAC_VULKAN ${OPENRAC_SWITCH_VULKAN} CACHE BOOL "Build the Vulkan renderer" FORCE)
+  # The deko3d game renderer (renderer/dkgl): GL carried out on the Switch's native GPU API.
+  option(OPENRAC_SWITCH_DEKO3D "Experimental Switch deko3d game renderer (renderer/dkgl)" OFF)
+  if(OPENRAC_SWITCH_DEKO3D AND OPENRAC_SWITCH_VULKAN)
+    message(FATAL_ERROR "OPENRAC_SWITCH_DEKO3D and OPENRAC_SWITCH_VULKAN are separate builds: choose one")
+  endif()
   set(OPENRAC_ENHANCED_RENDERING OFF CACHE BOOL "Switch uses the base OpenGL renderer" FORCE)
 endif()
 option(OPENRAC_GPU_MARKERS "Compile opt-in Vulkan GPU profiler labels" OFF)
@@ -90,6 +100,7 @@ enable_testing()
 set(OPENRAC_BUILD_INFO "${CMAKE_BINARY_DIR}/generated/build_info.cpp")
 add_custom_target(openrac_build_info
   COMMAND "${CMAKE_COMMAND}" "-DREPO=${PROJECT_SOURCE_DIR}/.." "-DOUT=${OPENRAC_BUILD_INFO}"
+          "-DNX_VERSION=${OPENRAC_NX_VERSION}"
           -P "${PROJECT_SOURCE_DIR}/cmake/BuildInfo.cmake"
   BYPRODUCTS "${OPENRAC_BUILD_INFO}"
   COMMENT "OpenRAC's version and commit"
@@ -163,6 +174,33 @@ openrac_add_test(moby_passes INCLUDES .)
 # How each tick's frames start: cleared, the last picture, or under the tick's 2D
 # (game/common/frontend/tick_picture.h).
 openrac_add_test(tick_picture INCLUDES .)
+# The 2D path's image transfers read tag by tag (game/common/frontend/image_sends.h).
+openrac_add_test(image_sends INCLUDES .)
+# A live moby's pose with the evaluation's temporaries reused (scene/moby_pose.h, moby_palette_into)
+# against the evaluation as it was, bit for bit, over synthetic game memory; and the allocations each
+# makes.
+openrac_add_test(moby_pose SOURCES tests/moby_pose_test.cpp scene/moby_pose.cpp
+  assets/geometry/moby_animation.cpp INCLUDES . LIBS openrac_common Threads::Threads)
+# The Switch clock steps env.txt may ask for (platform/switch/clock_choice.h): Nintendo's own, never
+# above each official maximum, the GPU held to 460.8 MHz handheld. Plain C++: runs on every host.
+openrac_add_test(switch_clock_choice INCLUDES .)
+# The Switch clocks' lifecycle (platform/switch/clocks.cpp) over fake clock services and a fake time:
+# delayed resets answered, override backoff, focus/mode/exit put-backs, refusals. Host only.
+if(NOT SWITCH)
+  openrac_add_test(switch_clocks_mock INCLUDES . tests/switch_clocks_fake LIBS openrac_common)
+endif()
+# The game's tick schedule (game/common/program/tick_pacing.h): wall time against ticks at 60 and 50 a
+# second, a rate change without a burst, catch-up inside the slack, no burst after a stall.
+openrac_add_test(tick_pacing INCLUDES .)
+# Diagnostic intervals from the environment (common/env_interval.h): unset, empty, 0, negative and
+# non-numbers off, a positive N kept (OPENRAC_DK_COUNTERS=0 used to mean every frame).
+openrac_add_test(env_interval INCLUDES .)
+# The game thread's tick phases (game/common/frontend/tick_phases.h): off, and on every 30 ticks.
+openrac_add_test(tick_phases INCLUDES . LIBS openrac_common)
+if(TARGET tick_phases_test)
+  add_test(NAME tick_phases_on COMMAND tick_phases_test)
+  set_tests_properties(tick_phases_on PROPERTIES ENVIRONMENT "OPENRAC_TICK_PHASES=30")
+endif()
 
 # The game fixes (game/common/fixes.h): rac1's list of differences, checked as the configure reads it
 # (cmake/Differences.cmake), and its fixes through the settings file. Needs no game.
@@ -259,6 +297,10 @@ openrac_add_c_test(rac4_io
   INCLUDES runtime/include game/common/include)
 openrac_add_c_test(graph_dma INCLUDES runtime/include game/common/include)
 openrac_add_c_test(compact_guest INCLUDES runtime/include DEFINITIONS OPENRAC_COMPACT_GUEST_MEMORY)
+openrac_add_test(switch_resolution INCLUDES .)
+openrac_add_test(switch_overlay_stats INCLUDES .)
+openrac_add_test(switch_camera_ui INCLUDES .)
+openrac_add_test(particle_cpu INCLUDES .)
 
 # ---- assets, media, audio, the extractor: no window ----
 openrac_add_c_test(crate_init NO_STRICT_ALIASING WRAPV NO_FP_CONTRACT)
@@ -359,6 +401,7 @@ if(OPENRAC_PORT_GAMES)
 endif()
 
 if(SWITCH)
+  include(SwitchDeko3D)
   # Console builds ship the games and NROs. Desktop inspection programs and
   # test executables remain explicit targets, rather than part of every build.
   get_property(openrac_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)

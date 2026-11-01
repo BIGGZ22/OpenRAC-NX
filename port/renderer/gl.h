@@ -356,6 +356,8 @@ bool loaded();
 // The native Vulkan backend exposes this GL surface, but can opt into its own
 // renderer optimisations without changing desktop GL or ES behaviour.
 bool is_vulkan();
+// Whether the GL in use is the Switch's deko3d one (renderer/dkgl): its GL_VERSION ends "OpenRAC on deko3d".
+bool is_deko3d();
 
 // Enhanced rendering (probe GI, modern shadows, GTAO: port/enhanced) is compiled into the desktop
 // builds and chosen when the game starts: the `enhanced_rendering` setting (the launcher's Mods

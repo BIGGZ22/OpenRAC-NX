@@ -61,6 +61,16 @@ struct GameState {
     float fog_near_f = 255.0f;  // F at the near depth.
     float fog_far_f = 255.0f;   // F at the far depth.
 
+    // The colour the game clears the frame to (SetBackgroundColor, the level settings' background
+    // the gameplay loader leaves in the view context): what shows wherever no sky shell covers.
+    // Display bytes, 0..1. Unset when the program keeps none: the level's own colour stands in.
+    std::optional<std::array<float, 3>> background_colour;
+
+    // Returns the colour to clear the frame to: the game's when it gave one, else `fallback`.
+    std::array<float, 3> background_or(const std::array<float, 3>& fallback) const {
+        return background_colour ? *background_colour : fallback;
+    }
+
     // Returns the camera's view matrix, in the renderer's convention (looking down -Z, Y up).
     renderer::Mat4 view() const { return renderer::look_along(camera_position, forward, up); }
 

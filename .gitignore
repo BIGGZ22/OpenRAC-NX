@@ -10,6 +10,13 @@
 /port/build-switch*/
 /port/*.log
 /port/*.backup
+# Local build trees, diagnostic attachments and release verification products.
+/port/build-*/
+/.codex-attachments/
+*.log
+*.[eE][lL][fF]
+last-build.*
+CMake*.backup*
 # Disc images and extracted disc files are supplied by each player.
 *.[iI][sS][oO]
 iso_data/

@@ -71,6 +71,12 @@ void openrac_stream_read_at_once(int at_once);
  * closed the window while a track was being read). */
 void openrac_sound_stop_readers(void);
 
+/* OPENRAC_AUDIO_TRACE=1: called by the game's vertical blank once a tick (program/vsync.cpp), with
+ * the tick count and the ticks a second. Logs, for each traced stream that is playing, the audio
+ * it has played against the game time that has passed since its first sound (about once a
+ * second). Nothing when the trace is off. Game thread only. */
+void openrac_sound_trace_tick(uint64_t tick, int ticks_a_second);
+
 #ifdef __cplusplus
 }
 #endif

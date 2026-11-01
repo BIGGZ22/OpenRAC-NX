@@ -10,6 +10,11 @@
 #include "renderer/vulkan/shader_compiler.h"
 
 #include <array>
+#include <vector>
+#include <filesystem>
+#include <cstdlib>
+#include <cstdio>
+#include <algorithm>
 #include <cstdint>
 #include <format>
 #include <memory>
@@ -438,7 +443,72 @@ bool check_compute_stage(std::string_view source, std::string& log) {
     return ok;
 }
 
+bool compile_program_cached(
+    std::string_view vertex,
+    std::string_view fragment,
+    CompiledProgram& out,
+    std::string& log,
+    std::string_view compute
+);
+
+namespace {
+
+// OPENRAC_DUMP_SHADERS=FOLDER (Switch: from env.txt): each program linked is written there once,
+// as its sources (<key>.vert/.frag/.comp, as the renderer gave them) and its compiled encoding
+// (<key>.prog, encode_program's bytes: SPIR-V and reflection). For the Deko3D shader catalog.
+void dump_program(
+    std::uint64_t key,
+    std::string_view vertex,
+    std::string_view fragment,
+    std::string_view compute,
+    const CompiledProgram& program
+) {
+    static const char* folder = std::getenv("OPENRAC_DUMP_SHADERS");
+    if (folder == nullptr || folder[0] == '\0') {
+        return;
+    }
+    static std::mutex lock;
+    static std::vector<std::uint64_t> written;
+    const std::scoped_lock hold(lock);
+    if (std::find(written.begin(), written.end(), key) != written.end()) {
+        return;
+    }
+    written.push_back(key);
+    std::error_code ignored;
+    std::filesystem::create_directories(folder, ignored);
+    const std::string base = std::format("{}/{:016x}", folder, key);
+    const auto save = [](const std::string& path, const void* data, std::size_t size) {
+        if (std::FILE* f = std::fopen(path.c_str(), "wb")) {
+            std::fwrite(data, 1, size, f);
+            std::fclose(f);
+        }
+    };
+    if (!vertex.empty()) save(base + ".vert", vertex.data(), vertex.size());
+    if (!fragment.empty()) save(base + ".frag", fragment.data(), fragment.size());
+    if (!compute.empty()) save(base + ".comp", compute.data(), compute.size());
+    const std::vector<char> bytes = encode_program(program);
+    save(base + ".prog", bytes.data(), bytes.size());
+}
+
+}  // namespace
+
 bool compile_program(
+    std::string_view vertex,
+    std::string_view fragment,
+    CompiledProgram& out,
+    std::string& log,
+    std::string_view compute
+) {
+    const bool ok = compile_program_cached(vertex, fragment, out, log, compute);
+    if (ok) {
+        dump_program(
+            cache_text<3>("program", {vertex, fragment, compute}).key, vertex, fragment, compute, out
+        );
+    }
+    return ok;
+}
+
+bool compile_program_cached(
     std::string_view vertex,
     std::string_view fragment,
     CompiledProgram& out,

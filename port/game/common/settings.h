@@ -86,6 +86,11 @@ struct Settings {
     int aspect_custom_y = 9;
     Hud hud = Hud::Centre;
     int render_scale = 100;  // the frame's resolution, as a percentage of the window's picture
+    int switch_resolution = 0;  // Switch internal render preset; 0: automatic, minimum 480p
+    int switch_handheld_resolution = -1;  // -1 inherits the common resolution
+    int switch_docked_resolution = -1;
+    bool switch_lock_strafe = true;
+    int switch_fov = 100;  // world-camera tangent scale; 100 preserves the original camera
     int msaa = 1;            // samples a pixel: 1 (off), 2, 4, 8, 16
     renderer::GtaoSettings gtao_settings;
     // Enhanced rendering at all (port/enhanced; the launcher's Mods entry): read at start, Vulkan
@@ -138,6 +143,9 @@ Settings& get();
 
 // Reads `file` (missing or unreadable: the defaults) and remembers it for save().
 void load(const std::filesystem::path& file);
+// A same-process launcher already owns the live settings. Do not discard its edits
+// by reloading the SD file when starting the game (even if persistence failed).
+void start_game(const std::filesystem::path& file, bool from_launcher);
 
 // The settings in one line, for the log and its header.
 std::string summary();

@@ -1,0 +1,194 @@
+diff --git a/port/renderer/vulkan/gpu_draw.inc b/port/renderer/vulkan/gpu_draw.inc
+index beab2b2..c7fc3ca 100644
+--- a/port/renderer/vulkan/gpu_draw.inc
++++ b/port/renderer/vulkan/gpu_draw.inc
+@@ -430,6 +430,7 @@ bool gpu_resident_ready() {
+ renderer::GpuInstanceBatch gpu_resident_batch(
+     unsigned name, const Buffer& source, unsigned count, const renderer::GpuCullView& view
+ ) {
++    prepare_frame();  // g->recording must be the slot's current one
+     const auto& groups = g->gpu.resident.groups;
+     const auto found = groups.find(name);
+ 
+@@ -461,6 +462,7 @@ renderer::GpuInstanceBatch gpu_make_batch(
+     std::span<const renderer::GpuCullBounds> bounds,
+     const renderer::GpuCullView& view
+ ) {
++    prepare_frame();  // g->recording must be the slot's current one
+     if (!gpu_driven_active() || bounds.empty()) {
+         return {};
+     }
+@@ -583,6 +585,7 @@ void gpu_release_resident() {
+ }
+ 
+ bool gpu_submit_draw(renderer::GpuInstanceBatch batch, unsigned first, unsigned count) {
++    prepare_frame();  // g->recording must be the slot's current one
+     if (!batch || batch.recording != g->recording || batch.page >= frame().gpu.used) {
+         return false;
+     }
+diff --git a/port/renderer/vulkan/vkgl_commands.cpp b/port/renderer/vulkan/vkgl_commands.cpp
+index a4e5eb1..3083241 100644
+--- a/port/renderer/vulkan/vkgl_commands.cpp
++++ b/port/renderer/vulkan/vkgl_commands.cpp
+@@ -533,8 +533,9 @@ Slice ring_copy(const void* data, VkDeviceSize size) {
+ // ---- Command buffers and the order of things ----
+ 
+ VkCommandBuffer upload_cmd() {
++    Frame& f = frame();  // first: reclaiming the slot begins a new recording
+     g->upload_used = true;
+-    return frame().upload;
++    return f.upload;
+ }
+ 
+ void count_where(std::string_view event) {
+@@ -576,6 +577,7 @@ void end_rendering(PassEnd why) {
+ }
+ 
+ VkCommandBuffer cmd_for(Image* image, bool force_main) {
++    Frame& f = frame();  // first: `touched` is compared with the recording the slot begins
+     if (!force_main && image != nullptr && image->touched != g->recording) {
+         return upload_cmd();
+     }
+@@ -583,7 +585,7 @@ VkCommandBuffer cmd_for(Image* image, bool force_main) {
+     if (image != nullptr) {
+         image->touched = g->recording;
+     }
+-    return frame().main;
++    return f.main;
+ }
+ 
+ void barrier(VkCommandBuffer cmd, Image& image, VkImageLayout to) {
+diff --git a/port/renderer/vulkan/vkgl_device.cpp b/port/renderer/vulkan/vkgl_device.cpp
+index e41077a..9aac0b8 100644
+--- a/port/renderer/vulkan/vkgl_device.cpp
++++ b/port/renderer/vulkan/vkgl_device.cpp
+@@ -821,6 +821,8 @@ void destroy_all() {
+         // The pre-warm worker stops first: it uses the programs' modules and the cache.
+         stop_pipeline_prewarm();
+         vkDeviceWaitIdle(g->device);
++        // Teardown drains every slot itself; releasing resources must not begin a new recording.
++        g->frame_pending = false;
+         gpu_release();
+         material_release();
+         save_pipeline_manifest();
+diff --git a/port/renderer/vulkan/vkgl_draw.cpp b/port/renderer/vulkan/vkgl_draw.cpp
+index 13c497b..0f79ef0 100644
+--- a/port/renderer/vulkan/vkgl_draw.cpp
++++ b/port/renderer/vulkan/vkgl_draw.cpp
+@@ -439,6 +439,7 @@ void draw(
+     if (p == nullptr || !p->linked || count <= 0 || instances <= 0) {
+         return;
+     }
++    prepare_frame();
+     const Target t = target_of(g->state.draw_framebuffer);
+     if ((t.colour == nullptr && t.depth == nullptr) || t.width <= 0 || t.height <= 0) {
+         return;
+diff --git a/port/renderer/vulkan/vkgl_gl.cpp b/port/renderer/vulkan/vkgl_gl.cpp
+index 3f96145..6f56d7a 100644
+--- a/port/renderer/vulkan/vkgl_gl.cpp
++++ b/port/renderer/vulkan/vkgl_gl.cpp
+@@ -473,6 +473,7 @@ void VKGL tex_image_2d(
+         fail(kGlInvalidEnum);
+         return;
+     }
++    prepare_frame();  // `touched` below is compared with the current recording
+     if (level == 0) {
+         Image* old = t->image.get();
+         const bool same =
+diff --git a/port/renderer/vulkan/vkgl_internal.h b/port/renderer/vulkan/vkgl_internal.h
+index cc23bb2..35d57c0 100644
+--- a/port/renderer/vulkan/vkgl_internal.h
++++ b/port/renderer/vulkan/vkgl_internal.h
+@@ -1013,6 +1013,7 @@ struct Context {
+ 
+     std::array<Frame, kFrames> frames;
+     int frame = 0;
++    bool frame_pending = false;  // `frame` selected by advance() but not yet reclaimed (prepare_frame)
+     std::uint64_t frame_count = 1;  // frames begun
+     std::uint64_t recording = 1;    // command buffers begun (a flush begins new ones)
+     bool upload_used = false;
+@@ -1085,7 +1086,16 @@ inline bool check(VkResult result, const char* what) {
+ }
+ 
+ // The frame slot being recorded.
++// Reclaims the selected slot (waits for its last submission, resets its pools and begins its
++// command buffers) before its first use. Backport of upstream 9906aa6e: the wait moves from the
++// end of present() to the next frame's first GL work, so the game's simulation overlaps the GPU.
++void prepare_frame();
++
++// The frame slot being recorded; its first use may wait for that slot's previous submission.
+ inline Frame& frame() {
++    if (g->frame_pending) {
++        prepare_frame();
++    }
+     return g->frames[static_cast<std::size_t>(g->frame)];
+ }
+ 
+diff --git a/port/renderer/vulkan/vkgl_pipelines.cpp b/port/renderer/vulkan/vkgl_pipelines.cpp
+index afc10bb..b25ea93 100644
+--- a/port/renderer/vulkan/vkgl_pipelines.cpp
++++ b/port/renderer/vulkan/vkgl_pipelines.cpp
+@@ -1808,6 +1808,7 @@ VkDescriptorSet descriptors(Program& p, std::span<const Sampled> samplers) {
+ }
+ 
+ void OPENRAC_GLAPI dispatch_compute(GLuint x, GLuint y, GLuint z) {
++    prepare_frame();
+     auto* p = g->programs.find(g->state.program);
+     if (!p || !p->linked || !p->compute_pipeline || !x || !y || !z) {
+         return;
+@@ -1849,6 +1850,7 @@ void OPENRAC_GLAPI dispatch_compute(GLuint x, GLuint y, GLuint z) {
+ }
+ 
+ void OPENRAC_GLAPI memory_barrier(GLbitfield) {
++    prepare_frame();
+     end_rendering(PassEnd::Barrier);
+     // Shader writes (compute's, the only shaders that write) before every later use of what they
+     // wrote: shader and uniform reads, vertices and indices, indirect arguments, copies (the R-08
+diff --git a/port/renderer/vulkan/vkgl_present.cpp b/port/renderer/vulkan/vkgl_present.cpp
+index f3d09bd..0a3b0ce 100644
+--- a/port/renderer/vulkan/vkgl_present.cpp
++++ b/port/renderer/vulkan/vkgl_present.cpp
+@@ -375,17 +375,33 @@ void publish_counters() {
+     g->published = now;
+ }
+ 
++// Selects the next slot without waiting: the game simulates its next tick while the GPU works.
+ void advance() {
+     g->frame = (g->frame + 1) % kFrames;
+-    Frame& f = frame();
++    ++g->frame_count;
++    g->frame_pending = true;
++}
++
++// The selected slot's pools and memory stay untouched until its previous submission completed.
++void prepare_frame() {
++    if (g == nullptr || !g->frame_pending) {
++        return;
++    }
++    Frame& f = g->frames[static_cast<std::size_t>(g->frame)];
+     if (f.submitted) {
+         const stats::Scope wait("vulkan frame wait");
+         const Clock::time_point start = Clock::now();
+-        vkWaitForFences(g->device, 1, &f.fence, VK_TRUE, UINT64_MAX);
++        const VkResult waited = vkWaitForFences(g->device, 1, &f.fence, VK_TRUE, UINT64_MAX);
++        if (!check(waited, "a frame-slot fence wait")) {
++            g->presentation_error =
++                "Vulkan frame-slot wait failed (" + std::to_string(int(waited)) + ")";
++        }
+         g->measures.wait_s += seconds_since(start);
+         timing_results(f);
+         f.submitted = false;
+     }
++    // Cleared before the helpers below, which reach the slot through frame() themselves.
++    g->frame_pending = false;
+     run_deferred(f);
+     f.timings.clear();
+     f.timestamp_used = 0;
+@@ -397,7 +413,6 @@ void advance() {
+     f.pool_at = 0;
+     f.chunk_at = 0;
+     f.chunk_used = 0;
+-    ++g->frame_count;
+     begin_buffers();
+ 
+     // A copy that waited for a screen there was not (no window, or none shown): made now, so the

@@ -369,6 +369,57 @@ void test_debugging_md_documents_the_table() {
         in_table.emplace(row.name);
     }
 
+    // Switch experiments still use direct getenv readers. Verify their documented
+    // names against those readers rather than requiring an unrelated runtime migration.
+    const auto root = debugging_page().parent_path().parent_path().parent_path();
+    const std::pair<const char*, const char*> direct[] = {
+        {"OPENRAC_BETWEEN_PRESENT_COST", "port/game/common/frontend/interpolation.cpp"},
+        {"OPENRAC_NO_BETWEEN_WHEN_BEHIND", "port/game/common/frontend/interpolation.cpp"},
+        {"OPENRAC_PACING_COUNTS", "port/game/common/frontend/interpolation.cpp"},
+        {"OPENRAC_DK_LATE_ACQUIRE", "port/renderer/dkgl/dkgl_core.cpp"},
+        {"OPENRAC_DK_PASS_STATS", "port/renderer/dkgl/dkgl_core.cpp"},
+        {"OPENRAC_DK_PASS_TIMING", "port/renderer/dkgl/dkgl_core.cpp"},
+        {"OPENRAC_DK_PVS", "port/scene/level_renderer.cpp"},
+        {"OPENRAC_STATIC_FRONT_TO_BACK", "port/scene/level_renderer.cpp"},
+        {"OPENRAC_TERRAIN_BATCH", "port/scene/level_renderer.cpp"},
+        {"OPENRAC_TEST_LOGS", "port/game/common/test_logs.h"},
+        {"OPENRAC_TICK_PHASES", "port/game/common/frontend/tick_phases.h"},
+        {"OPENRAC_DK_RENDER_THREAD", "port/game/common/frontend/interpolation.cpp"},
+        {"OPENRAC_RENDER_CORE", "port/game/common/frontend/interpolation.cpp"},
+        {"OPENRAC_LATE_IMAGE_REPEAT_SKIP", "port/game/common/frontend/frame.cpp"},
+        {"OPENRAC_STREAM_EARLY_START", "port/game/common/lib/sound_engine.cpp"},
+        {"OPENRAC_AUDIO_TRACE", "port/game/common/lib/sound_engine.cpp"},
+        {"OPENRAC_NATIVE_CUTOUT_MOBY_MIPS", "port/scene/level_renderer.cpp"},
+        {"OPENRAC_FRAME_CAP_FROM_HANDOFF", "port/game/common/frontend/interpolation.cpp"},
+        {"OPENRAC_IMAGE_SENDS_FIXTURE", "port/game/common/frontend/frame.cpp"},
+        {"OPENRAC_POOL_CORES", "port/common/parallel.cpp"},
+        {"OPENRAC_POOL_THREADS", "port/common/parallel.cpp"},
+        {"OPENRAC_POOL_STATS", "port/common/parallel.cpp"},
+        {"OPENRAC_POSE_REFERENCE", "port/scene/moby_pose.cpp"},
+        {"OPENRAC_POSE_VERIFY", "port/scene/moby_pose.cpp"},
+        {"OPENRAC_IMAGE_OWNER_TRACE", "port/game/common/frontend/frame.cpp"},
+        {"OPENRAC_SWITCH_CPU_MHZ", "port/platform/switch/clocks.cpp"},
+        {"OPENRAC_SWITCH_GPU_MHZ", "port/platform/switch/clocks.cpp"},
+        {"OPENRAC_SWITCH_MEM_MHZ", "port/platform/switch/clocks.cpp"},
+        {"OPENRAC_SWITCH_CLOCK_PROFILE", "port/platform/switch/clocks.cpp"},
+        {"OPENRAC_SWITCH_CLOCK_KEEP", "port/platform/switch/clocks.cpp"},
+        {"OPENRAC_TICK_RATE_60", "port/game/common/program/vsync.cpp"},
+        {"OPENRAC_LATE_IMAGE_REPEAT_STRICT", "port/game/common/frontend/frame.cpp"},
+        {"OPENRAC_VENDOR_LOGO_TRACE", "port/game/common/frontend/frame.cpp"},
+        {"OPENRAC_DK_COUNTERS", "port/renderer/dkgl/dkgl_core.cpp"},
+        {"OPENRAC_PALETTE_COPY_REFERENCE", "port/scene/level_renderer.cpp"},
+        {"OPENRAC_TICK_FRAME_PACING_REFERENCE", "port/game/common/frontend/interpolation.cpp"},
+        {"OPENRAC_EVEN_PRESENT", "port/game/common/frontend/interpolation.cpp"},
+        {"OPENRAC_PACING_RING", "port/game/common/frontend/interpolation.cpp"},
+    };
+    for (const auto& [name, path] : direct) {
+        std::ifstream file(root / path);
+        CHECK(file.is_open());
+        const std::string source((std::istreambuf_iterator<char>(file)), {});
+        CHECK(source.find(std::string("getenv(\"") + name + "\")") != std::string::npos);
+        CHECK(in_table.emplace(name).second);
+    }
+
     // Each difference is named, so that the failure says which row to write or remove.
     const std::vector<std::string> undocumented = lacking(in_table, documented);
     for (const std::string& name : undocumented) {

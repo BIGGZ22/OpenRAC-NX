@@ -19,8 +19,17 @@ namespace openrac::frontend {
 // Jobs capture their scene data by value. finish() transfers graphics ownership back to the producer.
 class RenderWorker {
 public:
+    // Which processor core the worker runs on. Only the Switch acts on it (elsewhere the system
+    // spreads threads itself): there a new thread starts on its creator's core and stays there.
+    struct Placement {
+        bool move = false;  // false: left where the system starts it
+        int core = -1;      // with move: this core, or -1 for the first one the process may use
+                            // other than the creating (game) thread's
+    };
+
     // Starts the worker with the producer's floating-point environment; startup errors reach the frontend's frame boundary.
     RenderWorker();
+    explicit RenderWorker(Placement placement);
     // Finishes the last job, stops and joins before any captured graphics owners are destroyed.
     ~RenderWorker();
     RenderWorker(const RenderWorker&) = delete;
@@ -46,6 +55,7 @@ private:
     std::string m_error;                // A worker failure, reported by finish/submit.
     const std::fenv_t
         m_environment;       // Producer's rounding and denormal mode, fixed before thread startup.
+    const int m_core;        // The core the worker moves itself to first, or -1 to stay.
     JoiningThread m_thread;  // Joined before the handoff fields disappear.
 };
 

@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstddef>
 #include <stdexcept>
+#include <thread>
 #include <vector>
 
 #include "check.h"
@@ -60,6 +61,49 @@ void rethrows() {
     CHECK(after.load() == 10);
 }
 
+// A call from inside a piece (the pool is busy with the outer call) runs on its own caller, and
+// every piece of both runs once.
+void nested() {
+    std::vector<std::atomic<int>> outer(12);
+    std::vector<std::atomic<int>> inner(12 * 9);
+    parallel::for_each(outer.size(), [&](std::size_t i) {
+        outer[i].fetch_add(1);
+        parallel::for_each(9, [&](std::size_t k) { inner[i * 9 + k].fetch_add(1); });
+    });
+    bool once = true;
+    for (const auto& r : outer) once = once && r.load() == 1;
+    for (const auto& r : inner) once = once && r.load() == 1;
+    CHECK(once);
+}
+
+// Two threads calling at once (the game's and the render worker's): one has the threads, the
+// other runs alone; neither loses or repeats a piece.
+void concurrent() {
+    std::vector<std::atomic<int>> a(5000), b(5000);
+    std::thread other([&] {
+        for (int round = 0; round < 20; ++round) {
+            parallel::for_each(b.size() / 20, [&](std::size_t i) { b[round * (b.size() / 20) + i].fetch_add(1); });
+        }
+    });
+    for (int round = 0; round < 20; ++round) {
+        parallel::for_each(a.size() / 20, [&](std::size_t i) { a[round * (a.size() / 20) + i].fetch_add(1); });
+    }
+    other.join();
+    bool once = true;
+    for (const auto& r : a) once = once && r.load() == 1;
+    for (const auto& r : b) once = once && r.load() == 1;
+    CHECK(once);
+}
+
+// Many short calls, as a tick's poses are (OPENRAC_POOL_STATS counts them when set).
+void many_calls() {
+    std::atomic<std::size_t> total{0};
+    for (int round = 0; round < 400; ++round) {
+        parallel::for_each(180, [&](std::size_t) { total.fetch_add(1); });
+    }
+    CHECK(total.load() == 400u * 180u);
+}
+
 }  // namespace
 
 int main() {
@@ -67,5 +111,8 @@ int main() {
     each_once();
     results_in_place();
     rethrows();
+    nested();
+    concurrent();
+    many_calls();
     return openrac::test::result();
 }

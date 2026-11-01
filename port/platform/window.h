@@ -191,6 +191,7 @@ public:
     // The window's icon: `rgba` is width x height pixels, 4 bytes each, top row first.
     void set_icon(const unsigned char* rgba, int width, int height);
     void swap();
+    bool last_swap_presented() const { return m_last_swap_presented; }
 
     // The size to render at, in pixels (larger than the window's size on a
     // high-density display).
@@ -218,10 +219,14 @@ private:
 
     // Opens the window for GlApi::Vulkan; false (and nothing left open) when Vulkan cannot be had.
     bool open_vulkan(const WindowConfig& config, std::string& error);
+    // Switch deko3d test builds: opens dkgl on the native window (platform/switch/graphics.cpp).
+    bool open_deko3d(const WindowConfig& config, std::string& error);
 
     SDL_Window* m_window = nullptr;
     SDL_GLContextState* m_context = nullptr;
     bool m_vulkan = false;
+    bool m_deko3d = false;
+    bool m_last_swap_presented = true;
     bool m_vulkan_library = false;  // macOS: the Vulkan library this window had SDL load
     DisplayMode m_mode = DisplayMode::Windowed;
     std::string m_gl_version;

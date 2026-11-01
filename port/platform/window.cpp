@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <format>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -820,10 +821,14 @@ bool Window::focused() const {
 void Window::swap() {
 #if defined(OPENRAC_VULKAN)
     if (m_vulkan) {
+        const auto before = vkgl::accepted_presents();
         vkgl::present();
+        m_last_swap_presented = vkgl::accepted_presents() > before;
+        if (!vkgl::presentation_error().empty()) throw std::runtime_error(vkgl::presentation_error());
         return;
     }
 #endif
+    m_last_swap_presented = true;
     SDL_GL_SwapWindow(m_window);
 }
 

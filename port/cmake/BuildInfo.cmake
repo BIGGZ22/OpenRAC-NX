@@ -17,6 +17,10 @@ if(EXISTS "${conf}")
   endif()
 endif()
 
+if(DEFINED NX_VERSION AND NOT NX_VERSION STREQUAL "")
+  set(version "${NX_VERSION}")
+endif()
+
 set(commit "unknown")
 find_program(GIT git)
 if(GIT)

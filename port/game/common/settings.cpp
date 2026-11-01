@@ -240,6 +240,16 @@ void load(const std::filesystem::path& file) {
             known = parse(value, kHud, s.hud);
         } else if (key == "render_scale") {
             known = parse_int(value, 25, 400, s.render_scale);
+        } else if (key == "switch_resolution") {
+            known = parse_int(value, 0, 6, s.switch_resolution);
+        } else if (key == "switch_handheld_resolution") {
+            known = parse_int(value, -1, 6, s.switch_handheld_resolution);
+        } else if (key == "switch_docked_resolution") {
+            known = parse_int(value, -1, 6, s.switch_docked_resolution);
+        } else if (key == "switch_lock_strafe") {
+            known = parse_bool(value, s.switch_lock_strafe);
+        } else if (key == "switch_fov") {
+            known = parse_int(value, 85, 120, s.switch_fov);
         } else if (key == "msaa") {
             known = parse_listed(value, kSampleCounts, s.msaa);
         } else if (key == "enhanced_rendering") {
@@ -374,6 +384,16 @@ void load(const std::filesystem::path& file) {
     log::info("settings from {}: {}", file.string(), summary());
 }
 
+void start_game(const std::filesystem::path& file, bool from_launcher) {
+    if (from_launcher && g_file.lexically_normal() == file.lexically_normal()) {
+        platform::controller::sanitize(g_settings.controller);
+        g_gain = gain_now();
+        log::info("using live launcher settings from {}", file.string());
+        return;
+    }
+    load(file);
+}
+
 std::string summary() {
     const Settings& s = g_settings;
     const std::string window = s.window_width > 0 && s.window_height > 0
@@ -430,6 +450,11 @@ bool save() {
         << "aspect_custom = " << s.aspect_custom_x << ":" << s.aspect_custom_y << "\n"
         << "hud = " << kHud[static_cast<int>(s.hud)] << "\n"
         << "render_scale = " << s.render_scale << "\n"
+        << "switch_resolution = " << s.switch_resolution << "\n"
+        << "switch_handheld_resolution = " << s.switch_handheld_resolution << "\n"
+        << "switch_docked_resolution = " << s.switch_docked_resolution << "\n"
+        << "switch_lock_strafe = " << (s.switch_lock_strafe ? 1 : 0) << "\n"
+        << "switch_fov = " << s.switch_fov << "\n"
         << "msaa = " << s.msaa << "\n"
         << "enhanced_rendering = " << (s.enhanced_rendering ? 1 : 0) << "\n"
         << "enhanced_graphics = " << (s.enhanced_graphics ? 1 : 0) << "\n"

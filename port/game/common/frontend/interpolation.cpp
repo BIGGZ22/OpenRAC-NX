@@ -13,20 +13,29 @@
 // owned snapshot on RenderWorker; finish_render returns exclusive graphics ownership before UI work.
 
 #include <algorithm>
+#include <climits>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
+#include <format>
 #include <limits>
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
+#include <vector>
+#include "common/timing_samples.h"
 
 #include "platform/sdl.h"
+#ifdef __SWITCH__
+#include "platform/switch/overlay_stats.h"
+#endif
 
 #include "common/env.h"
+#include "common/env_interval.h"
 #include "common/log.h"
 #include "common/sampler.h"
 #include "common/slow_cpu.h"
@@ -38,6 +47,7 @@
 #include "game/common/frontend/geometry.h"
 #include "game/common/frontend/pacing.h"
 #include "game/common/frontend/state.h"
+#include "game/common/frontend/tick_phases.h"
 #include "openrac/game_host.h"
 #include "platform/performance_hint.h"
 #include "platform/pump.h"
@@ -128,10 +138,150 @@ float alpha_at(std::chrono::steady_clock::time_point display) {
     return tick_alpha(display, pacing.tick, pacing.period);
 }
 
+// OPENRAC_FRAME_CAP_FROM_HANDOFF=1 (reference): the frame cap counts the next frame's start from
+// the handed-back frame's start shifted to its present, as before. That is the same instant for a
+// frame drawn on the game thread; with the render worker the present comes a tick after the frame
+// started, the next tick's frame, started right after it, was not yet due, the cap held it back
+// and, with frames between ticks declined, it was never drawn (sessions 42-43: 0.58-0.90 presents
+// a tick while the pacing line counted every tick frame as drawn).
+bool frame_cap_from_handoff() {
+    static const bool on = [] {
+        const char* v = std::getenv("OPENRAC_FRAME_CAP_FROM_HANDOFF");
+        const bool set = v != nullptr && std::string_view(v) == "1";
+        if (set) {
+            log::info("frontend: REFERENCE OPENRAC_FRAME_CAP_FROM_HANDOFF=1: the frame cap counts from "
+                      "a handed-back frame's present");
+        }
+        return set;
+    }();
+    return on;
+}
+
+// OPENRAC_TICK_FRAME_PACING_REFERENCE=1 (reference): the tick's own frame paced as before session
+// 55. (1) The frame cap lets it start only within 1 ms of its due time (frame_due), not
+// tick_frame_tolerance's half a cap frame when the cap is at least the tick rate. (2) A frame the
+// cap held back is declined by OPENRAC_NO_BETWEEN_WHEN_BEHIND like a frame between ticks, and so
+// never drawn. (3) That experiment's decline comes before a finished render job is swapped, so the
+// tick's frame waits for the next tick's work to be done before it is shown. (4) A tick frame is
+// held back even where between() is not run (no camera yet), and so not drawn.
+bool tick_frame_pacing_reference() {
+    static const bool on = [] {
+        const char* v = std::getenv("OPENRAC_TICK_FRAME_PACING_REFERENCE");
+        const bool set = v != nullptr && std::string_view(v) == "1";
+        if (set) {
+            log::info("frontend: REFERENCE OPENRAC_TICK_FRAME_PACING_REFERENCE=1: tick frames paced "
+                      "as before session 55 (1 ms cap tolerance, held-back frames declined when behind)");
+        }
+        return set;
+    }();
+    return on;
+}
+
+// OPENRAC_EVEN_PRESENT=1 (experiment, off by default): a tick's finished frame, swapped between
+// ticks (between), is swapped no sooner than a tick less 1 ms after the last swap, and never past
+// the next tick's time: the game thread waits there for no longer than it would sleep anyway. With
+// vsync 0 the swaps otherwise follow when each tick's work ends, which varies by several ms.
+bool even_present() {
+    static const bool on = [] {
+        const char* v = std::getenv("OPENRAC_EVEN_PRESENT");
+        const bool set = v != nullptr && std::string_view(v) == "1";
+        if (set) {
+            log::info("frontend: EXPERIMENT OPENRAC_EVEN_PRESENT=1: a tick frame's swap held to a tick "
+                      "after the last swap, at most to the next tick's time");
+        }
+        return set;
+    }();
+    return on;
+}
+
+// OPENRAC_PACING_RING=N (diagnostic, 0/unset off, 64..16384): the last N pacing events in memory,
+// written to the log once, at close (dump_pacing_ring): no SD writes while the game runs. One
+// allocation, at the first event. Window thread only. Times are microseconds from the first event.
+struct RingEvent {
+    enum Kind : std::uint8_t { Tick, Drawn, Deferred, DeferredDrawn, LostNextTick, LostWorker, LostLate, LostBehind, Swap };
+    Kind kind;
+    std::uint8_t rate;           // ticks a second
+    std::uint16_t tolerance_us;  // Drawn/Deferred: the cap tolerance used
+    std::uint32_t tick;          // the kept tick's frame number
+    std::int64_t at;             // when (us)
+    std::int64_t due;            // Tick: the tick's due time; Drawn/Deferred/Lost*: the cap's due; Swap: the frame's start
+    std::int32_t a_us;           // Tick: behind; Swap: the swap call's own time
+    std::int32_t b_us;           // Swap: CPU record time of the frame (render thread)
+    std::int32_t c_us;           // Swap: GPU time the frame measured, when timed
+};
+
+struct Ring {
+    std::vector<RingEvent> events;
+    std::size_t next = 0, capacity = 0;
+    bool wrapped = false;
+    std::chrono::steady_clock::time_point origin{};
+};
+
+int pacing_ring_size() {
+    static const int n = env_interval::parse(std::getenv("OPENRAC_PACING_RING"), 64, 16384);
+    return n;
+}
+
+Ring& ring() {
+    static Ring r;
+    return r;
+}
+
+std::int64_t ring_us(std::chrono::steady_clock::time_point t) {
+    Ring& r = ring();
+    if (t.time_since_epoch().count() == 0) {
+        return -1;
+    }
+    return std::chrono::duration_cast<std::chrono::microseconds>(t - r.origin).count();
+}
+
+void ring_add(RingEvent e) {
+    Ring& r = ring();
+    if (r.capacity == 0) {
+        r.capacity = static_cast<std::size_t>(pacing_ring_size());
+        r.events.resize(r.capacity);
+    }
+    r.events[r.next] = e;
+    r.next = (r.next + 1) % r.capacity;
+    r.wrapped = r.wrapped || r.next == 0;
+}
+
+void ring_event(RingEvent::Kind kind, std::chrono::steady_clock::time_point at,
+                std::chrono::steady_clock::time_point due, std::int64_t a = 0, std::int64_t b = 0,
+                std::int64_t c = 0, std::int64_t tolerance_us = 0) {
+    if (pacing_ring_size() == 0) {
+        return;
+    }
+    Ring& r = ring();
+    if (r.origin.time_since_epoch().count() == 0) {
+        r.origin = at;
+    }
+    const auto clamp32 = [](std::int64_t v) {
+        return static_cast<std::int32_t>(std::clamp<std::int64_t>(v, INT32_MIN, INT32_MAX));
+    };
+    const double period = pacing.period.count();
+    ring_add(RingEvent{
+        kind,
+        static_cast<std::uint8_t>(period > 0.0 ? std::clamp(1.0 / period + 0.5, 0.0, 255.0) : 0.0),
+        static_cast<std::uint16_t>(std::clamp<std::int64_t>(tolerance_us, 0, 65535)),
+        g && g->kept ? static_cast<std::uint32_t>(g->kept->frame) : 0u,
+        ring_us(at), ring_us(due), clamp32(a), clamp32(b), clamp32(c)});
+}
+
+std::int64_t us_of(std::chrono::duration<double> d) {
+    return static_cast<std::int64_t>(d.count() * 1e6);
+}
+
 // Swaps the window's buffers for the frame begun at `started`, and keeps what the swap tells the
 // pacing: what a frame costs, the display's refresh interval when it is to be read again, the
-// last swap that waited for a refresh, and when the frame cap lets the next frame start.
-void swapped(std::chrono::steady_clock::time_point started) {
+// last swap that waited for a refresh, and when the frame cap lets the next frame start, counted
+// from `frame_started`, when the frame was begun (draw_kept).
+// The frame being swapped's render-thread record and GPU times, for the ring (present_frame).
+std::int64_t ring_record_us = 0, ring_gpu_us = 0;
+
+void swapped(
+    std::chrono::steady_clock::time_point started, std::chrono::steady_clock::time_point frame_started
+) {
     using namespace std::chrono;
     const auto before = steady_clock::now();
     platform::frame_work_done();
@@ -140,6 +290,12 @@ void swapped(std::chrono::steady_clock::time_point started) {
     const auto after = steady_clock::now();
     const double cost = duration<double>(before - started).count();
     pacing.cost = 0.8 * pacing.cost + 0.2 * cost;
+    if (pacing.last_present.time_since_epoch().count() != 0) {
+        const double period = std::min(duration<double>(after - pacing.last_present).count(), 0.25);
+        pacing.present_period =
+            pacing.present_period > 0.0 ? 0.8 * pacing.present_period + 0.2 * period : period;
+    }
+    pacing.last_present = after;
     renderer::ui::fps_counter::frame_drawn(
         after, duration<double>(after - swap_started).count(), settings::get().show_fps
     );
@@ -169,10 +325,13 @@ void swapped(std::chrono::steady_clock::time_point started) {
     if (cap > 0.0) {
         const auto step = duration_cast<steady_clock::duration>(duration<double>(1.0 / cap));
         const auto now = steady_clock::now();
-        pacing.due = frame_pacing::next_due(pacing.due, started, now, step);
+        pacing.due = frame_pacing::next_due(pacing.due, frame_started, now, step);
     } else {
         pacing.due = {};
     }
+    ring_event(RingEvent::Swap, swap_started, frame_started,
+               std::chrono::duration_cast<std::chrono::microseconds>(after - swap_started).count(),
+               ring_record_us, ring_gpu_us);
     // The next frame's work counts from here: the swap, and any wait in it, is the display's.
     platform::work_resumed();
 }
@@ -191,6 +350,61 @@ void slow_frame() {
 // Whether the frame cap lets a frame start now (within a millisecond: a sleep wakes that coarsely).
 bool frame_due(std::chrono::steady_clock::time_point now) {
     return frame_may_start(frame_cap(), pacing.due, now);
+}
+
+bool tick_frame_pacing_reference_on() {
+    return tick_frame_pacing_reference();
+}
+
+bool tick_frame_due(std::chrono::steady_clock::time_point now) {
+    if (tick_frame_pacing_reference()) {
+        return frame_due(now);
+    }
+    return tick_frame_may_start(frame_cap(), pacing.due, now, pacing.period, pacing.between_since_tick);
+}
+
+void ring_tick_frame(std::chrono::steady_clock::time_point now, bool drawn) {
+    if (pacing_ring_size() == 0) {
+        return;
+    }
+    const auto tolerance = tick_frame_pacing_reference()
+                               ? std::chrono::steady_clock::duration(std::chrono::milliseconds(1))
+                               : tick_frame_tolerance(frame_cap(), pacing.period, pacing.between_since_tick);
+    ring_event(drawn ? RingEvent::Drawn : RingEvent::Deferred, now, pacing.due, 0, 0, 0,
+               std::chrono::duration_cast<std::chrono::microseconds>(tolerance).count());
+}
+
+void dump_pacing_ring() {
+    Ring& r = ring();
+    if (r.capacity == 0) {
+        return;
+    }
+    static constexpr const char* kNames[] = {"tick", "drawn", "deferred", "deferred-drawn", "lost-next-tick",
+                                             "lost-worker", "lost-late", "lost-behind", "swap"};
+    const std::size_t count = r.wrapped ? r.capacity : r.next;
+    const std::size_t first = r.wrapped ? r.next : 0;
+    log::info("pacing ring (OPENRAC_PACING_RING): {} events, microseconds from the first; columns: kind, "
+              "tick, rate, at, due (tick: its time; drawn/deferred/lost: the cap's due; swap: the frame's "
+              "start), a (tick: behind; swap: the swap call), b (swap: CPU record), c (swap: GPU), tolerance "
+              "(drawn/deferred). Swap times are the CPU's present call, not the display's scan-out.",
+              count);
+    std::string lines;
+    for (std::size_t i = 0; i < count; ++i) {
+        const RingEvent& e = r.events[(first + i) % r.capacity];
+        lines += std::format("{},{},{},{},{},{},{},{},{}\n", kNames[e.kind], e.tick, int(e.rate), e.at, e.due,
+                             e.a_us, e.b_us, e.c_us, int(e.tolerance_us));
+        if (lines.size() > 16384 || i + 1 == count) {
+            if (!lines.empty() && lines.back() == '\n') {
+                lines.pop_back();
+            }
+            log::info("pacing ring:\n{}", lines);
+            lines.clear();
+        }
+    }
+    r.events = {};
+    r.capacity = 0;
+    r.next = 0;
+    r.wrapped = false;
 }
 
 // ---- The kept tick ----
@@ -226,6 +440,20 @@ void capture_frame(const FramePresentation& output) {
 
 // Reports the diagnostic's blocking measurements after presentation.
 void report_frame_cost(const FramePresentation& output) {
+    static const int cpu_every=[] {
+        const auto* v=std::getenv("OPENRAC_CPU_TIMING");
+        return v && std::atoi(v)>0 ? std::clamp(std::atoi(v),30,3600) : 0;
+    }();
+    if(cpu_every) {
+        static TimingSamples scene,record,total;
+        scene.add(output.scene_seconds*1000);record.add(output.record_seconds*1000);
+        total.add(std::chrono::duration<double,std::milli>(output.finished-output.started).count());
+        if(total.values.size()>=unsigned(cpu_every)) {
+            log::info("cpu timing {} frames: scene avg {:.3f}; record avg {:.3f} p95 {:.3f} max {:.3f}; render CPU span avg {:.3f} ms (FRAME_COST active: {}; excludes game update and presentation)",
+                total.values.size(),scene.mean(),record.mean(),record.p95(),record.maximum(),total.mean(),output.measure_cost);
+            scene.clear();record.clear();total.clear();
+        }
+    }
     const int width = output.width;
     const int height = output.height;
     if (frame_cost.on) {
@@ -275,6 +503,45 @@ void log_pacing(const FramePresentation& output) {
     }
 }
 
+// OPENRAC_DK_RENDER_THREAD=1 (experiment, off by default): deko3d records the world on the render
+// worker too, as Vulkan does (one owned snapshot in flight; finish_render hands graphics back
+// before the UI and the present). Without it every deko3d frame is drawn on the game thread
+// between the game's ticks: the game's code, reading the tick, recording it and presenting it run
+// one after another (sessions 39-40: about 12 ms of game code, 5 ms of recording and the rest of
+// a 28-33 ms tick on one thread while the GPU waited).
+bool dk_render_thread() {
+    static const bool on = [] {
+        const char* v = std::getenv("OPENRAC_DK_RENDER_THREAD");
+        const bool set = v != nullptr && std::string_view(v) == "1";
+        if (set && gl::is_deko3d()) {
+            log::info(
+                "frontend: EXPERIMENT OPENRAC_DK_RENDER_THREAD=1: the deko3d world is recorded on "
+                "the render worker while the game runs its next tick"
+            );
+        } else if (set) {
+            log::info("frontend: OPENRAC_DK_RENDER_THREAD=1 ignored: the renderer is not deko3d");
+        }
+        return set && gl::is_deko3d();
+    }();
+    return on;
+}
+
+// Where the render worker runs (RenderWorker::Placement). OPENRAC_RENDER_CORE=N puts it on core N,
+// -1 leaves it where the system starts it; unset, the deko3d worker goes to a core other than the
+// game thread's (on the Switch a new thread otherwise starts on its creator's core, where it
+// would only take turns with the game) and the Vulkan worker is left as it was.
+RenderWorker::Placement render_placement() {
+    RenderWorker::Placement placement;
+    const char* v = std::getenv("OPENRAC_RENDER_CORE");
+    if (v != nullptr && *v != '\0') {
+        placement.core = std::atoi(v);
+        placement.move = placement.core >= 0;
+    } else {
+        placement.move = dk_render_thread();
+    }
+    return placement;
+}
+
 // Pins the immutable captured scene and transfers graphics ownership to its persistent worker.
 void queue_frame(const std::shared_ptr<FramePresentation>& output) {
     // The worker is persistent; every job owns poses, packets, textures and graphics settings.
@@ -282,8 +549,11 @@ void queue_frame(const std::shared_ptr<FramePresentation>& output) {
         // These renderer capability caches must be populated before the game and worker can query them.
         [[maybe_unused]] const int samples = renderer::FrameBuffer::max_samples();
         [[maybe_unused]] const float anisotropy = renderer::TexturePool::max_anisotropy();
-        g->render_worker = std::make_unique<RenderWorker>();
-        log::info("Vulkan world rendering on a dedicated thread; one snapshot in flight");
+        g->render_worker = std::make_unique<RenderWorker>(render_placement());
+        log::info(
+            "{} world rendering on a dedicated thread; one snapshot in flight",
+            gl::is_vulkan() ? "Vulkan" : "deko3d"
+        );
     }
     const auto snapshot_started = std::chrono::steady_clock::now();
     auto snapshot =
@@ -346,6 +616,9 @@ void draw_overlay(const FramePresentation& output) {
 
 // Composites debug UI and presents on the window thread, after exclusive graphics ownership returns.
 void present_frame(FramePresentation& output) {
+    // OPENRAC_TICK_PHASES: the present's share of the game thread's tick.
+    const tick_phases::Timer phase(tick_phases::Present);
+    tick_phases::count_present();
     // What is shown: the frame with one sample a pixel (a multisampled one is resolved here, once),
     // with the port's own overlays over it.
     const unsigned shown = output.shown;
@@ -380,7 +653,13 @@ void present_frame(FramePresentation& output) {
     }
     draw_overlay(output);
     const stats::Scope swap_scope("swap");
-    swapped(started);
+    ring_record_us = us_of(std::chrono::duration<double>(output.record_seconds));
+    ring_gpu_us = us_of(std::chrono::duration<double>(output.gpu_seconds));
+    swapped(started, frame_cap_from_handoff() ? started : output.started);
+#ifdef __SWITCH__
+    if (g->window->last_swap_presented())
+        platform::overlay_stats::presented(width, height, window_width, window_height);
+#endif
     report_frame_cost(output);
 }
 
@@ -409,7 +688,11 @@ bool finish_render() try {
     }
     const auto started = std::chrono::steady_clock::now();
     std::string error;
-    const bool complete = g->render_worker->finish(error);
+    bool complete = false;
+    {
+        const tick_phases::Timer phase(tick_phases::WorkerWait);
+        complete = g->render_worker->finish(error);
+    }
     auto output = std::move(g->pending_frame);
     // A worker failure has already relinquished all graphics resources.
     if (!complete) {
@@ -453,15 +736,27 @@ void draw_kept(bool first) try {
     frame_cost.mark = output->started;
     output->measure_cost = frame_cost.on;
     log_pacing(*output);
+    // The tick's own frame: its image transfers reach the renderer now.
+    if (first) {
+        image_sends_drawn();
+    }
     static const bool requested = env::flag(env::Var::RenderThread);
-    const bool threaded = gl::is_vulkan() && requested;
+    // deko3d only with OPENRAC_DK_RENDER_THREAD=1 (dk_render_thread); OPENRAC_RENDER_THREAD=0 still
+    // keeps both on this thread.
+    const bool threaded = (gl::is_vulkan() || dk_render_thread()) && requested;
     // OpenGL contexts retain the original window-thread path.
     if (!threaded) {
-        render_scene(*g, *g->kept, settings::get(), *output);
+        {
+            const tick_phases::Timer phase(tick_phases::Render);
+            render_scene(*g, *g->kept, settings::get(), *output);
+        }
         present_frame(*output);
         return;
     }
-    queue_frame(output);
+    {
+        const tick_phases::Timer phase(tick_phases::Render);
+        queue_frame(output);
+    }
 
 } catch (const std::exception& failure) {
     g->pending_frame.reset();
@@ -475,14 +770,172 @@ void draw_kept(bool first) try {
 
 // ---- Between ticks ----
 
+PacingCounts pacing_counts;
+
+namespace {
+int pacing_counts_every() {
+    static const int every = [] {
+        const char* v = std::getenv("OPENRAC_PACING_COUNTS");
+        return v != nullptr && std::atoi(v) > 0 ? std::clamp(std::atoi(v), 30, 3600) : 0;
+    }();
+    return every;
+}
+
+// OPENRAC_NO_BETWEEN_WHEN_BEHIND=1 (experiment, off by default): no frame between ticks while the
+// game's tick came half a tick or more after its time. Each such frame is a whole frame of GPU work that does not
+// advance the game; when the GPU cannot keep up, it slows the game's own ticks further.
+bool no_between_when_behind() {
+    static const bool on = [] {
+        const char* v = std::getenv("OPENRAC_NO_BETWEEN_WHEN_BEHIND");
+        const bool set = v != nullptr && std::string_view(v) == "1";
+        if (set) {
+            log::info("frontend: EXPERIMENT OPENRAC_NO_BETWEEN_WHEN_BEHIND=1: no frames between ticks while a tick is late");
+        }
+        return set;
+    }();
+    return on;
+}
+
+// OPENRAC_BETWEEN_PRESENT_COST=1 (experiment, off by default): a frame between ticks is drawn only
+// if the display's own pace (Pacing::present_period, which holds the GPU's time when it is the
+// slower) would show it before the next tick is due, plus the lag. The default estimate,
+// Pacing::cost, is the window thread's CPU time before the swap only: with the GPU taking ~60 ms a
+// frame (session 33) it still predicted a refresh in time, and up to 117 frames between 120 ticks
+// were drawn while every tick was behind, each a whole GPU frame that does not advance the game.
+bool between_present_cost() {
+    static const bool on = [] {
+        const char* v = std::getenv("OPENRAC_BETWEEN_PRESENT_COST");
+        const bool set = v != nullptr && std::string_view(v) == "1";
+        if (set) {
+            log::info("frontend: EXPERIMENT OPENRAC_BETWEEN_PRESENT_COST=1: frames between ticks only when the display's measured pace shows them before the next tick");
+        }
+        return set;
+    }();
+    return on;
+}
+
+// One line each OPENRAC_PACING_COUNTS ticks: where the presents went.
+void report_pacing_counts() {
+    const int every = pacing_counts_every();
+    if (every == 0 || pacing_counts.ticks < static_cast<std::uint64_t>(every)) {
+        return;
+    }
+    const PacingCounts& c = pacing_counts;
+    const double n = static_cast<double>(c.ticks);
+    log::info(
+        "pacing over {} ticks: tick frames drawn {} (held back by the frame cap and drawn between ticks {}; "
+        "held back and never drawn {}), left out late {}, other ticks undrawn {}, frames between ticks {} "
+        "({:.2f} presents a tick); ticks behind their time {} (over 100 ms, where vsync restarts its count: {}); "
+        "between frames declined by experiments: present cost {}, behind {}; late ticks still drawn: after 3 left out {}, "
+        "2D list uploads an image {}, other {}; display pace {:.1f} ms a frame, CPU cost {:.1f} ms; "
+        "held back and never drawn, by why: next tick first {}, render thread busy {}, too late {}, "
+        "declined behind (reference) {}; drawn at once by the tick tolerance {}",
+        c.ticks, c.tick_frames, c.deferred_drawn,
+        c.deferred > c.deferred_drawn ? c.deferred - c.deferred_drawn : 0, c.left_out,
+        c.ticks > c.tick_frames + c.left_out ? c.ticks - c.tick_frames - c.left_out : 0, c.between,
+        static_cast<double>(c.tick_frames + c.between) / n, c.behind, c.far_behind,
+        c.declined_present_cost, c.declined_behind, c.late_kept_limit, c.late_kept_image, c.late_kept_other,
+        pacing.present_period * 1000.0, pacing.cost * 1000.0, c.deferred_lost_next_tick,
+        c.deferred_lost_worker, c.deferred_lost_late, c.deferred_lost_behind, c.tolerance_admitted
+    );
+    // The image sends of the late ticks kept because of them, the most frequent first.
+    if (!c.image_sends.empty()) {
+        std::vector<std::pair<std::array<std::uint32_t, 4>, std::uint32_t>> sends(
+            c.image_sends.begin(), c.image_sends.end()
+        );
+        std::sort(sends.begin(), sends.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
+        std::string list;
+        for (std::size_t i = 0; i < sends.size() && i < 6; ++i) {
+            const auto& [k, n] = sends[i];
+            list += std::format("{}GS block {:#x} format {:#x} {}x{}: {}", i ? "; " : "", k[0], k[1], k[2], k[3], n);
+        }
+        log::info("pacing: image sends in late ticks kept for them, decoded tag by tag ({} destinations): {}", sends.size(), list);
+    }
+    if (c.late_kept_image != 0 || c.left_out_repeat != 0) {
+        log::info(
+            "pacing: of {} late ticks kept for an image, {} send none when decoded tag by tag (the "
+            "qword reading's false match) and {} could not be decoded cleanly; late ticks left out "
+            "although the qword reading saw an image (OPENRAC_LATE_IMAGE_REPEAT_SKIP): {}",
+            c.late_kept_image, c.late_image_none, c.late_image_unread, c.left_out_repeat
+        );
+    }
+    if (c.late_image_unread != 0) {
+        const auto& u = c.unread_by;  // image_sends::Problem order, None first
+        log::info(
+            "pacing: late image paths not read cleanly, by first problem: header not DIRECT {}, "
+            "DIRECT past the end {}, bytes after the last DIRECT {}, PACKED tag cut by its DIRECT {}, "
+            "REGLIST tag cut {}, IMAGE data past its DIRECT with no transfer open {}, image data open "
+            "at the end {}",
+            u[1], u[2], u[3], u[4], u[5], u[6], u[7]
+        );
+    }
+    {
+        const auto& v = c.repeat_verdicts;  // frame.cpp RepeatVerdict order
+        std::uint64_t any = 0;
+        for (const auto n : v) {
+            any += n;
+        }
+        if (any != 0) {
+            log::info(
+                "pacing: OPENRAC_LATE_IMAGE_REPEAT_SKIP verdicts on late image ticks: repeat (may be "
+                "left out) {}, not read cleanly {}, incomplete transfer {}, read-back {}, copy inside "
+                "GS memory {}, render to a texture {}, no drawn reference {}, different sends {} "
+                "(repeats whose paths had tags the renderer drops too: {})",
+                v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], c.repeat_with_dropped
+            );
+        }
+    }
+    if (c.diff_count + c.diff_place + c.diff_bytes != 0) {
+        log::info(
+            "pacing: different sends, first difference from the last drawn tick's: number of "
+            "transfers {}, a transfer's place {} (of them the same transfers in another order {}), "
+            "only a transfer's bytes {}",
+            c.diff_count, c.diff_place, c.diff_order_only, c.diff_bytes
+        );
+    }
+    if (!c.destination_changes.empty()) {
+        std::vector<std::pair<std::array<std::uint32_t, 5>, PacingCounts::DestinationChanges>> d(
+            c.destination_changes.begin(), c.destination_changes.end()
+        );
+        std::sort(d.begin(), d.end(), [](const auto& a, const auto& b) { return a.second.changed > b.second.changed; });
+        std::string list;
+        for (std::size_t i = 0; i < d.size() && i < 8; ++i) {
+            const auto& [k, v] = d[i];
+            list += std::format("{}block {:#x} format {:#x} {}x{} #{}: changed {} of {} ({} contents)",
+                                i ? "; " : "", k[0], k[1], k[2], k[3], k[4], v.changed, v.seen, v.distinct);
+        }
+        log::info("pacing: transfer destinations by how often their bytes change ({} destinations; "
+                  "contents counted to 8 per run): {}", d.size(), list);
+    }
+    pacing_counts = {};
+}
+}  // namespace
+
+void count_tick_frame(bool left_out) {
+    if (pacing_counts_every() != 0) {
+        ++(left_out ? pacing_counts.left_out : pacing_counts.tick_frames);
+    }
+}
+
 void set_tick(
     std::chrono::steady_clock::time_point tick,
     std::chrono::duration<double> period,
-    std::chrono::duration<double> late
+    std::chrono::duration<double> late,
+    std::chrono::duration<double> behind
 ) {
     pacing.tick = tick;
     pacing.period = period;
     pacing.late = late;
+    pacing.behind = behind;
+    if (pacing_ring_size() != 0) {
+        ring_event(RingEvent::Tick, std::chrono::steady_clock::now(), tick, us_of(behind));
+    }
+    if (pacing_counts_every() != 0) {
+        report_pacing_counts();
+        ++pacing_counts.ticks;
+        pacing_counts.behind += behind.count() > 0.0 ? 1 : 0;
+        pacing_counts.far_behind += behind.count() > 0.1 ? 1 : 0;
+    }
 }
 
 bool interpolating() {
@@ -498,14 +951,53 @@ int between(std::chrono::steady_clock::time_point next_tick) {
     if (!g) {
         return 0;
     }
+    const bool reference = tick_frame_pacing_reference();
+    // A tick frame the cap held back, not drawn now: never drawn (the next tick's frame follows).
+    const auto lost = [&](std::uint64_t PacingCounts::*why, RingEvent::Kind kind) {
+        if (pacing.first_pending) {
+            if (pacing_counts_every() != 0) {
+                ++(pacing_counts.*why);
+            }
+            if (pacing_ring_size() != 0) {
+                ring_event(kind, std::chrono::steady_clock::now(), pacing.due);
+            }
+        }
+        return 0;
+    };
+    // Half a tick late or more: not a sleep's wake-up jitter, the game falling behind. (`behind` is
+    // measured after the tick's own work and the wait for the last frame, so it holds that work
+    // too.) It declines frames between ticks only: a tick's frame the cap held back is that tick's
+    // only picture, and a finished frame is still swapped first (below). Before session 55 it came
+    // first and declined both (OPENRAC_TICK_FRAME_PACING_REFERENCE=1).
+    const bool behind_declines = no_between_when_behind() && pacing.behind > pacing.period * 0.5;
+    if (behind_declines && reference) {
+        ++pacing_counts.declined_behind;
+        return lost(&PacingCounts::deferred_lost_behind, RingEvent::LostBehind);
+    }
     // A new interpolation snapshot must not replace an in-flight one past the next tick's deadline.
     if (render_pending()) {
         if (!g->render_worker->ready_until(next_tick)) {
-            return 0;
+            return lost(&PacingCounts::deferred_lost_worker, RingEvent::LostWorker);
+        }
+        // OPENRAC_EVEN_PRESENT=1: no sooner than a tick less 1 ms after the last swap, never past
+        // the next tick's time (the game thread would sleep until then anyway).
+        if (even_present() && !reference && pacing.last_present.time_since_epoch().count() != 0) {
+            const auto even = pacing.last_present
+                              + std::chrono::duration_cast<std::chrono::steady_clock::duration>(pacing.period)
+                              - std::chrono::milliseconds(1);
+            const auto until = std::min(even, next_tick);
+            if (until > std::chrono::steady_clock::now()) {
+                std::this_thread::sleep_until(until);
+                platform::work_resumed();
+            }
         }
         if (!finish_render()) {
             return -1;
         }
+    }
+    if (behind_declines && !pacing.first_pending) {
+        ++pacing_counts.declined_behind;
+        return 0;
     }
     // A frame only for a refresh the kept tick is still shown at (the next tick's, with the lag).
     const auto lag =
@@ -515,15 +1007,22 @@ int between(std::chrono::steady_clock::time_point next_tick) {
     // waited for here.
     if (!frame_due(now)) {
         if (pacing.due >= next_tick) {
-            return 0;
+            return lost(&PacingCounts::deferred_lost_next_tick, RingEvent::LostNextTick);
         }
         std::this_thread::sleep_until(pacing.due);
         platform::work_resumed();
         now = std::chrono::steady_clock::now();
     }
     const auto display = next_display(now);
+    if (between_present_cost() && pacing.present_period > 0.0
+        && now + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                     std::chrono::duration<double>(pacing.present_period)
+                 ) >= next_tick + lag) {
+        ++pacing_counts.declined_present_cost;
+        return lost(&PacingCounts::deferred_lost_late, RingEvent::LostLate);
+    }
     if (display >= next_tick + lag) {
-        return 0;
+        return lost(&PacingCounts::deferred_lost_late, RingEvent::LostLate);
     }
     // Nothing waits for the display: a frame that would not be done by the next tick's time is not
     // started, so that the tick comes on time whatever a frame costs (with the swap's wait the
@@ -534,7 +1033,7 @@ int between(std::chrono::steady_clock::time_point next_tick) {
                        std::chrono::duration<double>(pacing.cost)
                    )
                >= next_tick) {
-        return 0;
+        return lost(&PacingCounts::deferred_lost_late, RingEvent::LostLate);
     }
     // The scene has arrived at the kept tick's: another frame would be the same picture again.
     if (!pacing.first_pending && pacing.last_alpha >= 1.0f && alpha_at(display) >= 1.0f) {
@@ -558,8 +1057,21 @@ int between(std::chrono::steady_clock::time_point next_tick) {
     renderer::g_dump_draws = false;
     const bool first = pacing.first_pending;
     pacing.first_pending = false;
+    pacing.between_since_tick = !first;
+    if (first) {
+        ring_event(RingEvent::DeferredDrawn, now, pacing.due);
+    }
     draw_kept(first);
     const bool displayed = finish_render();
+    if (displayed && pacing_counts_every() != 0) {
+        // A tick's own frame the frame cap held back (draw_tick_frame), drawn now, is a tick frame.
+        if (first) {
+            ++pacing_counts.tick_frames;
+            ++pacing_counts.deferred_drawn;
+        } else {
+            ++pacing_counts.between;
+        }
+    }
     renderer::g_dump_draws = dump;
     return displayed ? 1 : -1;
 }

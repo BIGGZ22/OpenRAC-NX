@@ -133,6 +133,10 @@ struct MobySequence {
 // game's memory, where a moby's +0x68 / +0x6c point at its two keys.
 MobyFrame parse_frame(ByteView base, std::size_t offset);
 
+// The same, into `out`, reusing its vectors' storage (every field is rewritten; the same checks
+// throw the same AssetError, after which `out` holds nothing usable).
+void parse_frame_into(ByteView base, std::size_t offset, MobyFrame& out);
+
 // A sequence at `offset` of `base`; frame pointers are relative to `base`
 // (the class blob, or a ratchet_seq lump for Ratchet's own sequences).
 MobySequence parse_sequence(ByteView base, std::size_t offset);
@@ -199,6 +203,9 @@ bool consecutive(const AnimState& state);
 // joint key B lists again is appended again, cutting off what followed it.
 std::vector<u8> post_scale_list(std::span<const u8> a, std::span<const u8> b);
 
+// The same, into `out` (cleared first).
+void post_scale_list_into(std::span<const u8> a, std::span<const u8> b, std::vector<u8>& out);
+
 // The joint palette for a state: one matrix per joint (one identity for a
 // class without joints; identity for every joint when a key is missing).
 std::vector<JointMatrix> evaluate(const MobyAnimClass& anim, const AnimState& state);
@@ -247,6 +254,31 @@ std::vector<JointMatrix> evaluate_keys(
     bool plain,
     std::span<const JointModifier> mods = {},
     std::span<const PoseLayer> layers = {}
+);
+
+// evaluate_keys' temporaries, for a caller that evaluates many poses on one thread: the scratchpad
+// joint records and the post-scale lists. Nothing carries over from one evaluation to the next
+// (each starts by clearing them as evaluate_keys starts from new ones); only the storage is
+// reused. Not to be shared between threads or between evaluations running at the same time.
+struct EvalScratch {
+    std::array<std::array<ps2::V4, 4>, 0x70> rec{};
+    std::vector<u8> post_list;
+    std::vector<u8> post_a_order;
+    std::vector<u8> post_b_order;
+};
+
+// evaluate_keys into `out` (its storage reused), with `scratch` for the temporaries: the same
+// palette, bit for bit (evaluate_keys is this with a new scratch and a new vector).
+void evaluate_keys_into(
+    const MobyAnimClass& anim,
+    const MobyFrame* a,
+    const MobyFrame* b,
+    f32 t,
+    bool plain,
+    std::span<const JointModifier> mods,
+    std::span<const PoseLayer> layers,
+    EvalScratch& scratch,
+    std::vector<JointMatrix>& out
 );
 
 // The blend snapshot (0x20ede8 / PAL func_0020FC38 with flags 0x300, after ReRAC's moby_anim.rs

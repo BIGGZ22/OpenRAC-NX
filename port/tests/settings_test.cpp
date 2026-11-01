@@ -96,6 +96,44 @@ void test_game_options_are_saved_when_they_change(const std::filesystem::path& f
     CHECK(read_file(file).find("game_language = 4\n") != std::string::npos);
 }
 
+void test_launcher_handoff(const std::filesystem::path& file) {
+    namespace settings = openrac::settings;
+    std::ofstream(file) << "volume = 100\nswitch_fov = 100\n";
+    settings::load(file);
+    auto& s = settings::get();
+    settings::set_volume(35);
+    s.switch_fov = 115;
+    s.switch_lock_strafe = false;
+    s.switch_resolution = 2;
+    s.switch_handheld_resolution = 3;
+    s.switch_docked_resolution = 6;
+    s.controller.camera_x = 150;
+    s.game_options["game_language"] = 4;
+    s.frame_rate = settings::FrameRate::Capped;
+    s.frame_cap = 30;
+    // Unsaved live edits must survive launcher -> game, even with stale disk data.
+    settings::start_game(file, true);
+    CHECK(s.volume == 35 && std::abs(settings::output_gain() - .35f) < .001f);
+    CHECK(s.switch_fov == 115 && !s.switch_lock_strafe);
+    CHECK(s.switch_handheld_resolution == 3 && s.switch_docked_resolution == 6);
+    CHECK(s.controller.camera_x == 150 && s.frame_cap == 30);
+    CHECK(settings::game_option("game_language", 0) == 4);
+    CHECK(settings::save());
+    const auto saved = read_file(file);
+    settings::load(file);
+    CHECK(settings::get().switch_fov == 115 && !settings::get().switch_lock_strafe);
+    CHECK(settings::get().switch_resolution == 2);
+    CHECK(settings::get().switch_handheld_resolution == 3 && settings::get().switch_docked_resolution == 6);
+    CHECK(settings::get().controller.camera_x == 150 && settings::get().frame_cap == 30);
+    CHECK(settings::save() && read_file(file) == saved);
+    // Direct/CLI starts still read the file, preserving intentional overrides.
+    std::ofstream(file) << "volume = 70\nswitch_fov = 90\n";
+    settings::start_game(file, false);
+    CHECK(settings::get().volume == 70 && settings::get().switch_fov == 90);
+    std::ofstream(file) << "";
+    settings::load(file);
+}
+
 }  // namespace
 
 int main() {
@@ -107,6 +145,7 @@ int main() {
         return 1;
     }
     const auto file = folder / "settings.ini";
+    test_launcher_handoff(file);
     settings::load(file);
     CHECK(settings::get().gtao);
     CHECK(settings::get().temporal_quality == renderer::TemporalQuality::Quality);

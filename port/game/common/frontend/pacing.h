@@ -44,4 +44,30 @@ bool frame_may_start(
     double cap, std::chrono::steady_clock::time_point due, std::chrono::steady_clock::time_point now
 );
 
+// How early a tick's own frame may start before the frame cap's `due` (session 55). The cap's
+// schedule counts from frame starts (frame_pacing::next_due); a tick's frame starts when the
+// tick's work and the wait for the last frame are done, which varies from tick to tick by several
+// milliseconds. Against the 1 ms of frame_may_start, a tick that finished its work sooner than the
+// one the schedule counts from was held back, although the game's ticks already come no faster
+// than the cap. So, when the cap is at least the tick rate (`step` at most `tick_period`, 0.25 ms
+// of rounding allowed: 1/60 s is 16.6667 ms, a tick 16.666 ms) and no frame was drawn between
+// ticks since the last tick's frame (`after_between` false): half a step, so that only a frame
+// sooner than half a cap's frame after the last is held back (a tick run at once after a late
+// one). Otherwise, the 1 ms: a cap under the tick rate chooses ticks by it, and a frame between
+// ticks has taken the cap's slot. The schedule stays the cap's (previous due plus a step), so the
+// rate over time is never above the cap.
+std::chrono::steady_clock::duration tick_frame_tolerance(
+    double cap, std::chrono::duration<double> tick_period, bool after_between
+);
+
+// Whether the frame cap lets a tick's own frame start at `now`: as frame_may_start, with
+// tick_frame_tolerance in place of its millisecond.
+bool tick_frame_may_start(
+    double cap,
+    std::chrono::steady_clock::time_point due,
+    std::chrono::steady_clock::time_point now,
+    std::chrono::duration<double> tick_period,
+    bool after_between
+);
+
 }  // namespace openrac::frontend

@@ -10,6 +10,7 @@
 
 #include <array>
 #include <cmath>
+#include <limits>
 
 #include "check.h"
 #include "game/common/frontend/geometry.h"
@@ -26,6 +27,8 @@ using openrac::frontend::frame_size;
 using openrac::frontend::kTvAspect;
 using openrac::frontend::moby_sphere_envelope;
 using openrac::frontend::same_moby;
+using openrac::frontend::usable_camera;
+using openrac::frontend::usable_view;
 using openrac::renderer::Mat4;
 using openrac::renderer::Vec3;
 
@@ -249,9 +252,72 @@ void test_the_moby_envelope_holds_the_blended_moby() {
     CHECK(moby_sphere_envelope(sphere0, invalid, sphere1, to, to)[3] == 0);
 }
 
+// The renderer's guard (scene_frame.cpp's set_camera): a camera with a NaN or an infinity, an eye
+// out past every level, axes of no length or along one line, is refused; the game's are taken.
+void test_usable_camera_refuses_what_cannot_be_drawn() {
+    CHECK(usable_camera(camera({216.2f, 158.7f, 57.3f}, {0.7577f, 0.6295f, 0.1719f})));
+    // The pause menu's camera (256, 256, 64) looking along +X.
+    CHECK(usable_camera(camera({256, 256, 64}, {1, 0, 0})));
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    const float inf = std::numeric_limits<float>::infinity();
+    CHECK(!usable_camera(camera({nan, 0, 0}, {1, 0, 0})));
+    CHECK(!usable_camera(camera({0, inf, 0}, {1, 0, 0})));
+    CHECK(!usable_camera(camera({0, 0, 0}, {nan, 0, 0})));
+    CHECK(!usable_camera(camera({1.5e6f, 0, 0}, {1, 0, 0})));
+    CHECK(usable_camera(camera({-0.9e6f, 0, 0}, {1, 0, 0})));
+    // Zero rows (a camera not set yet) and rows of garbage length.
+    CHECK(!usable_camera(camera({0, 0, 0}, {0, 0, 0})));
+    CHECK(!usable_camera(camera({0, 0, 0}, {3, 0, 0})));
+    CameraPose flat = camera({0, 0, 0}, {1, 0, 0});
+    flat.up = {0, 0, 0};
+    CHECK(!usable_camera(flat));
+    // Looking straight along up: no side axis.
+    CHECK(!usable_camera(camera({0, 0, 0}, {0, 0, 1})));
+    CHECK(!usable_camera(camera({0, 0, 0}, {0.01f, 0, -1})));
+    CHECK(usable_camera(camera({0, 0, 0}, {0.1f, 0, -1})));
+    // Left is not what the view is built from: garbage there is no reason to refuse.
+    CameraPose left = camera({0, 0, 0}, {1, 0, 0});
+    left.left = {nan, nan, nan};
+    CHECK(usable_camera(left));
+}
+
+// The matrices themselves: finite, a rotation that keeps volumes, a projection that looks ahead.
+void test_usable_view_refuses_broken_matrices() {
+    const Mat4 view = openrac::renderer::look_along({10, 20, 30}, {0, 1, 0}, {0, 0, 1});
+    const Mat4 projection = openrac::renderer::perspective_reversed(1.0f, 16.0f / 9.0f, 0.05f, 2000.0f);
+    CHECK(usable_view(view, projection));
+    Mat4 broken = view;
+    broken[13] = std::numeric_limits<float>::quiet_NaN();
+    CHECK(!usable_view(broken, projection));
+    Mat4 inf = projection;
+    inf[10] = std::numeric_limits<float>::infinity();
+    CHECK(!usable_view(view, inf));
+    // look_along with forward along up: a side axis of zero, the world squashed onto a line.
+    CHECK(!usable_view(openrac::renderer::look_along({0, 0, 0}, {0, 0, 1}, {0, 0, 1}), projection));
+    // A mirrored view and a projection that looks backwards.
+    Mat4 mirrored = view;
+    mirrored[0] = -mirrored[0];
+    mirrored[4] = -mirrored[4];
+    mirrored[8] = -mirrored[8];
+    CHECK(!usable_view(mirrored, projection));
+    Mat4 backwards = projection;
+    backwards[5] = -backwards[5];
+    CHECK(!usable_view(view, backwards));
+}
+
 }  // namespace
 
 int main() {
+    CHECK(openrac::frontend::world_pose_alpha(-2, 0.25f) == 1.0f);
+    CHECK(openrac::frontend::world_pose_alpha(-2, 1.0f) == 1.0f);
+    CHECK(openrac::frontend::world_pose_alpha(3, 0.25f) == 0.25f);
+    CHECK(openrac::frontend::world_pose_alpha(-1, 0.25f) == 0.25f);
+    const std::array<float,3> cyan{.35f,1.f,1.f};
+    const std::array<float,4> black{0,0,0,1},level{.35f,1.f,1.f,1};
+    CHECK(openrac::frontend::world_clear_colour(true,true,cyan)==level);
+    CHECK(openrac::frontend::world_clear_colour(true,false,cyan)==black);
+    CHECK(openrac::frontend::world_clear_colour(false,true,cyan)==black);
+    CHECK(openrac::frontend::world_clear_colour(false,false,cyan)==black);
     test_a_four_by_three_window_is_filled();
     test_a_wide_window_centres_a_full_height_box();
     test_a_portrait_window_centres_a_full_width_box();
@@ -265,5 +331,7 @@ int main() {
     test_blend_pose_moves_and_turns_part_way();
     test_blend_pose_takes_a_cut_whole();
     test_the_moby_envelope_holds_the_blended_moby();
+    test_usable_camera_refuses_what_cannot_be_drawn();
+    test_usable_view_refuses_broken_matrices();
     return openrac::test::result();
 }

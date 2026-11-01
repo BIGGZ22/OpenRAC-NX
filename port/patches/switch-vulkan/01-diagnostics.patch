@@ -1,0 +1,156 @@
+diff --git a/port/game/common/main.cpp b/port/game/common/main.cpp
+index 3143cca..4fc6064 100644
+--- a/port/game/common/main.cpp
++++ b/port/game/common/main.cpp
+@@ -34,6 +34,7 @@
+ #include <algorithm>
+ #include <chrono>
+ #include <cstdint>
++#include <cstdio>
+ #include <cstdlib>
+ #include <cstring>
+ #include <ctime>
+@@ -275,7 +276,47 @@ int run_game_as_the_ee() {
+ 
+ }  // namespace
+ 
++#ifdef __SWITCH__
++namespace {
++// Switch has no shell to set test switches in. KEY=VALUE lines of sdmc:/switch/openrac/env.txt
++// (blank lines and # comments skipped) go into the environment before anything reads it, so
++// OPENRAC_RENDER_OPT_OFF, OPENRAC_GPU_MATERIALS_OFF, OPENRAC_FRAME_COST and the rest can be
++// tried without a rebuild. What was applied is written to env-applied.log beside it.
++void load_switch_env() {
++    std::FILE* in = std::fopen("sdmc:/switch/openrac/env.txt", "r");
++    if (in == nullptr) {
++        std::remove("sdmc:/switch/openrac/env-applied.log");
++        return;
++    }
++    std::FILE* report = std::fopen("sdmc:/switch/openrac/env-applied.log", "w");
++    char buffer[1024];
++    const auto trim = [](std::string text) {
++        const auto first = text.find_first_not_of(" \t\r\n");
++        if (first == std::string::npos) return std::string();
++        const auto last = text.find_last_not_of(" \t\r\n");
++        return text.substr(first, last - first + 1);
++    };
++    while (std::fgets(buffer, sizeof buffer, in) != nullptr) {
++        const std::string line = trim(buffer);
++        if (line.empty() || line[0] == '#') continue;
++        const auto eq = line.find('=');
++        if (eq == std::string::npos) continue;
++        const std::string key = trim(line.substr(0, eq));
++        const std::string value = trim(line.substr(eq + 1));
++        if (key.empty()) continue;
++        setenv(key.c_str(), value.c_str(), 1);
++        if (report != nullptr) std::fprintf(report, "%s=%s\n", key.c_str(), value.c_str());
++    }
++    std::fclose(in);
++    if (report != nullptr) std::fclose(report);
++}
++}  // namespace
++#endif
++
+ int main(int argc, char** argv) {
++#ifdef __SWITCH__
++    load_switch_env();  // first: the environment is read once, at its first use
++#endif
+ #ifdef __SWITCH__
+     bool from_switch_launcher = false;
+ #endif
+diff --git a/port/platform/switch/graphics.cpp b/port/platform/switch/graphics.cpp
+index 66e0a99..ad26fa1 100644
+--- a/port/platform/switch/graphics.cpp
++++ b/port/platform/switch/graphics.cpp
+@@ -119,6 +119,7 @@ bool Window::open_vulkan(const WindowConfig& config, std::string& error) {
+     m_gl_vendor = vkgl::driver_version();
+     if (FILE* report = std::fopen("sdmc:/switch/openrac/vulkan-startup.log", "w")) {
+         std::fprintf(report, "%s\n%s\n%s\n", m_gl_version.c_str(), m_gl_renderer.c_str(), m_gl_vendor.c_str());
++        std::fputs(vkgl::device_report().c_str(), report);
+         std::fclose(report);
+     }
+     return true;
+diff --git a/port/renderer/vulkan/vkgl.cpp b/port/renderer/vulkan/vkgl.cpp
+index 1ee8b83..9603d4f 100644
+--- a/port/renderer/vulkan/vkgl.cpp
++++ b/port/renderer/vulkan/vkgl.cpp
+@@ -17,10 +17,12 @@
+ #include <array>
+ #include <chrono>
+ #include <cstddef>
++#include <cstdio>
+ #include <span>
+ #include <stdexcept>
+ #include <string>
+ #include <utility>
++#include <vector>
+ #include <volk.h>
+ 
+ #include "platform/sdl.h"
+@@ -362,4 +364,51 @@ bool software() {
+     return g != nullptr && g->software;
+ }
+ 
++std::string device_report() {
++    using namespace detail;
++    if (g == nullptr || g->physical == VK_NULL_HANDLE) {
++        return {};
++    }
++    std::string out;
++    char line[256];
++    VkPhysicalDeviceMemoryProperties memory{};
++    vkGetPhysicalDeviceMemoryProperties(g->physical, &memory);
++    for (std::uint32_t i = 0; i < memory.memoryHeapCount; ++i) {
++        std::snprintf(line, sizeof line, "heap %u: %llu MiB%s\n", i,
++            static_cast<unsigned long long>(memory.memoryHeaps[i].size >> 20),
++            (memory.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) ? " device-local" : "");
++        out += line;
++    }
++    for (std::uint32_t i = 0; i < memory.memoryTypeCount; ++i) {
++        const VkMemoryPropertyFlags f = memory.memoryTypes[i].propertyFlags;
++        std::snprintf(line, sizeof line, "type %u: heap %u%s%s%s%s\n", i,
++            memory.memoryTypes[i].heapIndex,
++            (f & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) ? " DEVICE_LOCAL" : "",
++            (f & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) ? " HOST_VISIBLE" : "",
++            (f & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) ? " HOST_COHERENT" : "",
++            (f & VK_MEMORY_PROPERTY_HOST_CACHED_BIT) ? " HOST_CACHED" : "");
++        out += line;
++    }
++    std::snprintf(line, sizeof line, "device-only memory: %s\n", device_only_memory() ? "yes" : "no");
++    out += line;
++    std::snprintf(line, sizeof line, "bindless materials: %s (capacity %u)\n",
++        g->bindless_supported ? "on" : "off", g->material_texture_capacity);
++    out += line;
++    std::snprintf(line, sizeof line, "gpu timestamps: %u bits, period %.3f ns\n",
++        g->timestamp_bits, static_cast<double>(g->properties.limits.timestampPeriod));
++    out += line;
++    if (g->surface != VK_NULL_HANDLE) {
++        std::uint32_t n = 0;
++        vkGetPhysicalDeviceSurfacePresentModesKHR(g->physical, g->surface, &n, nullptr);
++        std::vector<VkPresentModeKHR> modes(n);
++        vkGetPhysicalDeviceSurfacePresentModesKHR(g->physical, g->surface, &n, modes.data());
++        out += "present modes:";
++        for (const VkPresentModeKHR m : modes) {
++            out += " " + std::to_string(static_cast<int>(m));
++        }
++        out += " (0 immediate, 1 mailbox, 2 fifo, 3 fifo-relaxed)\n";
++    }
++    return out;
++}
++
+ }  // namespace openrac::vkgl
+diff --git a/port/renderer/vulkan/vkgl.h b/port/renderer/vulkan/vkgl.h
+index e36f3e9..1dab16d 100644
+--- a/port/renderer/vulkan/vkgl.h
++++ b/port/renderer/vulkan/vkgl.h
+@@ -260,6 +260,10 @@ const std::string& driver_version();
+ const std::string& api_version();
+ bool software();
+ 
++// Several lines for a startup report: memory heaps and types, the material path, GPU timestamps
++// and the presentation modes the surface offers. Empty with no context.
++std::string device_report();
++
+ // True when the open device has memory that is device-local and not host-visible, where a static
+ // buffer's staged copy goes (docs/port/RENDER_PERF.md, "R-05"). False with no context, and on a
+ // driver whose every memory type the host sees (lavapipe, some integrated GPUs).

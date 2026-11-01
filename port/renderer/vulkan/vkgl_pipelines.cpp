@@ -1808,6 +1808,7 @@ VkDescriptorSet descriptors(Program& p, std::span<const Sampled> samplers) {
 }
 
 void OPENRAC_GLAPI dispatch_compute(GLuint x, GLuint y, GLuint z) {
+    prepare_frame();
     auto* p = g->programs.find(g->state.program);
     if (!p || !p->linked || !p->compute_pipeline || !x || !y || !z) {
         return;
@@ -1849,6 +1850,7 @@ void OPENRAC_GLAPI dispatch_compute(GLuint x, GLuint y, GLuint z) {
 }
 
 void OPENRAC_GLAPI memory_barrier(GLbitfield) {
+    prepare_frame();
     end_rendering(PassEnd::Barrier);
     // Shader writes (compute's, the only shaders that write) before every later use of what they
     // wrote: shader and uniform reads, vertices and indices, indirect arguments, copies (the R-08

@@ -24,6 +24,7 @@ namespace {
 bool g_loaded = false;
 Api g_api = Api::Desktop;
 bool g_vulkan = false;
+bool g_deko3d = false;
 std::set<std::string, std::less<>> g_extensions;
 
 // OpenGL ES's forms of the desktop functions it lacks (OPENRAC_GL_DESKTOP_FUNCTIONS).
@@ -62,6 +63,9 @@ bool load(GetProcAddress get, std::string& missing) {
     g_vulkan =
         version != nullptr
         && std::strstr(reinterpret_cast<const char*>(version), "OpenRAC on Vulkan") != nullptr;
+    g_deko3d =
+        version != nullptr
+        && std::strstr(reinterpret_cast<const char*>(version), "OpenRAC on deko3d") != nullptr;
     g_api = version != nullptr
                     && std::strncmp(reinterpret_cast<const char*>(version), "OpenGL ES", 9) == 0
                 ? Api::ES
@@ -132,6 +136,10 @@ Api api() {
 
 bool is_vulkan() {
     return g_vulkan;
+}
+
+bool is_deko3d() {
+    return g_deko3d;
 }
 
 namespace {

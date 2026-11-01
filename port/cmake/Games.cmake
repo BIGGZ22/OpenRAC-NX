@@ -66,6 +66,15 @@ target_include_directories(sound_engine_test PRIVATE "${CMAKE_CURRENT_LIST_DIR}/
 target_link_libraries(sound_engine_test PRIVATE openrac_game_common)
 openrac_warnings(sound_engine_test)
 add_test(NAME sound_engine COMMAND sound_engine_test)
+# OPENRAC_STREAM_EARLY_START: a stream read and decoded in parts sounds the same samples as one
+# read whole; run without and with the variable.
+add_executable(sound_stream_early_test "${CMAKE_CURRENT_LIST_DIR}/../tests/sound_stream_early_test.cpp")
+target_include_directories(sound_stream_early_test PRIVATE "${CMAKE_CURRENT_LIST_DIR}/..")
+target_link_libraries(sound_stream_early_test PRIVATE openrac_game_common)
+openrac_warnings(sound_stream_early_test)
+add_test(NAME sound_stream_early COMMAND sound_stream_early_test)
+add_test(NAME sound_stream_early_on COMMAND sound_stream_early_test)
+set_tests_properties(sound_stream_early_on PROPERTIES ENVIRONMENT "OPENRAC_STREAM_EARLY_START=1")
 
 function(openrac_add_game config)
   file(READ "${config}" json)
@@ -283,14 +292,31 @@ function(openrac_add_game config)
     add_executable(openrac-${id} "${OPENRAC_GAME_DIR}/common/main.cpp")
     set(targets openrac-${id})
     if(SWITCH)
+      set(switch_package_name "OpenRAC - ${id}")
+      if(OPENRAC_SWITCH_VULKAN)
+        set_target_properties(openrac-${id} PROPERTIES OUTPUT_NAME "openrac-${id}-vulkan")
+        target_compile_definitions(openrac-${id} PRIVATE OPENRAC_SWITCH_VULKAN_BUILD=1)
+        set(switch_package_name "OpenRAC Vulkan Test - ${id}")
+      endif()
+      if(OPENRAC_SWITCH_DEKO3D)
+        set_target_properties(openrac-${id} PROPERTIES OUTPUT_NAME "openrac-${id}-deko3d")
+        target_compile_definitions(openrac-${id} PRIVATE OPENRAC_SWITCH_DEKO3D_BUILD=1)
+        set(switch_package_name "OpenRAC deko3d Test - ${id}")
+      endif()
       target_sources(openrac-${id} PRIVATE "${PROJECT_SOURCE_DIR}/platform/switch/launcher.cpp")
       if(OPENRAC_PORT_WINDOW)
+        target_link_libraries(openrac-${id} PRIVATE openrac_launcher_artwork)
         target_sources(openrac-${id} PRIVATE
           "${PROJECT_SOURCE_DIR}/platform/switch/launcher_canvas.cpp"
           "${PROJECT_SOURCE_DIR}/platform/switch/launcher_font.c"
           "${PROJECT_SOURCE_DIR}/platform/switch/launcher_graphics.cpp")
         set_source_files_properties("${PROJECT_SOURCE_DIR}/platform/switch/launcher_font.c"
           PROPERTIES COMPILE_OPTIONS "-w")
+        if(OPENRAC_SWITCH_DEKO3D)
+          # The deko3d build shows the launcher with deko3d as well (launcher_graphics.cpp).
+          target_include_directories(openrac-${id} PRIVATE "${OPENRAC_DKGL_DEKO3D_INCLUDE}")
+          target_link_libraries(openrac-${id} PRIVATE "${OPENRAC_DKGL_DEKO3D_LIBRARY}")
+        endif()
       endif()
       target_sources(openrac-${id} PRIVATE "${PROJECT_SOURCE_DIR}/platform/switch/pad.cpp")
       if(id MATCHES "^rac1-")
@@ -303,9 +329,30 @@ function(openrac_add_game config)
       endif()
       if(COMMAND nx_create_nro)
         set(nacp "${CMAKE_CURRENT_BINARY_DIR}/openrac-${id}.nacp")
-        nx_generate_nacp(OUTPUT "${nacp}" NAME "OpenRAC - ${id}"
-          AUTHOR "OpenRAC contributors" VERSION "0.1.0")
-        nx_create_nro(openrac-${id} NACP "${nacp}")
+        nx_generate_nacp(OUTPUT "${nacp}" NAME "${switch_package_name}"
+          AUTHOR "OpenRAC contributors" VERSION "${OPENRAC_NX_VERSION}")
+        if(OPENRAC_SWITCH_DEKO3D)
+          # The precompiled shader pack dkgl reads (romfs:/dkgl, renderer/dkgl/dkgl.h).
+          set(dkgl_romfs "${CMAKE_CURRENT_BINARY_DIR}/generated/dkgl-romfs-${id}")
+          file(GLOB dkgl_pack CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/renderer/dkgl/pack/*")
+          # GLOB CONFIGURE_DEPENDS notices added/removed names, not changed
+          # shader bytes. Re-run the copy when an existing stage is rebuilt.
+          set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${dkgl_pack})
+          file(REMOVE_RECURSE "${dkgl_romfs}")
+          file(MAKE_DIRECTORY "${dkgl_romfs}/dkgl")
+          file(COPY ${dkgl_pack} DESTINATION "${dkgl_romfs}/dkgl")
+          # The same programs from devkitPro's unpatched uam (romfs:/dkgl-stock, OPENRAC_DK_PACK=stock),
+          # kept to compare on hardware with the scheduling-fixed pack above.
+          file(GLOB dkgl_stock_pack CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/renderer/dkgl/pack-stock-uam/*")
+          if(dkgl_stock_pack)
+            set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${dkgl_stock_pack})
+            file(MAKE_DIRECTORY "${dkgl_romfs}/dkgl-stock")
+            file(COPY ${dkgl_stock_pack} DESTINATION "${dkgl_romfs}/dkgl-stock")
+          endif()
+          nx_create_nro(openrac-${id} NACP "${nacp}" ROMFS "${dkgl_romfs}")
+        else()
+          nx_create_nro(openrac-${id} NACP "${nacp}")
+        endif()
       endif()
     endif()
   endif()
