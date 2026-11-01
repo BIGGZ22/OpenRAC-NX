@@ -38,7 +38,7 @@ SD:/switch/openrac/
 - Third-person lock-strafe: hold **ZL** to strafe while aiming with the right stick.
 - Memory-card saves stored on the SD card.
 
-### v0.2.0-alpha pre-release
+### v0.2.0-alpha
 
 - Native deko3d rendering, redesigned launcher, custom artwork and menu colours.
 - Resolution presets from 480p, handheld/docked profiles, optional Status Monitor FPS/RES reporting, lock-strafe toggle and experimental FOV controls.
