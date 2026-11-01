@@ -2,7 +2,7 @@
 
 A native Nintendo Switch port of **Ratchet & Clank (2002)**, based on [OpenRAC](https://github.com/OpenRAC/OpenRAC).
 
-**Early alpha. An overclock and full application mode are required for playable performance.** The app does not apply an overclock automatically. Performance varies by scene, and a complete playthrough has not been verified.
+**An overclock and full application mode are required for playable performance.** The app does not apply an overclock automatically. Performance varies by scene, and a complete playthrough has not been verified.
 
 [Download releases](https://github.com/BIGGZ22/OpenRAC-NX/releases) · [Build guide](port/platform/switch/README.md) · [Credits](CREDITS.md)
 
@@ -16,7 +16,7 @@ Other games and disc revisions are currently unsupported. No game files are incl
 
 ## Installation
 
-1. Download `openrac-rac1-pal-deko3d-v0.2.0-alpha.nro` from the releases page. You may rename it to `openrac-rac1-pal.nro`.
+1. Download `openrac-rac1-pal-deko3d-v0.2.0.nro` from the releases page. You may rename it to `openrac-rac1-pal.nro`.
 2. Put the NRO and your supported ISO in `SD:/switch/openrac/`. Keep only one ISO in that folder.
 3. Launch in **full application mode**, then let first-launch setup prepare the game.
 4. Select **Play** and press **A**.
@@ -38,7 +38,7 @@ SD:/switch/openrac/
 - Third-person lock-strafe: hold **ZL** to strafe while aiming with the right stick.
 - Memory-card saves stored on the SD card.
 
-### v0.2.0-alpha
+### v0.2.0
 
 - Native deko3d rendering, redesigned launcher, custom artwork and menu colours.
 - Resolution presets from 480p, handheld/docked profiles, optional Status Monitor FPS/RES reporting, lock-strafe toggle and experimental FOV controls.
@@ -78,7 +78,7 @@ Save through the game's menu and wait for it to finish before exiting.
 
 - **Missing files or interrupted setup:** open the Setup page and select prepare/resume.
 - **Low performance:** check that your overclock is active and you launched in full application mode.
-- **Reporting a bug:** include the build version, planet/scene and steps to reproduce it.
+- **Reporting a bug:** [open an issue](https://github.com/BIGGZ22/OpenRAC-NX/issues/new) with the build version, planet/scene and steps to reproduce it.
 - **Game log:** `SD:/switch/openrac/openrac-rac1-pal.log`
 - **Setup log:** `SD:/switch/openrac/data/setup.log`
 
