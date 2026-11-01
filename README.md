@@ -16,14 +16,14 @@ Other games and disc revisions are currently unsupported. No game files are incl
 
 ## Installation
 
-1. Download `openrac-rac1-pal-deko3d-v0.2.0.nro` from the releases page. You may rename it to `openrac-rac1-pal.nro`.
+1. Download `OpenRAC-NX.nro` from the releases page.
 2. Put the NRO and your supported ISO in `SD:/switch/openrac/`. Keep only one ISO in that folder.
 3. Launch in **full application mode**, then let first-launch setup prepare the game.
 4. Select **Play** and press **A**.
 
 ```text
 SD:/switch/openrac/
-  openrac-rac1-pal.nro
+  OpenRAC-NX.nro
   Ratchet.iso
 ```
 
