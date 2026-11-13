@@ -3,13 +3,27 @@
   "game": "Ratchet & Clank",
   "system": "PS2",
   "type": "port",
-  "original": { "region": "PAL", "serial": "SCES-50916" },
+  "original": {
+    "region": "PAL",
+    "serial": "SCES-50916"
+  },
   "project": "OpenRAC-NX",
   "status": "in-progress",
-  "targets": ["Switch"],
+  "targets": [
+    "Switch"
+  ],
   "approach": "Nintendo Switch port of OpenRAC (decompilation-based PC port) with a deko3d renderer",
   "notes": "A Switch homebrew build of OpenRAC. Uses the player's own copy of the game; no game data is included. Work in progress: performance and rendering fixes are ongoing on hardware.",
+  "maintainers": [
+    {
+      "name": "BIGGZ22",
+      "link": "https://github.com/BIGGZ22"
+    }
+  ],
   "links": [
-    { "label": "Upstream OpenRAC", "url": "https://github.com/OpenRAC/OpenRAC" }
+    {
+      "label": "Upstream OpenRAC",
+      "url": "https://github.com/OpenRAC/OpenRAC"
+    }
   ]
 }
